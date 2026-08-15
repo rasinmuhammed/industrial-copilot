@@ -45,7 +45,7 @@ A **margin** is a signed scalar in engineering units (`−1,433 min·N·m past t
 overstrain limit`). Three properties follow:
 
 - **It inverts** → the system *prescribes*: "reduce torque 4.2 N·m and every margin returns positive."
-- **It's continuous** → the system *forecasts*: 811 healthy rows (8.1%) sit within 2% of a boundary. The failure label sees none of them.
+- **It's continuous** → the system *forecasts*: 579 healthy cycles come within 5% of failing, against 339 total failures. The binary label sees none of them.
 - **It's associative** → the system *scales*: `min()` composes losslessly up a rollup tree.
 
 ### Language models are bad at time series. We removed them from the numeric path.

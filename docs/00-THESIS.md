@@ -65,13 +65,20 @@ A classifier can only score a state you hand it; it cannot produce one.
 A binary label carries no information until it flips. A margin trending toward
 zero yields a crossing time. Measured on this dataset:
 
-- **811 healthy rows (8.1 %) sit within 2 % of a boundary**
-- **2,508 (25.1 %) within 5 %**
+- **164 healthy cycles sit within 2 % of a boundary**
+- **579 within 5 %**
+- **2,019 within 10 %**
 - There are only **339 failures** in the entire dataset
 
-The failure label sees none of those near-misses. The margin sees all of them.
-That is a **7.4× larger early-warning surface than the total failure count**,
-available with no model at all.
+Distance is computed per *rule*, not per condition — HDF is conjunctive, so a
+cycle far below 1380 rpm is nowhere near failing if its thermal gradient is
+healthy. The corrected definition is self-validating: **no** healthy cycle has a
+negative rule-level margin, and **exactly the 287** deterministically-explained
+failures do.
+
+The failure label sees none of those near-misses. The margin sees all of them —
+579 cycles that came within 5 % of failing, against 339 that actually did, with
+no model involved and no false members in the count.
 
 ### 3.3 It aggregates → the system scales
 
