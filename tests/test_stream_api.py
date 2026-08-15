@@ -198,4 +198,71 @@ class TestEnvelopeProjection:
         response = client.get("/explorer")
         assert response.status_code == 200
         assert "Operating Envelope" in response.text
-        assert "ISA-101" in response.text  # the design rationale is in the source
+        # The design system is shared, so the rationale lives in app.css.
+        assert "/static/app.css" in response.text
+
+
+class TestFleet:
+    """One ranking across the whole fleet.
+
+    Margins are normalised by their own threshold, so a thermal risk and a
+    torque risk land on the same scale and can be ordered against each other.
+    Probabilities from separate models cannot be ranked together — a 0.3 from a
+    heat model and a 0.3 from a wear model are not the same quantity.
+    """
+
+    def test_machines_are_ranked_by_risk(self, client):
+        body = client.get("/fleet").json()
+        margins = [m["worst_margin"] for m in body["machines"]]
+        assert margins == sorted(margins)
+        assert body["worst"] == body["machines"][0]
+
+    def test_every_virtual_machine_is_present(self, client):
+        body = client.get("/fleet").json()
+        assert len(body["machines"]) == 15
+        assert sum(body["counts"].values()) == 15
+
+    def test_binding_rule_is_the_smallest_distance(self, client):
+        body = client.get("/fleet").json()
+        for m in body["machines"]:
+            assert m["binding"] == min(m["distances"], key=m["distances"].get)
+            assert m["worst_margin"] == pytest.approx(min(m["distances"].values()), abs=1e-4)
+
+    def test_state_follows_the_margin(self, client):
+        body = client.get("/fleet").json()
+        for m in body["machines"]:
+            expected = "alert" if m["worst_margin"] < 0 else (
+                "watch" if m["worst_margin"] < 0.05 else "normal"
+            )
+            assert m["state"] == expected
+
+    def test_playhead_surfaces_a_real_violation(self, client):
+        """Cycle 51 is the replay's first genuine boundary crossing."""
+        body = client.get("/fleet", params={"through_udi": 51}).json()
+        assert body["counts"]["alert"] == 1
+        worst = body["worst"]
+        assert worst["machine"] == "L-01"
+        assert worst["worst_margin"] < 0
+        assert worst["binding"] == "PWF"
+
+    def test_the_first_violation_is_a_stall_not_an_overload(self, client):
+        """High speed, low torque — the mechanism the flagship analysis found.
+        Power falls under the 3500 W floor rather than over the ceiling."""
+        import math
+
+        worst = client.get("/fleet", params={"through_udi": 51}).json()["worst"]
+        power = worst["torque"] * worst["rpm"] * 2 * math.pi / 60
+        assert power < 3500
+        assert worst["rpm"] > 2500 and worst["torque"] < 15
+        assert worst["worst_margin"] == pytest.approx((power - 3500) / 3500, abs=1e-3)
+
+    def test_history_supports_a_sparkline(self, client):
+        body = client.get("/fleet", params={"history": 30}).json()
+        for m in body["machines"]:
+            assert 2 <= len(m["history"]) <= 30
+
+    def test_view_and_stylesheet_are_served(self, client):
+        assert "Fleet" in client.get("/fleet/view").text
+        css = client.get("/static/app.css")
+        assert css.status_code == 200
+        assert "ISA-101" in css.text  # the design rationale ships with the code

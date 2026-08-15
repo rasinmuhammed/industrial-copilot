@@ -6,6 +6,8 @@
     GET  /envelope              the true failure boundary, for plotting
     GET  /envelope/projection   the boundary as a function of FUTURE wear
     GET  /explorer              the Operating Envelope Explorer
+    GET  /fleet                 every machine ranked on one axis of risk
+    GET  /fleet/view            the fleet control room
     GET  /health                readiness, versions, gate status
     GET  /                      minimal console
 
@@ -23,7 +25,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
 
 from copilot.engine import Engine
@@ -31,6 +33,7 @@ from copilot.ops import execute
 from copilot.ir import parse_plan, PlanError
 from copilot.reliability import audit_calibration, check_invariants
 from copilot.session import SessionState
+from copilot.ops.registry import TABLE
 from copilot.stream import StreamScorer, replay
 
 _HERE = Path(__file__).resolve().parent
@@ -323,13 +326,113 @@ def envelope_projection(
     }
 
 
+def _static(name: str) -> str:
+    path = _HERE / "static" / name
+    if not path.exists():
+        raise HTTPException(500, f"{name} is missing from the package")
+    return path.read_text(encoding="utf-8")
+
+
+@app.get("/static/app.css")
+def stylesheet() -> Response:
+    return Response(_static("app.css"), media_type="text/css")
+
+
 @app.get("/explorer", response_class=HTMLResponse)
 def explorer() -> str:
     """The Operating Envelope Explorer."""
-    path = _HERE / "static" / "explorer.html"
-    if not path.exists():
-        raise HTTPException(500, "explorer.html is missing from the package")
-    return path.read_text(encoding="utf-8")
+    return _static("explorer.html")
+
+
+@app.get("/fleet")
+def fleet(
+    through_udi: int | None = Query(None, ge=1, description="replay playhead; default = latest"),
+    history: int = Query(24, ge=2, le=120, description="cycles of margin history per machine"),
+) -> dict[str, Any]:
+    """Every machine ranked on ONE axis of risk.
+
+    This is the property that makes a fleet view possible at all. Margins are
+    normalised by their own threshold, so a thermal risk and a torque risk land
+    on the same scale and can be ordered against each other. Probabilities from
+    separate models cannot: a 0.3 from a heat model and a 0.3 from a wear model
+    are not the same quantity and ranking them together is meaningless.
+
+    Returns each machine's latest state as of the playhead, its worst
+    normalised margin, which rule is binding, and a short history for a
+    sparkline.
+    """
+    con = engine().ctx.con
+    ceiling = through_udi or con.execute(
+        f"SELECT max(udi) FROM {TABLE}"  # noqa: S608
+    ).fetchone()[0]
+
+    rows = con.execute(
+        f"""WITH scoped AS (
+              SELECT * FROM {TABLE} WHERE udi <= ?
+            ),
+            ranked AS (
+              SELECT *, row_number() OVER (PARTITION BY machine_id ORDER BY udi DESC) AS rn
+              FROM scoped
+            )
+            SELECT machine_id, product_type, udi, ts,
+                   rotational_speed_rpm, torque_nm, tool_wear_min, power_w,
+                   temp_delta_k, hdf_distance, pwf_distance, osf_distance,
+                   worst_normalised_margin, machine_failure
+            FROM ranked WHERE rn = 1 ORDER BY worst_normalised_margin""",  # noqa: S608
+        [ceiling],
+    ).fetchall()
+
+    names = [
+        "machine", "variant", "udi", "ts", "rpm", "torque", "wear", "power",
+        "temp_delta", "hdf", "pwf", "osf", "worst", "failed",
+    ]
+
+    machines = []
+    for raw in rows:
+        r = dict(zip(names, raw))
+        distances = {"HDF": r["hdf"], "PWF": r["pwf"], "OSF": r["osf"]}
+        binding = min(distances, key=distances.get)
+        spark = con.execute(
+            f"""SELECT worst_normalised_margin FROM {TABLE}
+                WHERE machine_id = ? AND udi <= ? ORDER BY udi DESC LIMIT ?""",  # noqa: S608
+            [r["machine"], ceiling, history],
+        ).fetchall()
+
+        worst = float(r["worst"])
+        machines.append(
+            {
+                "machine": r["machine"],
+                "variant": r["variant"],
+                "udi": int(r["udi"]),
+                "worst_margin": round(worst, 4),
+                "binding": binding,
+                "state": "alert" if worst < 0 else ("watch" if worst < 0.05 else "normal"),
+                "rpm": round(float(r["rpm"]), 1),
+                "torque": round(float(r["torque"]), 2),
+                "wear": round(float(r["wear"]), 1),
+                "power": round(float(r["power"])),
+                "distances": {k: round(float(v), 4) for k, v in distances.items()},
+                "history": [round(float(v[0]), 4) for v in reversed(spark)],
+            }
+        )
+
+    counts = {"alert": 0, "watch": 0, "normal": 0}
+    for m in machines:
+        counts[m["state"]] += 1
+
+    return {
+        "playhead": int(ceiling),
+        "max_udi": int(con.execute(f"SELECT max(udi) FROM {TABLE}").fetchone()[0]),  # noqa: S608
+        "machines": machines,
+        "counts": counts,
+        "worst": machines[0] if machines else None,
+    }
+
+
+@app.get("/fleet/view", response_class=HTMLResponse)
+def fleet_view() -> str:
+    """The fleet control room."""
+    return _static("fleet.html")
 
 
 @app.get("/health")
@@ -390,7 +493,8 @@ _CONSOLE = """<!doctype html>
 <header>
   <h1>Industrial Copilot — Margin Engine</h1>
   <div class="sub">Distance to the failure boundary. No number is authored by a model.
-    &nbsp;·&nbsp; <a href="/explorer" style="color:#4ecfbb">Operating Envelope Explorer →</a></div>
+    &nbsp;·&nbsp; <a href="/fleet/view" style="color:#4ecfbb">Fleet</a>
+    &nbsp;·&nbsp; <a href="/explorer" style="color:#4ecfbb">Envelope explorer</a></div>
 </header>
 <main>
   <section>

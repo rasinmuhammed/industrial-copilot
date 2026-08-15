@@ -161,10 +161,13 @@ Deliberately **no** agent framework and **no** vector database. → [docs/03-ARC
 make demo      # scripted walkthrough of all four acceptance criteria
 make chat      # interactive terminal copilot
 make ask Q="why did cycle 9016 fail?"
-make serve     # FastAPI + SSE console on :8000
+make serve     # API, chat console, envelope explorer and fleet view on :8000
+               #   /            ask
+               #   /fleet/view  every machine ranked on one axis of risk
+               #   /explorer    the operating envelope, draggable
 make stream    # replay the fleet with live lead-time alerts
 make eval      # golden suite; hard gates fail the build
-make test      # 176 unit and adversarial tests
+make test      # 189 unit and adversarial tests
 make discover  # re-derive the documented thresholds from data alone
 make bench     # margin throughput benchmark
 ```
@@ -184,7 +187,7 @@ with **no credentials configured**:
 | Latency p50 / p95 | **3.1 / 20.6 ms** |
 | Planning p50 / p95 | **0.33 / 0.50 ms** |
 | Questions resolved below the LLM tier | **92%** |
-| Tests | **176 passing** |
+| Tests | **189 passing** |
 | Documented dataset claims reproduced | **46/46** |
 
 ---
@@ -254,7 +257,8 @@ arithmetic.
 | Streaming scorer with lead-time alerts | ✅ |
 | CLI, FastAPI + SSE, console | ✅ |
 | Golden eval suite with hard gates | ✅ |
-| Envelope explorer UI, fleet tile wall | roadmap |
+| Operating Envelope Explorer | ✅ |
+| Fleet control room (one ranking across all machines) | ✅ |
 | Verified-exemplar store, planner LoRA | roadmap |
 | Edge agent, multi-tenancy, rollup tiles | roadmap ([11-SCALE](docs/11-SCALE.md)) |
 
