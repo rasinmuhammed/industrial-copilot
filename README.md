@@ -158,14 +158,34 @@ Deliberately **no** agent framework and **no** vector database. → [docs/03-ARC
 ## Running
 
 ```bash
-make chat                     # terminal copilot
-make serve                    # FastAPI on :8000
-make stream                   # live replay + alerts
-make eval                     # full eval suite
-make eval-fast                # deterministic tier only, zero credentials
-python scripts/discover_rules.py   # re-derive thresholds from data alone
-python scripts/bench.py            # throughput benchmark
+make demo      # scripted walkthrough of all four acceptance criteria
+make chat      # interactive terminal copilot
+make ask Q="why did cycle 9016 fail?"
+make serve     # FastAPI + SSE console on :8000
+make stream    # replay the fleet with live lead-time alerts
+make eval      # golden suite; hard gates fail the build
+make test      # 176 unit and adversarial tests
+make discover  # re-derive the documented thresholds from data alone
+make bench     # margin throughput benchmark
 ```
+
+### Verified state
+
+Everything below is reproduced by `make eval`, `make test` and `make verify`,
+with **no credentials configured**:
+
+| | |
+|---|---|
+| Golden cases | **25/25** across 8 categories, 27 numeric assertions |
+| Unsourced numeral rate | **0.000** |
+| Numeric exactness vs independent reference | **1.000** |
+| Refusal correctness | **1.000** |
+| Premise refutation | **1.000** |
+| Latency p50 / p95 | **3.1 / 20.6 ms** |
+| Planning p50 / p95 | **0.33 / 0.50 ms** |
+| Questions resolved below the LLM tier | **92%** |
+| Tests | **176 passing** |
+| Documented dataset claims reproduced | **46/46** |
 
 ---
 
@@ -199,12 +219,16 @@ the deterministic tier, the Cerebras free tier, or local Ollama.
 
 ## Performance
 
+Three figures for three different things — conflating them would overstate the case:
+
 | Measurement | Result |
 |---|---|
-| Margin evaluation, vectorised | **419 M samples/sec/core** |
-| Margin evaluation, per event | **0.22 µs** (4.6 M events/sec/core) |
+| Raw margin arithmetic, vectorised | **419 M samples/sec/core** |
+| Raw margin arithmetic, per event | **0.22 µs** → 4.6 M/sec/core |
+| `evaluate()` returning a margin object | **1.09 µs** → 918 k/sec/core |
+| Full stream scorer: robust track + alerting | **~14 µs** → ~72 k/sec/core |
 | Requirement, 2,000-machine site @ 1 Hz | 2,000 events/sec |
-| **Headroom on one core** | **2,310×** |
+| **Headroom on one core (full scorer)** | **~36×** |
 | Query execution | < 10 ms |
 
 Speed is not the result of optimisation — **there is no model to run at inference
@@ -212,6 +236,27 @@ time.** Intelligence lives in the knowledge base, built offline; online is
 arithmetic.
 
 ---
+
+## What is built
+
+| Component | Status |
+|---|---|
+| Physics warehouse, knowledge base, rule audit | ✅ |
+| Dimensional type system (unit-safe, delta-aware) | ✅ |
+| Analysis IR with six-stage validation | ✅ |
+| 12 operators, each tested against an independent reference | ✅ |
+| Three-tier router, typed session state | ✅ |
+| Proof-Carrying Numbers verifier (fail-closed) | ✅ |
+| Interval margins → ALERT / SAFE / **ABSTAIN** | ✅ |
+| Gate 2 — instrument vs process drift discrimination | ✅ |
+| Gate 3 — knowledge-base calibration monitor | ✅ |
+| Threshold discovery from data alone | ✅ |
+| Streaming scorer with lead-time alerts | ✅ |
+| CLI, FastAPI + SSE, console | ✅ |
+| Golden eval suite with hard gates | ✅ |
+| Envelope explorer UI, fleet tile wall | roadmap |
+| Verified-exemplar store, planner LoRA | roadmap |
+| Edge agent, multi-tenancy, rollup tiles | roadmap ([11-SCALE](docs/11-SCALE.md)) |
 
 ## Documentation
 
