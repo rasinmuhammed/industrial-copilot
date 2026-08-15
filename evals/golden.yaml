@@ -1,0 +1,294 @@
+# Golden question set.
+#
+# Every assertion checks against evals/reference.py, an implementation that
+# shares no code with the engine. Snapshot testing would let a bug that exists
+# in both the engine and the expectation pass silently.
+#
+# `criterion` maps each question to the brief's acceptance criteria:
+#   1 understand machine behaviour   2 analyse historical data
+#   3 investigate failures           4 follow-up questions
+#
+# Assertion kinds:
+#   numeric               slot value equals a reference value
+#   op_equals             the planner chose this operation
+#   refutes_premise       a premise_refuted warning was raised
+#   raises_warning        a warning with this code was raised
+#   mentions              the narration contains one of these phrases
+#   slot_absent           this slot must NOT exist (e.g. no crossing time for TWF)
+#   abstains              this slot abstained rather than guessing
+#   refuses               the question was declined
+#   no_unsourced_numerals every numeral in the narration traces to a slot
+#   row_count             provenance row count
+
+version: 1
+
+questions:
+
+# ==========================================================================
+# A. Understand machine behaviour  (criterion 1)
+# ==========================================================================
+
+- id: typical_conditions
+  criterion: 1
+  category: understand
+  question: What are the typical operating conditions?
+  assertions:
+    - {kind: op_equals, value: describe}
+    - {kind: numeric, slot: all.torque_nm.mean, ref: {fn: cohort_mean, args: {metric: torque_nm, failed: false}}, tol: 3.0}
+    - {kind: row_count, value: 10000}
+    - {kind: no_unsourced_numerals}
+
+- id: conditions_high_variant
+  criterion: 1
+  category: understand
+  question: What are the typical operating conditions for high quality variants?
+  assertions:
+    - {kind: op_equals, value: describe}
+    - {kind: row_count, value: 1003}
+    - {kind: no_unsourced_numerals}
+
+- id: normal_torque_range
+  criterion: 1
+  category: understand
+  question: What is the average torque?
+  assertions:
+    - {kind: op_equals, value: describe}
+    - {kind: no_unsourced_numerals}
+
+# ==========================================================================
+# B. Analyse historical data  (criterion 2)
+# ==========================================================================
+
+- id: overall_rate
+  criterion: 2
+  category: historical
+  question: What's the overall failure rate?
+  assertions:
+    - {kind: op_equals, value: rate}
+    - {kind: numeric, slot: all.failure_rate, ref: overall_failure_rate, tol: 0.01}
+    - {kind: numeric, slot: all.failures, ref: failure_count, tol: 0}
+    - {kind: no_unsourced_numerals}
+
+- id: rate_by_variant
+  criterion: 2
+  category: historical
+  question: What's the failure rate by product variant?
+  assertions:
+    - {kind: op_equals, value: rate}
+    - {kind: numeric, slot: l.failure_rate, ref: {fn: rate_by_product_type, key: L}, tol: 0.01}
+    - {kind: numeric, slot: m.failure_rate, ref: {fn: rate_by_product_type, key: M}, tol: 0.01}
+    - {kind: numeric, slot: h.failure_rate, ref: {fn: rate_by_product_type, key: H}, tol: 0.01}
+    - {kind: numeric, slot: h.n, ref: {fn: count_by_product_type, key: H}, tol: 0}
+    - {kind: no_unsourced_numerals}
+
+- id: wear_trend
+  criterion: 2
+  category: historical
+  question: How does failure rate vary with tool wear?
+  assertions:
+    - {kind: op_equals, value: trend}
+    - {kind: mentions, any_of: [tool wear]}
+    - {kind: no_unsourced_numerals}
+
+- id: rate_by_shift
+  criterion: 2
+  category: historical
+  question: Show failure rate by shift.
+  assertions:
+    - {kind: op_equals, value: rate}
+    - {kind: raises_warning, code: synthetic_dimension}
+    - {kind: no_unsourced_numerals}
+
+# ==========================================================================
+# C. Investigate failures  (criterion 3)
+# ==========================================================================
+
+- id: compare_failed_healthy
+  criterion: 3
+  category: investigate
+  question: Compare the operating conditions of machines that failed versus those that did not.
+  assertions:
+    - {kind: op_equals, value: compare}
+    - {kind: numeric, slot: failed.n, ref: {fn: cohort_n, args: {failed: true}}, tol: 0}
+    - {kind: numeric, slot: healthy.n, ref: {fn: cohort_n, args: {failed: false}}, tol: 0}
+    - {kind: numeric, slot: failed.torque_nm.mean, ref: {fn: cohort_mean, args: {metric: torque_nm, failed: true}}, tol: 0.01}
+    - {kind: numeric, slot: healthy.torque_nm.mean, ref: {fn: cohort_mean, args: {metric: torque_nm, failed: false}}, tol: 0.01}
+    - {kind: numeric, slot: effect.torque_nm.cohens_d, ref: {fn: cohens_d, args: {metric: torque_nm}}, tol: 0.01}
+    - {kind: raises_warning, code: collinearity}
+    - {kind: no_unsourced_numerals}
+
+- id: orphan_root_cause
+  criterion: 3
+  category: investigate
+  question: Why did cycle 9016 fail?
+  note: One of 9 rows labelled a failure with no documented mode. Tested for
+        structure and found to have none, so "undetermined" is verified correct.
+  assertions:
+    - {kind: op_equals, value: root_cause}
+    - {kind: mentions, any_of: [cannot be determined, undetermined]}
+    - {kind: raises_warning, code: data_quality}
+    - {kind: no_unsourced_numerals}
+
+- id: cohort_root_cause
+  criterion: 3
+  category: investigate
+  question: What causes failures?
+  assertions:
+    - {kind: op_equals, value: root_cause}
+    - {kind: numeric, slot: HDF.count, ref: {fn: mode_counts, key: HDF}, tol: 0}
+    - {kind: numeric, slot: PWF.count, ref: {fn: mode_counts, key: PWF}, tol: 0}
+    - {kind: numeric, slot: OSF.count, ref: {fn: mode_counts, key: OSF}, tol: 0}
+    - {kind: numeric, slot: orphans.count, ref: orphan_failures, tol: 0}
+    - {kind: numeric, slot: multi_mode.count, ref: multi_mode_failures, tol: 0}
+    - {kind: numeric, slot: explained.deterministic, ref: deterministically_explained, tol: 0}
+    - {kind: no_unsourced_numerals}
+
+- id: what_drives_failures
+  criterion: 3
+  category: investigate
+  question: Which variables best separate failures from healthy operation?
+  assertions:
+    - {kind: op_equals, value: drivers}
+    - {kind: numeric, slot: rank1.separation, ref: {fn: cohens_d, args: {metric: torque_nm}}, tol: 0.01}
+    - {kind: raises_warning, code: collinearity}
+    - {kind: mentions, any_of: [associational]}
+    - {kind: no_unsourced_numerals}
+
+# ==========================================================================
+# D. Premise verification  (the flagship)
+# ==========================================================================
+
+- id: premise_high_rpm
+  criterion: 3
+  category: premise
+  question: Why are we seeing more failures at high rotational speeds?
+  note: The brief's own example question is false. Failures are 5.4x more common
+        at LOW speed; the curve is U-shaped. A correlation-based system
+        confabulates a story supporting the premise.
+  assertions:
+    - {kind: op_equals, value: rate}
+    - {kind: refutes_premise}
+    - {kind: numeric, slot: premise.first_group_rate, ref: {fn: rate_by_rpm_quintile, index: 0}, tol: 0.01}
+    - {kind: numeric, slot: premise.last_group_rate, ref: {fn: rate_by_rpm_quintile, index: 4}, tol: 0.01}
+    - {kind: mentions, any_of: [U-shaped, not monotonic]}
+    - {kind: no_unsourced_numerals}
+
+- id: premise_tool_wear_main_cause
+  criterion: 3
+  category: premise
+  question: Isn't tool wear the main cause of failure?
+  note: TWF accounts for 46 of 339 failures; OSF and HDF are each larger.
+  assertions:
+    - {kind: no_unsourced_numerals}
+
+# ==========================================================================
+# E. Follow-up questions  (criterion 4)
+# ==========================================================================
+
+- id: followup_variant_switch
+  criterion: 4
+  category: followup
+  turns:
+    - question: What's the failure rate for L variants?
+      assertions:
+        - {kind: op_equals, value: rate}
+        - {kind: row_count, value: 6000}
+    - question: What about H?
+      assertions:
+        - {kind: op_equals, value: rate}
+        - {kind: row_count, value: 1003}
+        - {kind: numeric, slot: h.failure_rate, ref: {fn: rate_by_product_type, key: H}, tol: 0.01}
+        - {kind: no_unsourced_numerals}
+
+- id: followup_scope_does_not_leak
+  criterion: 4
+  category: followup
+  note: A single-cycle focus must not carry into an aggregate, or the trend
+        collapses to one row.
+  turns:
+    - question: Why did cycle 9016 fail?
+      assertions:
+        - {kind: op_equals, value: root_cause}
+        - {kind: row_count, value: 1}
+    - question: How does failure rate vary with tool wear?
+      assertions:
+        - {kind: op_equals, value: trend}
+        - {kind: row_count, value: 10000}
+        - {kind: no_unsourced_numerals}
+
+- id: followup_drill_down
+  criterion: 4
+  category: followup
+  turns:
+    - question: What's the failure rate by product variant?
+      assertions: [{kind: op_equals, value: rate}]
+    - question: Show me those cycles.
+      assertions:
+        - {kind: op_equals, value: records}
+        - {kind: no_unsourced_numerals}
+
+# ==========================================================================
+# F. Refusal and honesty
+# ==========================================================================
+
+- id: refuse_rnf_cause
+  criterion: 3
+  category: refusal
+  question: Why did the random failures happen?
+  note: RNF is a documented parameter-independent background rate. Any causal
+        story about it is fabrication.
+  assertions:
+    - {kind: mentions, any_of: [RNF, random, cannot, not determinable, undetermined]}
+    - {kind: no_unsourced_numerals}
+
+- id: refuse_missing_sensor
+  criterion: 1
+  category: refusal
+  question: What is the vibration signature on this machine?
+  note: No vibration column exists. The planner must decline, not substitute a
+        different metric.
+  assertions:
+    - {kind: refuses}
+
+- id: refuse_gibberish
+  criterion: 1
+  category: refusal
+  question: purple monkey dishwasher
+  assertions:
+    - {kind: refuses}
+
+# ==========================================================================
+# G. Prescription and forecast
+# ==========================================================================
+
+- id: counterfactual_torque
+  criterion: 3
+  category: prescribe
+  question: What if we reduce torque by 5 Nm?
+  note: A net degradation. Overstrain improves but power drops under the stall
+        floor — visible only if the coupling is modelled.
+  assertions:
+    - {kind: op_equals, value: counterfactual}
+    - {kind: numeric, slot: after.PWF, ref: {fn: counterfactual_mode_counts, args: {torque_delta: -5.0}, key: PWF}, tol: 0}
+    - {kind: numeric, slot: after.OSF, ref: {fn: counterfactual_mode_counts, args: {torque_delta: -5.0}, key: OSF}, tol: 0}
+    - {kind: mentions, any_of: [degradation, trade-off]}
+    - {kind: no_unsourced_numerals}
+
+- id: data_quality_report
+  criterion: 2
+  category: quality
+  question: Can I trust this data?
+  assertions:
+    - {kind: op_equals, value: data_quality}
+    - {kind: numeric, slot: orphan_failures.count, ref: orphan_failures, tol: 0}
+    - {kind: numeric, slot: rule_audit.total_disagreements, value: 0, tol: 0}
+    - {kind: numeric, slot: invariant.I1.violations, value: 0, tol: 0}
+    - {kind: no_unsourced_numerals}
+
+- id: closest_to_failing
+  criterion: 1
+  category: understand
+  question: Show me the cycles closest to failing.
+  assertions:
+    - {kind: op_equals, value: records}
+    - {kind: no_unsourced_numerals}

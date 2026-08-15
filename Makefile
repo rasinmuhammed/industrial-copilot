@@ -8,7 +8,7 @@ help:  ## Show available targets
 	@grep -E '^[a-z-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 	  | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 	@echo ""
-	@echo "  Phase 4+ targets (serve, stream, eval) land as the engine is built."
+	@echo "  Phase 5+ targets (serve, stream) land as the engine is built."
 	@echo "  See docs/13-BUILD-PLAN.md."
 
 venv:  ## Create the virtualenv
@@ -38,6 +38,12 @@ ask:  ## One question: make ask Q="why did cycle 9016 fail?"
 
 demo:  ## Scripted walkthrough of all four acceptance criteria
 	$(PY) -m copilot.cli demo
+
+eval:  ## Run the golden eval suite (hard gates fail the build)
+	$(PY) evals/run_evals.py
+
+eval-json:  ## Machine-readable eval report
+	$(PY) evals/run_evals.py --json
 
 test:  ## Run the test suite
 	$(PY) -m pytest tests/ -q

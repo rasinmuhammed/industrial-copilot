@@ -46,8 +46,8 @@ _INTENT_PATTERNS: list[tuple[OpName, float, re.Pattern[str]]] = [
         r"|what should i (do|set|change)|how (do|can) i fix|recommend"
         r"|within limits|acceptable range)\b")),
     (OpName.ROOT_CAUSE, 0.9, re.compile(
-        r"\b(why did|root cause|what caused|cause of|what made .* fail"
-        r"|reason for (the )?fail|diagnose|what went wrong)\b")),
+        r"\b(why did|root cause|what caused|what causes|causes? of|what made .* fail"
+        r"|reason for (the )?fail|diagnose|what went wrong|attribut)\b")),
     (OpName.DRIVERS, 0.85, re.compile(
         r"\b(what (drives|separates|distinguishes|predicts)|which (variables|factors|"
         r"parameters|metrics) (best )?(separate|distinguish|drive|matter|predict)"
@@ -55,10 +55,12 @@ _INTENT_PATTERNS: list[tuple[OpName, float, re.Pattern[str]]] = [
     (OpName.COMPARE, 0.85, re.compile(
         r"\b(compare|versus|vs\.?|difference between|contrast"
         r"|how do .* differ|failed .* (and|versus|vs) .* (did not|didn't|healthy))\b")),
+    # "by shift" on its own is a grouped rate. Treating it as a trend axis
+    # misroutes "show failure rate by shift", which is a breakdown, not a series.
     (OpName.TREND, 0.8, re.compile(
         r"\b(trend|over time|as .* (increases|rises|grows)|vary with|varies with"
-        r"|relationship (between|with)|change(s)? with|by (hour|day|shift)"
-        r"|as a function of)\b")),
+        r"|relationship (between|with)|change(s)? with|as a function of"
+        r"|(trend|series|evolution) (by|per) (hour|day|shift))\b")),
     (OpName.RECORDS, 0.8, re.compile(
         r"\b(show me|list|give me examples|which (cycles|rows|records)|examples of"
         r"|closest to (failing|failure))\b")),

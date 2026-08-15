@@ -286,12 +286,18 @@ def _cohort(
                        (CASE WHEN {_BOUNDARIES[0]['fired_sql']} THEN 1 ELSE 0 END +
                         CASE WHEN {_BOUNDARIES[1]['fired_sql']} THEN 1 ELSE 0 END +
                         CASE WHEN {_BOUNDARIES[2]['fired_sql']} THEN 1 ELSE 0 END +
-                        twf) > 1 THEN 1 ELSE 0 END)::BIGINT                 AS multi
+                        twf) > 1 THEN 1 ELSE 0 END)::BIGINT                 AS multi,
+              -- DISTINCT failures explained by any deterministic rule. Summing
+              -- the per-mode counts instead would double-count the 21 rows that
+              -- fire two modes, and report more explained failures than exist.
+              sum(CASE WHEN machine_failure = 1 AND
+                       ({_BOUNDARIES[0]['fired_sql']} OR {_BOUNDARIES[1]['fired_sql']}
+                        OR {_BOUNDARIES[2]['fired_sql']}) THEN 1 ELSE 0 END)::BIGINT AS explained
             FROM {TABLE} WHERE {where}""",  # noqa: S608
         params,
     ).fetchone()
 
-    failures, hdf, pwf, osf, twf, rnf, orphans, multi = (int(v or 0) for v in row)
+    failures, hdf, pwf, osf, twf, rnf, orphans, multi, explained = (int(v or 0) for v in row)
 
     bundle.put("cohort.n", total, unit="count", sig_figs=8)
     bundle.put("cohort.failures", failures, unit="count", sig_figs=8)
@@ -308,8 +314,13 @@ def _cohort(
     bundle.put("multi_mode.count", multi, unit="count", sig_figs=8)
     bundle.put("RNF.count", rnf, unit="count", sig_figs=8)
 
-    explained = hdf + pwf + osf
     bundle.put("explained.deterministic", explained, unit="count", sig_figs=8)
+    bundle.put(
+        "explained.share_of_failures",
+        (explained / failures * 100.0) if failures else None,
+        unit="%", sig_figs=3,
+        quality=Quality.OK if failures else Quality.ABSTAIN,
+    )
 
     if orphans:
         bundle.warn(
