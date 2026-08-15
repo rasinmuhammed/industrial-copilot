@@ -86,9 +86,10 @@ Nine rows carry `machine_failure = 1` with none of TWF/HDF/PWF/OSF set.
 | 8507 | L | 11.2 | 1710 | 27.3 | 163 | 4889 | 6550 | 0 |
 | 9016 | L | 10.9 | 1431 | 49.7 | 210 | 7448 | 563 | 0 |
 
-**Tested for hidden structure and found none.** Mean worst-normalised margin is
-**0.057** for orphans versus **0.068** for healthy rows — statistically
-indistinguishable. None carries RNF.
+**Tested for hidden structure and found none.** Mean rule-level worst margin is
+**0.153** for orphans versus **0.180** for healthy rows — the same neighbourhood,
+with orphans if anything slightly *safer* than a failure population should look.
+None carries RNF.
 
 Therefore *"cause cannot be determined"* is a **verified correct answer**, not an
 evasion. The copilot reports these explicitly and excludes them from attribution.
@@ -156,17 +157,29 @@ and report collinearity automatically — see [04-ANALYSIS-IR.md](04-ANALYSIS-IR
 
 ## 7. The near-miss surface
 
-Worst normalised margin = `min` over all five boundaries, each scaled by its own
-threshold.
+Distance is computed **per rule**, not per condition — this distinction is a real
+modelling trap. HDF is conjunctive (both conditions required), so its binding
+constraint is the *larger* normalised margin; PWF fires on either side, so its
+binding constraint is the *smaller*. Treating all five conditions as independent
+makes healthy rows appear to have violated a boundary.
 
-| Healthy rows within… | count | % of fleet |
+The corrected definition is **self-validating**:
+
+```
+healthy rows with a negative rule-level margin:  0      (exactly as it must be)
+failed  rows with a negative rule-level margin:  287    (= the deterministic count)
+```
+
+| Healthy rows within… | count | vs 339 total failures |
 |---|---:|---:|
-| 2 % of a boundary | 811 | 8.11 % |
-| 5 % of a boundary | 2,508 | 25.08 % |
-| 10 % of a boundary | 5,010 | 50.10 % |
+| 2 % of a boundary | 164 | 0.5× |
+| 5 % of a boundary | 579 | 1.7× |
+| 10 % of a boundary | 2,019 | 6.0× |
 
-Against **339 total failures**. The binary label sees zero of these; the margin
-sees all of them. This is the quantified justification for the entire design.
+Nearly **six hundred healthy cycles came within 5 % of failing**. The binary label
+sees none of them; the margin sees every one. That is the quantified justification
+for the entire design — and unlike the naive per-condition version, this count
+contains no false members.
 
 ## 8. Tool wear is a real degradation trajectory
 

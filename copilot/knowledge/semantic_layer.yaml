@@ -141,6 +141,14 @@ metrics:
     synonyms: [failure, failed, breakdown, machine failure, fault]
 
 dimensions:
+  udi:
+    column: udi
+    label: cycle
+    description: >
+      Production cycle identifier (the published UDI index). Addressable so an
+      engineer can ask about one specific cycle: "why did cycle 9016 fail?".
+    synonyms: [udi, cycle, cycle id, record, row, observation, event id]
+
   product_type:
     column: product_type
     label: product quality variant

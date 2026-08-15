@@ -187,3 +187,74 @@ machinery underneath rather than a slogan.
 ---
 
 **Next:** [09-STREAMING.md](09-STREAMING.md) — real-time inference and forecasting.
+
+---
+
+## 8. Continual learning: two speeds, neither of them online gradient descent
+
+> "Something that doesn't just run on trained weights but constantly keeps
+> improving, while remaining fast and light."
+
+Weight-level online learning in a plant is a compliance problem, not an
+engineering one: catastrophic forgetting, no stable production eval signal, no
+clean rollback, and an unanswerable audit question — *"why did the system change
+its answer?"* *"the weights drifted."* We do not do it.
+
+But the system **is** continually learning. Just in artifacts you can inspect,
+version, diff, and roll back: the KB accumulates confirmed thresholds, the
+calibration monitor re-estimates them from new failures, the plan cache warms,
+and the alert self-audit tunes the gate.
+
+### 8.1 The free training signal
+
+Every answered question emits a triple:
+
+```
+(question, plan, did_it_verify?)
+```
+
+That label is **free and objective** — the plan either validated, executed and
+passed the PCN verifier, or it did not. No human annotation, no preference
+model. This is Reinforcement Learning from Verifiable Rewards, and semantic
+parsing is close to the ideal task for it.
+
+### 8.2 Fast loop — instant, zero training
+
+A **verified-exemplar store**. Embed the question with a frozen encoder (~5 ms),
+kNN against exemplars that previously verified, reuse the matched plan template
+with slot substitution.
+
+Add one exemplar and it is live on the very next query. This is the
+"constantly improving, fast and light" property, and it carries *no* training
+risk because nothing is being trained.
+
+### 8.3 Slow loop — nightly, this is where Unsloth belongs
+
+Distil the accumulated exemplars into a LoRA. That shrinks the retrieved-example
+prompt, which cuts both latency and cost. Promotion is **gated on the golden
+set**: a new adapter ships only if it beats the incumbent. If it regresses, roll
+back to the exemplar store, which never stopped working.
+
+The frontier model acts as **teacher** — it handles the genuinely novel tail, and
+its verified plans become tomorrow's exemplars. The expensive path therefore
+shrinks over time by construction.
+
+### 8.4 Revised planner ladder
+
+| Tier | Mechanism | Latency | How it learns |
+|---|---|---|---|
+| 0 | exact plan cache | ~0 ms | instantly |
+| 1 | grammar matcher | ~1 ms | never (hand-written) |
+| 2 | **kNN over verified exemplars** | ~5–10 ms | **instantly, no training** |
+| 3 | SLM + constrained decoding | ~150–400 ms | nightly LoRA (Unsloth) |
+| 4 | frontier API (teacher) | ~400–600 ms | — |
+
+### 8.5 Three conditions on the fine-tuning work
+
+1. **Only the planner.** Fine-tuning to teach machine facts is the exact failure
+   mode this architecture exists to eliminate.
+2. **Eval-gated promotion.** An adapter that does not beat the golden set does
+   not ship.
+3. **Tier 2 before Tier 3.** The exemplar store delivers most of the adaptive
+   benefit for a fraction of the effort — and it generates the LoRA's training
+   data, which de-risks the whole track.

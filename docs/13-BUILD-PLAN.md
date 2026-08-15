@@ -155,22 +155,38 @@
 
 ---
 
-## Phase 9 — Planner fine-tuning *(optional bonus)*
+## Phase 9 — Adaptive planning *(bonus)*
 
-Fine-tune **question → Analysis Plan**, never the answer. Narrow, mechanical,
-machine-verifiable, with synthetically generable training data.
+Two sub-phases, deliberately ordered. See [08-DISCOVERY.md](08-DISCOVERY.md) §8.
+
+### 9a — Verified-exemplar store (Tier 2)
+
+Every answered question emits `(question, plan, did_it_verify?)`. Store the
+verified ones; embed with a frozen encoder; kNN-retrieve at plan time.
+
+**Learns instantly, trains nothing, ~5–10 ms.** Highest value per unit of effort
+in the whole bonus track, and it generates the training data for 9b.
+
+*Gate:* measurable tier-2 hit rate on the golden set; no regression in
+`numeric_exactness`.
+
+### 9b — Planner LoRA (Tier 3), Unsloth + Together
+
+Distil the exemplar store into a LoRA so the prompt shrinks and latency drops.
 
 | Step | Detail |
 |---|---|
-| Data | Generate 5–10k question/plan pairs by templating the semantic layer + paraphrase |
-| Train | Unsloth LoRA on a 7–8B base |
-| Serve | Together / local |
-| Measure | plan exact-match and end-to-end numeric accuracy, **against the same golden set**, with and without |
+| Data | Verified exemplars, plus templated question/plan pairs from the semantic layer |
+| Train | Unsloth LoRA on a 3–8B base, overnight |
+| Serve | Together, or local with XGrammar constrained decoding |
+| Measure | plan exact-match + end-to-end numeric accuracy on the golden set, with and without |
 
-Target: planner tier from ~400 ms to < 100 ms, API removed from the hot path.
+*Gate:* an adapter ships only if it **beats the incumbent** on the golden set.
+On regression, roll back to 9a, which never stopped working.
 
 > Teaching a model *facts about machines* is the failure mode this project exists
-> to eliminate. Teaching it *intent → plan* is the correct target.
+> to eliminate. Teaching it *intent → plan* is the correct target — and the reward
+> is verifiable, so the labels are free.
 
 ---
 

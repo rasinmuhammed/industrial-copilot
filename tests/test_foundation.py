@@ -286,3 +286,168 @@ class TestRate:
         bundle = execute(parse_plan({"op": "rate", "group_by": ["shift"]}), ctx)
         assert bundle.provenance.synthetic_dimensions == ["shift"]
         assert any(w.code == "synthetic_dimension" for w in bundle.warnings)
+
+
+class TestCompare:
+    def test_answers_the_briefs_third_example_question(self, ctx):
+        bundle = execute(
+            parse_plan(
+                {
+                    "op": "compare",
+                    "cohorts": [
+                        {"name": "failed", "filters": [{"field": "failure", "op": "=", "value": 1}]},
+                        {"name": "healthy", "filters": [{"field": "failure", "op": "=", "value": 0}]},
+                    ],
+                    "metrics": ["torque_nm", "tool_wear_min"],
+                }
+            ),
+            ctx,
+        )
+        assert bundle.slots["failed.n"].value == 339
+        assert bundle.slots["healthy.n"].value == 9661
+        # Failed cycles run hotter and more worn.
+        assert bundle.slots["delta.torque_nm"].value > 0
+        assert bundle.slots["delta.tool_wear_min"].value > 0
+        # Torque separates the cohorts strongly.
+        assert bundle.slots["effect.torque_nm.cohens_d"].value > 0.8
+        assert bundle.slots["effect.torque_nm.magnitude"].value == "large"
+
+    def test_delta_slots_carry_difference_units(self, ctx):
+        """A delta must not be comparable against an absolute threshold."""
+        bundle = execute(
+            parse_plan(
+                {
+                    "op": "compare",
+                    "cohorts": [
+                        {"name": "a", "filters": [{"field": "product_type", "op": "=", "value": "L"}]},
+                        {"name": "b", "filters": [{"field": "product_type", "op": "=", "value": "H"}]},
+                    ],
+                    "metrics": ["torque_nm"],
+                }
+            ),
+            ctx,
+        )
+        assert bundle.slots["delta.torque_nm"].unit == "ΔN·m"
+
+    def test_collinearity_is_detected_automatically(self, ctx):
+        """r(rpm, torque) = -0.875: every rpm analysis here is confounded."""
+        bundle = execute(
+            parse_plan(
+                {
+                    "op": "compare",
+                    "cohorts": [
+                        {"name": "failed", "filters": [{"field": "failure", "op": "=", "value": 1}]},
+                        {"name": "healthy", "filters": [{"field": "failure", "op": "=", "value": 0}]},
+                    ],
+                    "metrics": ["rotational_speed_rpm", "torque_nm"],
+                }
+            ),
+            ctx,
+        )
+        r = bundle.slots["corr.rotational_speed_rpm__torque_nm"].value
+        assert r == pytest.approx(-0.875, abs=0.005)
+        assert any(w.code == "collinearity" for w in bundle.warnings)
+
+    def test_empty_cohort_abstains_rather_than_comparing(self, ctx):
+        bundle = execute(
+            parse_plan(
+                {
+                    "op": "compare",
+                    "cohorts": [
+                        {"name": "real", "filters": [{"field": "product_type", "op": "=", "value": "L"}]},
+                        {"name": "empty", "filters": [{"field": "tool_wear_min", "op": ">", "value": 999}]},
+                    ],
+                    "metrics": ["torque_nm"],
+                }
+            ),
+            ctx,
+        )
+        assert bundle.slots["delta.torque_nm"].quality is Quality.ABSTAIN
+
+
+def _by_udi(ctx, udi: int):
+    return execute(
+        parse_plan({"op": "root_cause", "filters": [{"field": "udi", "op": "=", "value": udi}]}),
+        ctx,
+    )
+
+
+class TestRootCause:
+    def test_orphan_failure_returns_undetermined(self, ctx):
+        """9 rows are labelled failures with no documented mode. Tested for
+        structure and found to have none — 'undetermined' is verified correct."""
+        bundle = _by_udi(ctx, 9016)
+        assert bundle.slots["cycle.failed"].value == "yes"
+        assert bundle.slots["cause.verdict"].value == "cause_undetermined"
+        assert any("cannot be determined" in w.message for w in bundle.warnings)
+
+    def test_multi_mode_failure_reports_every_mode(self, ctx):
+        """A single-label classifier must pick one and is wrong on the rest."""
+        udi = ctx.con.execute(
+            "SELECT udi FROM observations WHERE pwf=1 AND osf=1 LIMIT 1"
+        ).fetchone()[0]
+        bundle = _by_udi(ctx, udi)
+        assert bundle.slots["cause.mode_count"].value == 2
+        assert set(bundle.slots["cause.verdict"].value.split(" + ")) == {"PWF", "OSF"}
+        assert bundle.slots["PWF.fired"].value == "yes"
+        assert bundle.slots["OSF.fired"].value == "yes"
+
+    def test_osf_reports_the_crossing_point(self, ctx):
+        udi = ctx.con.execute(
+            "SELECT udi FROM observations WHERE osf=1 AND pwf=0 AND hdf=0 LIMIT 1"
+        ).fetchone()[0]
+        bundle = _by_udi(ctx, udi)
+        crossing = bundle.slots["OSF.crossing_wear_min"].value
+        wear = bundle.slots["TWF.tool_wear"].value
+        assert wear > crossing  # it crossed before the observed wear
+        assert bundle.slots["OSF.exceeded_by_min"].value == pytest.approx(wear - crossing, abs=1e-6)
+
+    def test_twf_is_a_probability_never_a_certainty(self, ctx):
+        udi = ctx.con.execute(
+            "SELECT udi FROM observations WHERE tool_wear_min BETWEEN 200 AND 240 LIMIT 1"
+        ).fetchone()[0]
+        bundle = _by_udi(ctx, udi)
+        assert bundle.slots["TWF.in_window"].value == "yes"
+        assert bundle.slots["TWF.failure_probability"].value == pytest.approx(5.4, abs=0.1)
+
+    def test_healthy_row_explains_the_non_event_at_rule_level(self, ctx):
+        """HDF is conjunctive: being below 1380 rpm alone is not an approach to
+        failure. Distance must be per-rule, never per-condition."""
+        udi = ctx.con.execute(
+            "SELECT udi FROM observations WHERE machine_failure=0 "
+            "ORDER BY worst_normalised_margin DESC LIMIT 1"
+        ).fetchone()[0]
+        bundle = _by_udi(ctx, udi)
+        assert bundle.slots["cause.verdict"].value == "no failure mode triggered"
+        assert bundle.slots["closest.normalised_distance"].value >= 0
+
+    def test_no_healthy_row_has_a_negative_rule_distance(self, ctx):
+        """Self-validation of the margin definition itself."""
+        bad = ctx.con.execute(
+            "SELECT count(*) FROM observations WHERE machine_failure=0 "
+            "AND least(hdf_distance, pwf_distance, osf_distance) < 0"
+        ).fetchone()[0]
+        assert bad == 0
+
+    def test_exactly_the_deterministic_failures_have_negative_distance(self, ctx):
+        negative = ctx.con.execute(
+            "SELECT count(*) FROM observations WHERE machine_failure=1 "
+            "AND least(hdf_distance, pwf_distance, osf_distance) < 0"
+        ).fetchone()[0]
+        assert negative == 287
+
+    def test_cohort_attribution_totals(self, ctx):
+        bundle = execute(parse_plan({"op": "root_cause"}), ctx)
+        assert bundle.slots["cohort.n"].value == 10000
+        assert bundle.slots["cohort.failures"].value == 339
+        assert bundle.slots["HDF.count"].value == 115
+        assert bundle.slots["PWF.count"].value == 95
+        assert bundle.slots["OSF.count"].value == 98
+        assert bundle.slots["orphans.count"].value == 9
+        assert bundle.slots["multi_mode.count"].value == 23
+
+    def test_rnf_is_never_attributed(self, ctx):
+        udi = ctx.con.execute("SELECT udi FROM observations WHERE rnf=1 LIMIT 1").fetchone()[0]
+        bundle = _by_udi(ctx, udi)
+        assert any("RNF" in w.message and "cannot be attributed" in w.message
+                   for w in bundle.warnings)

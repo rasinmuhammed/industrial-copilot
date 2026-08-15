@@ -52,13 +52,12 @@ def load() -> list[dict]:
         r["mf"] = int(r["Machine failure"])
         for m in ("TWF", "HDF", "PWF", "OSF", "RNF"):
             r[m] = int(r[m])
-        r["worst"] = min(
-            (r["dT"] - 8.6) / 8.6,
-            (r["rpm"] - 1380) / 1380,
-            (r["power"] - 3500) / 3500,
-            (9000 - r["power"]) / 9000,
-            (r["osf_th"] - r["strain"]) / r["osf_th"],
-        )
+        # Rule-level distance: HDF is conjunctive (binding = larger margin),
+        # PWF is disjunctive (binding = smaller), OSF is a single condition.
+        r["hdf_d"] = max((r["dT"] - 8.6) / 8.6, (r["rpm"] - 1380) / 1380)
+        r["pwf_d"] = min((r["power"] - 3500) / 3500, (9000 - r["power"]) / 9000)
+        r["osf_d"] = (r["osf_th"] - r["strain"]) / r["osf_th"]
+        r["worst"] = min(r["hdf_d"], r["pwf_d"], r["osf_d"])
     return rows
 
 
@@ -110,9 +109,9 @@ def main() -> int:
     orphans = [r for r in rows if r["mf"] and not (r["TWF"] or r["HDF"] or r["PWF"] or r["OSF"])]
     check("orphan failures", len(orphans), 9)
     check("orphans carrying RNF", sum(r["RNF"] for r in orphans), 0)
-    check("orphan worst-margin mean", round(st.mean(r["worst"] for r in orphans), 3), 0.057, 0.001)
+    check("orphan worst-margin mean", round(st.mean(r["worst"] for r in orphans), 3), 0.153, 0.001)
     healthy = [r["worst"] for r in rows if not r["mf"]]
-    check("healthy worst-margin mean", round(st.mean(healthy), 3), 0.068, 0.001)
+    check("healthy worst-margin mean", round(st.mean(healthy), 3), 0.180, 0.001)
     check("RNF=1 also machine_failure", sum(1 for r in rows if r["RNF"] and r["mf"]), 1)
 
     # -- §5 multi-mode -----------------------------------------------------
@@ -154,9 +153,15 @@ def main() -> int:
 
     # -- §7 near-miss surface ----------------------------------------------
     section("§7  The near-miss surface")
-    for thr, expected in ((0.02, 811), (0.05, 2508), (0.10, 5010)):
+    for thr, expected in ((0.02, 164), (0.05, 579), (0.10, 2019)):
         n = sum(1 for r in rows if not r["mf"] and 0 < r["worst"] < thr)
         check(f"healthy rows within {int(thr * 100)}% of a boundary", n, expected)
+    # Self-validation: the rule-level margin must be negative on exactly the
+    # deterministically-explained failures, and on nothing else.
+    check("healthy rows with negative rule margin",
+          sum(1 for r in rows if not r["mf"] and r["worst"] < 0), 0)
+    check("failed rows with negative rule margin",
+          sum(1 for r in rows if r["mf"] and r["worst"] < 0), 287)
 
     # -- §8 degradation trajectory -----------------------------------------
     section("§8  Tool wear is a real degradation trajectory")

@@ -90,20 +90,31 @@ def _build_sql(cfg: Settings) -> str:
             product_type || '-' ||
                 lpad(CAST(((udi - 1) % {n_mach}) + 1 AS VARCHAR), 2, '0')  AS machine_id
         FROM physics
+    ),
+    scored AS (
+        SELECT
+            *,
+            CASE WHEN hour(ts) < 8 THEN 'A' WHEN hour(ts) < 16 THEN 'B' ELSE 'C' END AS shift,
+
+            -- Distance to each RULE firing, normalised by its own threshold.
+            -- The aggregation differs by rule structure, and getting this wrong
+            -- is a real modelling error: HDF needs BOTH conditions violated, so
+            -- its binding constraint is the LARGER margin. PWF fires on EITHER
+            -- side, so its binding constraint is the SMALLER one.
+            greatest(temp_delta_margin_k / 8.6,
+                     speed_margin_rpm / 1380.0)              AS hdf_distance,
+            least(power_low_margin_w / 3500.0,
+                  power_high_margin_w / 9000.0)              AS pwf_distance,
+            overstrain_margin_min_nm / osf_threshold_min_nm  AS osf_distance
+        FROM enriched
     )
     SELECT
         *,
-        CASE WHEN hour(ts) < 8 THEN 'A' WHEN hour(ts) < 16 THEN 'B' ELSE 'C' END AS shift,
-        -- Worst-case (smallest) normalised margin across all deterministic
-        -- modes: a single "how close to the edge is this cycle" number.
-        least(
-            temp_delta_margin_k / 8.6,
-            speed_margin_rpm / 1380.0,
-            power_low_margin_w / 3500.0,
-            power_high_margin_w / 9000.0,
-            overstrain_margin_min_nm / osf_threshold_min_nm
-        ) AS worst_normalised_margin
-    FROM enriched
+        -- One "how close to failing is this cycle" number. Self-validating:
+        -- exactly the 287 deterministically-explained failures are negative,
+        -- and no healthy row is.
+        least(hdf_distance, pwf_distance, osf_distance) AS worst_normalised_margin
+    FROM scored
     """
 
 
