@@ -3,440 +3,503 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Operating Envelope — Margin Engine</title>
+<title>Operating Envelope · Margin Engine</title>
 <style>
-/* ------------------------------------------------------------------
-   Designed to ISA-101 High Performance HMI convention, not as a
-   dashboard. The base is neutral grey; saturated colour is reserved
-   for abnormal state and for the one element the operator is moving.
-   A screen where everything is colourful is a screen where colour
-   means nothing.
-   ------------------------------------------------------------------ */
+/* =============================================================================
+   Type: a humanist sans carries the interface; monospace carries only the
+   numbers. Setting an entire product in monospace reads as a developer tool
+   rather than a product — mono earns its place where digits must align in a
+   column, and nowhere else.
+
+   Colour: ISA-101 High Performance HMI. The ground is neutral; saturated
+   colour is spent only on abnormal state and on the one element the operator
+   is moving. A screen where everything is coloured is a screen where colour
+   carries no information.
+   ============================================================================= */
 :root{
-  --ground:#191c1d; --panel:#202424; --panel-2:#262b2b;
-  --rule:#2c3132; --rule-2:#394040;
-  --ink:#dfe3e2; --ink-2:#a4acab; --ink-3:#79817f;
+  --bg:#0e1011;
+  --surface:#15181a;
+  --raised:#1b1f21;
+  --line:#23282a;
+  --line-strong:#2f3639;
 
-  /* normal state is deliberately quiet */
-  --safe-fill:#222b28; --safe-edge:#3c4b45;
+  --text:#e9edec;
+  --text-2:#9ba4a3;
+  --text-3:#6a7473;
 
-  /* the single live element */
-  --live:#63d2b6; --live-dim:#2f6b5d;
+  --live:#4fd1b1;
+  --live-soft:rgba(79,209,177,.13);
+  --live-line:rgba(79,209,177,.34);
 
-  /* ISA-101 alarm palette — these appear nowhere else */
-  --warn:#e0a03f; --crit:#e0573a;
+  --warn:#e8a838;
+  --crit:#ec6a4c;
+  --crit-soft:rgba(236,106,76,.11);
 
+  --field:#2a3230;
+
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   --mono:ui-monospace,"SF Mono",SFMono-Regular,"Cascadia Mono","Roboto Mono",Menlo,monospace;
+
+  --r:7px;
+  --ease:cubic-bezier(.32,.72,0,1);
 }
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
-  margin:0;background:var(--ground);color:var(--ink);
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:var(--sans);font-size:13.5px;line-height:1.5;letter-spacing:-.006em;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
   -webkit-user-select:none;user-select:none;
-  font-family:var(--mono);font-size:13px;line-height:1.45;
-  -webkit-font-smoothing:antialiased;
-  display:grid;grid-template-rows:auto 1fr auto;
+  display:grid;grid-template-rows:auto 1fr;
 }
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 
-/* ---- masthead ---- */
+/* ─── header ────────────────────────────────────────────────────────── */
 header{
-  display:flex;align-items:baseline;gap:18px;
-  padding:11px 18px;border-bottom:1px solid var(--rule);background:var(--panel);
+  display:flex;align-items:center;gap:16px;height:52px;padding:0 18px;
+  border-bottom:1px solid var(--line);background:var(--surface);
 }
-.mark{font-weight:600;letter-spacing:.14em;font-size:11px;text-transform:uppercase}
-.mark b{color:var(--live);font-weight:600}
-.sub{color:var(--ink-3);font-size:11px}
-.verdict{
-  margin-left:auto;display:flex;align-items:center;gap:9px;
-  font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+.brand{display:flex;align-items:center;gap:9px;font-weight:600;font-size:13.5px;letter-spacing:-.012em}
+.glyph{
+  width:19px;height:19px;border-radius:5px;flex:none;position:relative;
+  background:linear-gradient(150deg,var(--live) 0%,#2c8f7a 100%);
 }
-.lamp{width:9px;height:9px;border-radius:50%;background:var(--ink-3);box-shadow:0 0 0 3px rgba(0,0,0,.3)}
-.lamp.safe{background:var(--live)}
-.lamp.alert{background:var(--crit)}
-.lamp.abstain{background:var(--warn)}
+.glyph::after{
+  content:"";position:absolute;left:4px;right:4px;top:8px;height:1.5px;
+  background:var(--bg);border-radius:1px;
+}
+.crumb{color:var(--text-3);font-size:13px}
+.crumb b{color:var(--text-2);font-weight:500}
+.spacer{flex:1}
+.pill{
+  display:inline-flex;align-items:center;gap:7px;height:27px;padding:0 12px 0 9px;
+  border:1px solid var(--line-strong);border-radius:99px;background:var(--raised);
+  font-size:12px;font-weight:500;color:var(--text-2);white-space:nowrap;
+  transition:background .16s var(--ease),border-color .16s var(--ease),color .16s var(--ease);
+}
+.pill .dot{width:6px;height:6px;border-radius:50%;background:var(--live);flex:none}
+.pill.bad{border-color:rgba(236,106,76,.42);background:var(--crit-soft);color:var(--crit)}
+.pill.bad .dot{background:var(--crit)}
 
-/* ---- body ---- */
-main{display:grid;grid-template-columns:262px 1fr;min-height:0;overflow:hidden}
-aside{border-right:1px solid var(--rule);background:var(--panel);overflow:auto;padding:14px 0}
-.plot{position:relative;min-width:0;min-height:0;overflow:hidden;
-  display:flex;align-items:center;justify-content:center;padding:10px 14px}
+/* ─── frame ─────────────────────────────────────────────────────────── */
+main{display:grid;grid-template-columns:236px minmax(0,1fr) 292px;min-height:0;overflow:hidden}
+.rail{background:var(--surface);overflow-y:auto;overflow-x:hidden}
+.rail.l{border-right:1px solid var(--line)}
+.rail.r{border-left:1px solid var(--line)}
+.stage{min-width:0;min-height:0;overflow:hidden;display:flex;padding:16px 18px}
 svg{width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
 svg text{pointer-events:none}
 
-/* ---- measurement rail ---- */
-.grp{padding:0 16px 14px}
-.grp-t{
-  font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);
-  padding-bottom:8px;margin-bottom:9px;border-bottom:1px solid var(--rule);
-}
-.m{display:grid;grid-template-columns:1fr auto;gap:1px 8px;padding:7px 0 9px;
-  align-items:baseline;border-bottom:1px solid rgba(255,255,255,.03)}
-.m:last-child{border-bottom:0}
-.m-l{color:var(--ink-2);font-size:11.5px}
-.m-v{font-variant-numeric:tabular-nums;font-size:13px;text-align:right;white-space:nowrap}
-.m-bar{grid-column:1/-1;height:3px;background:var(--rule);position:relative;margin-top:6px;
-  border-radius:1px;overflow:hidden}
-.m-bar i{position:absolute;inset:0 auto 0 0;background:var(--live-dim);display:block;
-  transition:width .12s linear}
-.m.neg .m-v{color:var(--crit)}
-.m.neg .m-bar i{background:var(--crit)}
-.m.near .m-v{color:var(--warn)}
-.m.near .m-bar i{background:var(--warn)}
+.block{padding:15px 16px;border-bottom:1px solid var(--line)}
+.block:last-child{border-bottom:0}
+.block h2{margin:0 0 12px;font-size:12px;font-weight:600;color:var(--text-2)}
+.hint{color:var(--text-3);font-size:11.5px;line-height:1.5;margin:10px 0 0}
 
-.note{padding:10px 16px;margin:0 16px;background:var(--panel-2);border-left:2px solid var(--live-dim);
-      color:var(--ink-2);font-size:11.5px;line-height:1.5}
-.note.crit{border-left-color:var(--crit)}
-.note.warn{border-left-color:var(--warn)}
-.note b{color:var(--ink);font-weight:600}
+/* ─── inputs ────────────────────────────────────────────────────────── */
+.field{margin-bottom:14px}
+.field:last-child{margin-bottom:0}
+.field-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px;gap:8px}
+.field-top label{font-size:12.5px;color:var(--text-2)}
+.readout{font-size:12.5px;color:var(--text);white-space:nowrap}
+.readout em{color:var(--text-3);font-style:normal;font-size:11px;margin-left:3px}
 
-/* ---- controls ---- */
-footer{border-top:1px solid var(--rule);background:var(--panel);padding:12px 18px;
-  display:grid;grid-template-columns:repeat(4,minmax(120px,1fr)) auto auto;
-  gap:14px 22px;align-items:end}
-.ctl{display:flex;flex-direction:column;gap:6px;min-width:0}
-.ctl label{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);
-           display:flex;justify-content:space-between;gap:10px}
-.ctl label span{color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:0}
-input[type=range]{-webkit-appearance:none;appearance:none;height:2px;background:var(--rule-2);outline:none}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;
-  background:var(--ink);cursor:ew-resize;border-radius:0}
-input[type=range]::-moz-range-thumb{width:11px;height:11px;background:var(--ink);
-  border:0;cursor:ew-resize;border-radius:0}
-.seg{display:flex;border:1px solid var(--rule-2)}
-.seg button{background:none;border:0;color:var(--ink-3);font:inherit;font-size:11px;
-  padding:4px 11px;cursor:pointer}
-.seg button[aria-pressed=true]{background:var(--rule-2);color:var(--ink)}
-.toggle{display:flex;align-items:center;gap:7px;color:var(--ink-2);font-size:11px;cursor:pointer;
-        user-select:none}
-.toggle input{accent-color:var(--live)}
-@media (max-width:1000px){
-  footer{grid-template-columns:repeat(2,1fr) auto;}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:16px;background:none;
+  outline:none;display:block;cursor:pointer;
 }
-@media (max-width:880px){
-  main{grid-template-columns:1fr;grid-template-rows:auto 1fr}
-  aside{border-right:0;border-bottom:1px solid var(--rule);max-height:210px}
+input[type=range]::-webkit-slider-runnable-track{height:3px;background:var(--field);border-radius:2px}
+input[type=range]::-moz-range-track{height:3px;background:var(--field);border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:13px;height:13px;border-radius:50%;margin-top:-5px;
+  background:var(--text);border:2px solid var(--surface);
+  box-shadow:0 1px 3px rgba(0,0,0,.5);transition:transform .12s var(--ease);
+}
+input[type=range]::-moz-range-thumb{
+  width:13px;height:13px;border-radius:50%;background:var(--text);
+  border:2px solid var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.5);
+}
+input[type=range]:hover::-webkit-slider-thumb{transform:scale(1.15)}
+input[type=range]:active::-webkit-slider-thumb{background:var(--live)}
+input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px var(--live-soft)}
+
+.seg{display:flex;gap:2px;padding:2px;background:var(--field);border-radius:6px}
+.seg button{
+  flex:1;background:none;border:0;border-radius:4px;color:var(--text-3);
+  font:inherit;font-size:12px;font-weight:500;padding:5px 0;cursor:pointer;
+  transition:background .13s var(--ease),color .13s var(--ease);
+}
+.seg button:hover{color:var(--text-2)}
+.seg button[aria-pressed=true]{background:var(--raised);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.35)}
+
+.switch{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer}
+.switch span.lbl{font-size:12.5px;color:var(--text-2)}
+.track{width:32px;height:18px;border-radius:99px;background:var(--field);flex:none;
+  position:relative;transition:background .16s var(--ease)}
+.track::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+  background:var(--text-3);transition:transform .16s var(--ease),background .16s var(--ease)}
+.switch input{position:absolute;opacity:0;pointer-events:none}
+.switch input:checked + .track{background:var(--live-line)}
+.switch input:checked + .track::after{transform:translateX(14px);background:var(--live)}
+.switch input:focus-visible + .track{box-shadow:0 0 0 3px var(--live-soft)}
+
+/* ─── diagnosis ─────────────────────────────────────────────────────── */
+.row{padding:9px 0;border-bottom:1px solid rgba(255,255,255,.035)}
+.row:last-of-type{border-bottom:0}
+.row-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.row-l{font-size:12.5px;color:var(--text-2)}
+.row-v{font-size:12.5px;color:var(--text);white-space:nowrap}
+.row-v .u{color:var(--text-3);font-size:11px}
+.meter{height:3px;border-radius:2px;background:var(--field);margin-top:7px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--live);opacity:.62;transition:width .16s var(--ease)}
+.row.neg .row-v{color:var(--crit)}
+.row.neg .meter i{background:var(--crit);opacity:1}
+.row.tight .row-v{color:var(--warn)}
+.row.tight .meter i{background:var(--warn);opacity:.9}
+
+.kv{display:flex;justify-content:space-between;gap:10px;padding:6px 0;font-size:12.5px}
+.kv dt{color:var(--text-2)}
+.kv dd{margin:0;color:var(--text);white-space:nowrap}
+
+.card{border:1px solid var(--line-strong);border-radius:var(--r);padding:12px 13px;
+  background:var(--raised);font-size:12.5px;line-height:1.55;color:var(--text-2)}
+.card.act{border-color:rgba(236,106,76,.42);background:var(--crit-soft)}
+.card h3{margin:0 0 6px;font-size:12.5px;font-weight:600;color:var(--text)}
+.card.act h3{color:var(--crit)}
+.card b{color:var(--text);font-weight:600}
+.cta{margin-top:10px;padding-top:10px;border-top:1px solid var(--line-strong);
+  display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.cta.tight{border:0;padding-top:4px;margin-top:0}
+.cta span{color:var(--text-3);font-size:11.5px}
+.cta b{font-size:14px}
+.cta.tight b{font-size:12.5px}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:1180px){main{grid-template-columns:212px minmax(0,1fr) 258px}}
+@media (max-width:960px){
+  main{grid-template-columns:1fr;grid-template-rows:auto minmax(240px,1fr) auto}
+  .rail.l{border-right:0;border-bottom:1px solid var(--line)}
+  .rail.r{border-left:0;border-top:1px solid var(--line)}
 }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="mark">Margin<b>·</b>Engine</div>
-  <div class="sub">Operating envelope — computed boundary, not a decision surface</div>
-  <div class="verdict"><span class="lamp" id="lamp"></span><span id="verdict">—</span></div>
+  <div class="brand"><span class="glyph"></span>Margin Engine</div>
+  <div class="crumb">Operating envelope · <b id="asset">L-03</b></div>
+  <div class="spacer"></div>
+  <div class="pill" id="status"><span class="dot"></span><span id="status-text">Within envelope</span></div>
 </header>
 
 <main>
-  <aside>
-    <div class="grp">
-      <div class="grp-t">Margins to boundary</div>
+  <div class="rail l">
+    <div class="block">
+      <h2>Setpoint</h2>
+      <div class="field">
+        <div class="field-top"><label for="rpm">Speed</label>
+          <span class="readout"><span class="num" id="v-rpm">1400</span><em>rpm</em></span></div>
+        <input type="range" id="rpm" min="1200" max="2600" step="5" value="1400">
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="tq">Torque</label>
+          <span class="readout"><span class="num" id="v-tq">45.0</span><em>N·m</em></span></div>
+        <input type="range" id="tq" min="5" max="80" step="0.5" value="45">
+      </div>
+      <p class="hint">Drag the crosshair to move both at once.</p>
+    </div>
+
+    <div class="block">
+      <h2>Condition</h2>
+      <div class="field">
+        <div class="field-top"><label for="wear">Tool wear</label>
+          <span class="readout"><span class="num" id="v-wear">150</span><em>min</em></span></div>
+        <input type="range" id="wear" min="0" max="260" step="1" value="150">
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="dt">Thermal gradient</label>
+          <span class="readout"><span class="num" id="v-dt">10.0</span><em>K</em></span></div>
+        <input type="range" id="dt" min="5" max="14" step="0.1" value="10">
+      </div>
+      <div class="field">
+        <div class="field-top"><label>Quality variant</label></div>
+        <div class="seg" id="variant">
+          <button data-v="L" aria-pressed="true">L</button>
+          <button data-v="M" aria-pressed="false">M</button>
+          <button data-v="H" aria-pressed="false">H</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="block">
+      <label class="switch">
+        <span class="lbl">Project wear forward</span>
+        <input type="checkbox" id="project" checked><span class="track"></span>
+      </label>
+      <p class="hint">Shows where the ceiling falls to as the tool wears.</p>
+    </div>
+  </div>
+
+  <div class="stage"><svg id="svg" viewBox="0 0 780 540" role="img"
+    aria-label="Safe operating window plotted as torque against rotational speed, with the ceiling projected forward as the tool wears."></svg></div>
+
+  <div class="rail r">
+    <div class="block">
+      <h2>Distance to boundary</h2>
       <div id="margins"></div>
     </div>
-    <div class="grp">
-      <div class="grp-t">Operating window</div>
-      <div class="m"><div class="m-l">torque floor</div><div class="m-v" id="w-lo">—</div></div>
-      <div class="m"><div class="m-l">torque ceiling</div><div class="m-v" id="w-hi">—</div></div>
-      <div class="m"><div class="m-l">width</div><div class="m-v" id="w-w">—</div></div>
-      <div class="m"><div class="m-l">binding constraint</div><div class="m-v" id="w-b">—</div></div>
+    <div class="block">
+      <h2>Torque window</h2>
+      <dl style="margin:0">
+        <div class="kv"><dt>Floor</dt><dd class="num" id="w-lo">—</dd></div>
+        <div class="kv"><dt>Ceiling</dt><dd class="num" id="w-hi">—</dd></div>
+        <div class="kv"><dt>Width</dt><dd class="num" id="w-w">—</dd></div>
+        <div class="kv"><dt>Limited by</dt><dd id="w-b">—</dd></div>
+      </dl>
     </div>
-    <div id="advice"></div>
-  </aside>
-
-  <div class="plot"><svg id="svg" viewBox="0 0 760 520" role="img"
-    aria-label="Safe operating window in rotational speed versus torque, with the boundary projected forward as the tool wears."></svg></div>
+    <div class="block" id="advice"></div>
+  </div>
 </main>
-
-<footer>
-  <div class="ctl">
-    <label>Tool wear <span id="v-wear"></span></label>
-    <input type="range" id="wear" min="0" max="260" step="1" value="150">
-  </div>
-  <div class="ctl">
-    <label>Speed <span id="v-rpm"></span></label>
-    <input type="range" id="rpm" min="1200" max="2600" step="5" value="1400">
-  </div>
-  <div class="ctl">
-    <label>Torque <span id="v-tq"></span></label>
-    <input type="range" id="tq" min="5" max="80" step="0.5" value="45">
-  </div>
-  <div class="ctl">
-    <label>Δ temperature <span id="v-dt"></span></label>
-    <input type="range" id="dt" min="5" max="14" step="0.1" value="10">
-  </div>
-  <div class="ctl" style="min-width:auto">
-    <label>Variant</label>
-    <div class="seg" id="variant">
-      <button data-v="L" aria-pressed="true">L</button>
-      <button data-v="M" aria-pressed="false">M</button>
-      <button data-v="H" aria-pressed="false">H</button>
-    </div>
-  </div>
-  <label class="toggle"><input type="checkbox" id="project" checked> Project envelope forward</label>
-</footer>
 
 <script>
 "use strict";
-/* Physics mirrors copilot/physics.py exactly. Kept client-side only so the plot
-   stays live under a drag; every number the copilot *states* still comes from
-   the server and is slot-verified. */
-const RAD = 2*Math.PI/60;
-const TH  = {L:11000, M:12000, H:13000};
-const RATE= {L:2, M:3, H:5};
+/* Physics mirrors copilot/physics.py. Held client-side so the chart stays live
+   under a drag; every number the copilot *states* still comes from the server
+   and is slot-verified before it reaches a human. */
+const RAD=2*Math.PI/60, TH={L:11000,M:12000,H:13000}, RATE={L:2,M:3,H:5};
 const PWF_LO=3500, PWF_HI=9000, HDF_T=8.6, HDF_S=1380;
+const S={wear:150,rpm:1400,tq:45,dt:10,variant:"L",project:true};
 
-const S = {wear:150, rpm:1400, tq:45, dt:10, variant:"L", project:true};
+const RPM_LO=1200,RPM_HI=2600,TQ_HI=80;
+const PAD={l:58,r:34,t:26,b:56};
+let W=780,H=540,X0=PAD.l,X1=746,Y0=PAD.t,Y1=470;
 
-const X0=64, X1=724, Y0=28, Y1=462;          // plot frame
-const RPM_LO=1200, RPM_HI=2600, TQ_LO=0, TQ_HI=80;
-const px = r => X0 + (r-RPM_LO)/(RPM_HI-RPM_LO)*(X1-X0);
-const py = t => Y1 - (t-TQ_LO)/(TQ_HI-TQ_LO)*(Y1-Y0);
-const rpmAt = x => RPM_LO + (x-X0)/(X1-X0)*(RPM_HI-RPM_LO);
-const tqAt  = y => TQ_LO  + (Y1-y)/(Y1-Y0)*(TQ_HI-TQ_LO);
+function measure(){
+  const stage=document.querySelector(".stage");
+  const cs=getComputedStyle(stage);
+  W=Math.max(360, stage.clientWidth  - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
+  H=Math.max(260, stage.clientHeight - parseFloat(cs.paddingTop)  - parseFloat(cs.paddingBottom));
+  X0=PAD.l; X1=W-PAD.r; Y0=PAD.t; Y1=H-PAD.b;
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+}
+const px=r=>X0+(r-RPM_LO)/(RPM_HI-RPM_LO)*(X1-X0);
+const py=t=>Y1-t/TQ_HI*(Y1-Y0);
+const rpmAt=x=>RPM_LO+(x-X0)/(X1-X0)*(RPM_HI-RPM_LO);
+const tqAt=y=>(Y1-y)/(Y1-Y0)*TQ_HI;
 
-const floorAt   = rpm => PWF_LO/(rpm*RAD);
-const overloadAt= rpm => PWF_HI/(rpm*RAD);
-const osfCeil   = (wear,v) => wear>0 ? TH[v]/wear : Infinity;
-const ceilAt    = (rpm,wear,v) => Math.min(overloadAt(rpm), osfCeil(wear,v));
-const hdfBinds  = dt => dt < HDF_T;
+const floorAt=r=>PWF_LO/(r*RAD);
+const overloadAt=r=>PWF_HI/(r*RAD);
+const osfCeil=(w,v)=>w>0?TH[v]/w:Infinity;
+const ceilAt=(r,w,v)=>Math.min(overloadAt(r),osfCeil(w,v));
+const hdfBinds=dt=>dt<HDF_T;
+const fmt=(n,d=1)=>n.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
 
 function margins(s){
-  const omega=s.rpm*RAD, power=s.tq*omega, strain=s.wear*s.tq, th=TH[s.variant];
-  return {
-    temp:  {label:"HDF thermal",   v:s.dt-HDF_T,        u:"ΔK",       span:HDF_T},
-    speed: {label:"HDF speed",     v:s.rpm-HDF_S,       u:"Δrpm",     span:HDF_S},
-    stall: {label:"power stall",   v:power-PWF_LO,      u:"ΔW",       span:PWF_LO},
-    over:  {label:"power overload",v:PWF_HI-power,      u:"ΔW",       span:PWF_HI},
-    strain:{label:"overstrain",    v:th-strain,         u:"Δmin·N·m", span:th}
-  };
+  const om=s.rpm*RAD, p=s.tq*om, st=s.wear*s.tq, th=TH[s.variant];
+  return [
+    ["Thermal gradient", s.dt-HDF_T,  "K",       HDF_T],
+    ["Speed",            s.rpm-HDF_S, "rpm",     HDF_S],
+    ["Power · stall",    p-PWF_LO,    "W",       PWF_LO],
+    ["Power · overload", PWF_HI-p,    "W",       PWF_HI],
+    ["Overstrain",       th-st,       "min·N·m", th],
+  ];
 }
-/* HDF is conjunctive: it only fires when BOTH conditions are violated. */
 function fired(s){
   const m=margins(s), out=[];
-  if(m.temp.v<0 && m.speed.v<0) out.push("HDF");
-  if(m.stall.v<0 || m.over.v<0) out.push("PWF");
-  if(m.strain.v<0) out.push("OSF");
+  if(m[0][1]<0 && m[1][1]<0) out.push("HDF");   // conjunctive
+  if(m[2][1]<0 || m[3][1]<0) out.push("PWF");   // disjunctive
+  if(m[4][1]<0) out.push("OSF");
   return out;
 }
 
-const NS="http://www.w3.org/2000/svg";
-const svg=document.getElementById("svg");
-const el=(n,a={})=>{const e=document.createElementNS(NS,n);
-  for(const k in a) e.setAttribute(k,a[k]); return e;};
+const NS="http://www.w3.org/2000/svg", svg=document.getElementById("svg");
+const el=(n,a={})=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
+const txt=(s,a)=>{const e=el("text",a);e.textContent=s;return e;};
+const MONO='ui-monospace,"SF Mono",Menlo,monospace';
+const SANS='system-ui,-apple-system,"Segoe UI",sans-serif';
 
-function regionPath(wear,v,dt){
-  const lo = hdfBinds(dt) ? Math.max(RPM_LO,HDF_S) : RPM_LO;
-  const N=90, step=(RPM_HI-lo)/N, up=[], dn=[];
+function regionPath(w,v,dt){
+  const lo=hdfBinds(dt)?Math.max(RPM_LO,HDF_S):RPM_LO, N=96, st=(RPM_HI-lo)/N;
+  const up=[],dn=[];
   for(let i=0;i<=N;i++){
-    const r=lo+i*step, f=floorAt(r), c=ceilAt(r,wear,v);
+    const r=lo+i*st, f=floorAt(r), c=ceilAt(r,w,v);
     if(c<=f) continue;
     up.push([px(r),py(f)]); dn.push([px(r),py(c)]);
   }
-  if(!up.length) return null;
-  const pts=[...up, ...dn.reverse()];
-  return "M"+pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join("L")+"Z";
+  if(up.length<2) return null;
+  return "M"+[...up,...dn.reverse()].map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join("L")+"Z";
 }
 
 function draw(){
+  measure();
   while(svg.firstChild) svg.removeChild(svg.firstChild);
   const v=S.variant;
 
-  // ---- grid + frame -------------------------------------------------
-  const g=el("g",{stroke:"var(--rule)","stroke-width":1});
-  for(let r=1200;r<=2600;r+=200){
-    g.appendChild(el("line",{x1:px(r),y1:Y0,x2:px(r),y2:Y1}));
-  }
-  for(let t=0;t<=80;t+=10){
-    g.appendChild(el("line",{x1:X0,y1:py(t),x2:X1,y2:py(t)}));
-  }
-  svg.appendChild(g);
+  const grid=el("g",{stroke:"var(--line)","stroke-width":1});
+  for(let r=1400;r<RPM_HI;r+=200) grid.appendChild(el("line",{x1:px(r),y1:Y0,x2:px(r),y2:Y1}));
+  const tStep = (Y1-Y0) > 420 ? 10 : 20;
+  for(let t=tStep;t<TQ_HI;t+=tStep) grid.appendChild(el("line",{x1:X0,y1:py(t),x2:X1,y2:py(t)}));
+  svg.appendChild(grid);
 
-  // ---- the safe region ----------------------------------------------
   const d=regionPath(S.wear,v,S.dt);
   if(d){
-    svg.appendChild(el("path",{d,fill:"var(--safe-fill)",stroke:"var(--safe-edge)","stroke-width":1.4}));
+    svg.appendChild(el("path",{d,fill:"var(--live-soft)",stroke:"var(--live-line)","stroke-width":1.3}));
   }else{
-    const t=el("text",{x:(X0+X1)/2,y:(Y0+Y1)/2,"text-anchor":"middle",
-      fill:"var(--crit)","font-size":13});
-    t.textContent="NO FEASIBLE SETPOINT AT THIS WEAR";
-    svg.appendChild(t);
+    svg.appendChild(txt("No feasible setpoint at this wear",{x:(X0+X1)/2,y:(Y0+Y1)/2,
+      "text-anchor":"middle",fill:"var(--crit)","font-size":13.5,"font-family":SANS}));
   }
 
-  // ---- the window closing as the tool wears --------------------------
-  // Only the CEILING moves: the floor is pinned by the stall constraint, while
-  // the overstrain ceiling is threshold/wear and descends toward it. Drawing
-  // the descending ceilings is both truer and far more legible than stacking
-  // translucent regions on top of each other.
+  /* Only the ceiling moves. The stall floor is pinned by the drive, while the
+     overstrain ceiling is threshold/wear and descends toward it — so a closing
+     window reads best as a falling ceiling, not as nested regions. */
   if(S.project){
-    const rate=RATE[v], lo=hdfBinds(S.dt)?Math.max(RPM_LO,HDF_S):RPM_LO;
-    const steps=[40,80,120];
-    steps.forEach((cycles,i)=>{
-      const w=S.wear+cycles*rate;
-      const pts=[]; const N=60, st=(RPM_HI-lo)/N;
+    const lo=hdfBinds(S.dt)?Math.max(RPM_LO,HDF_S):RPM_LO;
+    [40,80,120].forEach((cyc,i)=>{
+      const w=S.wear+cyc*RATE[v], pts=[], N=64, st=(RPM_HI-lo)/N;
       for(let j=0;j<=N;j++){
-        const r=lo+j*st, c=ceilAt(r,w,v), f=floorAt(r);
-        if(c<=f) break;
+        const r=lo+j*st, c=ceilAt(r,w,v);
+        if(c<=floorAt(r)) break;
         pts.push(px(r).toFixed(1)+","+py(c).toFixed(1));
       }
       if(pts.length<2) return;
-      svg.appendChild(el("polyline",{points:pts.join(" "),fill:"none",
-        stroke:"var(--ink-3)","stroke-width":1,"stroke-dasharray":"4 4",
-        opacity:0.55-0.12*i}));
-      // Stagger labels across the x-axis so three horizons never collide.
-      const lx=lo+(RPM_HI-lo)*(0.30+0.24*i);
-      const lc=ceilAt(lx,w,v);
-      if(lc>floorAt(lx)){
-        const lab=el("text",{x:px(lx),y:py(lc)-6,"text-anchor":"middle",
-          fill:"var(--ink-3)","font-size":9.5});
-        lab.textContent=`+${cycles} cyc · wear ${Math.round(w)}`;
-        svg.appendChild(lab);
-      }
+      svg.appendChild(el("polyline",{points:pts.join(" "),fill:"none",stroke:"var(--text-3)",
+        "stroke-width":1,"stroke-dasharray":"3 5",opacity:.62-.13*i}));
+      const lx=lo+(RPM_HI-lo)*(.30+.24*i), lc=ceilAt(lx,w,v);
+      if(lc>floorAt(lx))
+        svg.appendChild(txt(`+${cyc} cycles`,{x:px(lx),y:py(lc)-7,"text-anchor":"middle",
+          fill:"var(--text-3)","font-size":10.5,"font-family":SANS}));
     });
   }
 
-  // ---- HDF speed wall (only when the thermal condition is met) ------
-  if(hdfBinds(S.dt) && HDF_S>RPM_LO){
+  if(hdfBinds(S.dt)){
     svg.appendChild(el("line",{x1:px(HDF_S),y1:Y0,x2:px(HDF_S),y2:Y1,
-      stroke:"var(--warn)","stroke-width":1.2,"stroke-dasharray":"5 3",opacity:.75}));
-    const t=el("text",{x:px(HDF_S)+5,y:Y0+12,fill:"var(--warn)","font-size":9.5});
-    t.textContent="HDF · Δtemp below 8.6 K forces speed ≥ 1380";
-    svg.appendChild(t);
+      stroke:"var(--warn)","stroke-width":1.2,"stroke-dasharray":"4 4",opacity:.7}));
+    svg.appendChild(txt("Heat dissipation limit",{x:px(HDF_S)+7,y:Y0+13,
+      fill:"var(--warn)","font-size":10.5,"font-family":SANS}));
   }
 
-  // ---- axes ----------------------------------------------------------
-  svg.appendChild(el("rect",{x:X0,y:Y0,width:X1-X0,height:Y1-Y0,
-    fill:"none",stroke:"var(--rule-2)"}));
-  for(let r=1200;r<=2600;r+=200){
-    const t=el("text",{x:px(r),y:Y1+15,"text-anchor":"middle",fill:"var(--ink-3)","font-size":10});
-    t.textContent=r; svg.appendChild(t);
-  }
-  for(let q=0;q<=80;q+=20){
-    const t=el("text",{x:X0-8,y:py(q)+3.5,"text-anchor":"end",fill:"var(--ink-3)","font-size":10});
-    t.textContent=q; svg.appendChild(t);
-  }
-  const ax=el("text",{x:(X0+X1)/2,y:Y1+34,"text-anchor":"middle",fill:"var(--ink-3)",
-    "font-size":9.5,"letter-spacing":"0.14em"}); ax.textContent="ROTATIONAL SPEED · rpm";
-  svg.appendChild(ax);
-  const ay=el("text",{x:16,y:(Y0+Y1)/2,"text-anchor":"middle",fill:"var(--ink-3)",
-    "font-size":9.5,"letter-spacing":"0.14em",transform:`rotate(-90 16 ${(Y0+Y1)/2})`});
-  ay.textContent="TORQUE · N·m"; svg.appendChild(ay);
+  svg.appendChild(el("line",{x1:X0,y1:Y1,x2:X1,y2:Y1,stroke:"var(--line-strong)"}));
+  svg.appendChild(el("line",{x1:X0,y1:Y0,x2:X0,y2:Y1,stroke:"var(--line-strong)"}));
+  for(let r=1200;r<=RPM_HI;r+=200)
+    svg.appendChild(txt(r,{x:px(r),y:Y1+17,"text-anchor":"middle",fill:"var(--text-3)",
+      "font-size":10.5,"font-family":MONO}));
+  for(let q=0;q<=TQ_HI;q+=tStep)
+    svg.appendChild(txt(q,{x:X0-9,y:py(q)+3.5,"text-anchor":"end",fill:"var(--text-3)",
+      "font-size":10.5,"font-family":MONO}));
+  svg.appendChild(txt("Rotational speed  ·  rpm",{x:(X0+X1)/2,y:Y1+37,"text-anchor":"middle",
+    fill:"var(--text-3)","font-size":11.5,"font-family":SANS}));
+  svg.appendChild(txt("Torque  ·  N·m",{x:15,y:(Y0+Y1)/2,"text-anchor":"middle",
+    fill:"var(--text-3)","font-size":11.5,"font-family":SANS,
+    transform:`rotate(-90 15 ${(Y0+Y1)/2})`}));
 
-  // ---- prescription: the minimal move back inside ---------------------
   const f=fired(S);
-  if(f.length && d){
-    const c=ceilAt(S.rpm,S.wear,v)*0.98, fl=floorAt(S.rpm)*1.02;
-    let target=null;
-    if(S.tq>c && c>fl) target=c;
-    else if(S.tq<fl && fl<c) target=fl;
+  if(f.length&&d){
+    const c=ceilAt(S.rpm,S.wear,v)*.98, fl=floorAt(S.rpm)*1.02;
+    const target = S.tq>c&&c>fl ? c : (S.tq<fl&&fl<c ? fl : null);
     if(target!==null){
       svg.appendChild(el("line",{x1:px(S.rpm),y1:py(S.tq),x2:px(S.rpm),y2:py(target),
-        stroke:"var(--live)","stroke-width":1.4,"stroke-dasharray":"3 3",opacity:.85}));
-      svg.appendChild(el("circle",{cx:px(S.rpm),cy:py(target),r:3.5,
-        fill:"none",stroke:"var(--live)","stroke-width":1.4}));
+        stroke:"var(--live)","stroke-width":1.3,"stroke-dasharray":"3 3",opacity:.9}));
+      svg.appendChild(el("circle",{cx:px(S.rpm),cy:py(target),r:4,fill:"var(--bg)",
+        stroke:"var(--live)","stroke-width":1.5}));
     }
   }
 
-  // ---- the setpoint --------------------------------------------------
-  const cx=px(S.rpm), cy=py(S.tq);
-  const col=f.length? "var(--crit)" : "var(--live)";
-  svg.appendChild(el("line",{x1:cx-13,y1:cy,x2:cx+13,y2:cy,stroke:col,"stroke-width":1.2}));
-  svg.appendChild(el("line",{x1:cx,y1:cy-13,x2:cx,y2:cy+13,stroke:col,"stroke-width":1.2}));
-  svg.appendChild(el("circle",{cx,cy,r:6,fill:"none",stroke:col,"stroke-width":1.6}));
-  const rd=el("text",{x:cx+17,y:cy-8,fill:col,"font-size":10.5});
-  rd.textContent=`${Math.round(S.rpm)} rpm · ${S.tq.toFixed(1)} N·m`;
-  svg.appendChild(rd);
-  const pw=el("text",{x:cx+17,y:cy+5,fill:"var(--ink-3)","font-size":9.5});
-  pw.textContent=`${Math.round(S.tq*S.rpm*RAD)} W`;
-  svg.appendChild(pw);
+  const cx=px(S.rpm), cy=py(S.tq), col=f.length?"var(--crit)":"var(--live)";
+  svg.appendChild(el("circle",{cx,cy,r:13,fill:col,opacity:.12}));
+  svg.appendChild(el("line",{x1:cx-9,y1:cy,x2:cx+9,y2:cy,stroke:col,"stroke-width":1.1}));
+  svg.appendChild(el("line",{x1:cx,y1:cy-9,x2:cx,y2:cy+9,stroke:col,"stroke-width":1.1}));
+  svg.appendChild(el("circle",{cx,cy,r:4.5,fill:"var(--bg)",stroke:col,"stroke-width":1.8}));
+
+  const right=cx>X1-190, ax=right?cx-19:cx+19, an=right?"end":"start";
+  svg.appendChild(txt(`${Math.round(S.rpm)} rpm · ${fmt(S.tq)} N·m`,
+    {x:ax,y:cy-6,"text-anchor":an,fill:col,"font-size":12,"font-family":MONO}));
+  svg.appendChild(txt(`${Math.round(S.tq*S.rpm*RAD).toLocaleString()} W`,
+    {x:ax,y:cy+9,"text-anchor":an,fill:"var(--text-3)","font-size":11,"font-family":MONO}));
 }
 
 function render(){
   draw();
-  const m=margins(S), f=fired(S);
+  const f=fired(S), ms=margins(S);
 
-  // verdict lamp
-  const lamp=document.getElementById("lamp"), verdict=document.getElementById("verdict");
-  lamp.className="lamp "+(f.length?"alert":"safe");
-  verdict.textContent=f.length? "violating · "+f.join(" + ") : "within envelope";
-  verdict.style.color=f.length?"var(--crit)":"var(--ink-2)";
+  const pill=document.getElementById("status");
+  pill.className="pill"+(f.length?" bad":"");
+  document.getElementById("status-text").textContent =
+    f.length ? `${f.join(" + ")} violated` : "Within envelope";
+  document.getElementById("asset").textContent = `${S.variant}-03`;
 
-  // margin rail
   const rail=document.getElementById("margins"); rail.innerHTML="";
-  for(const k of ["temp","speed","stall","over","strain"]){
-    const x=m[k], frac=Math.max(0,Math.min(1,x.v/x.span));
-    const near=x.v>=0 && frac<0.10;
+  for(const [label,val,unit,span] of ms){
+    const frac=Math.max(0,Math.min(1,val/span)), tight=val>=0&&frac<.10;
     const row=document.createElement("div");
-    row.className="m"+(x.v<0?" neg":(near?" near":""));
-    row.innerHTML=`<div class="m-l">${x.label}</div>
-      <div class="m-v">${x.v>=0?"+":"−"}${Math.abs(x.v).toLocaleString(undefined,
-        {maximumFractionDigits:Math.abs(x.v)<100?1:0})} ${x.u}</div>
-      <div class="m-bar"><i style="width:${(frac*100).toFixed(1)}%"></i></div>`;
+    row.className="row"+(val<0?" neg":(tight?" tight":""));
+    const mag=Math.abs(val);
+    row.innerHTML=`<div class="row-top"><span class="row-l">${label}</span>
+      <span class="row-v"><span class="num">${val<0?"−":"+"}${fmt(mag,mag<100?1:0)}</span>
+      <span class="u"> ${unit}</span></span></div>
+      <div class="meter"><i style="width:${(frac*100).toFixed(1)}%"></i></div>`;
     rail.appendChild(row);
   }
 
-  // window geometry
   const fl=floorAt(S.rpm), ce=ceilAt(S.rpm,S.wear,S.variant);
-  const osf=osfCeil(S.wear,S.variant), ov=overloadAt(S.rpm);
-  document.getElementById("w-lo").textContent=fl.toFixed(1)+" N·m";
-  document.getElementById("w-hi").textContent=(ce>fl?ce.toFixed(1):"—")+" N·m";
-  document.getElementById("w-w").textContent=(ce>fl?(ce-fl).toFixed(1):"0.0")+" N·m";
-  document.getElementById("w-b").textContent=osf<ov?"overstrain":"overload";
+  const osf=osfCeil(S.wear,S.variant), ov=overloadAt(S.rpm), width=Math.max(0,ce-fl);
+  document.getElementById("w-lo").textContent=fmt(fl)+" N·m";
+  document.getElementById("w-hi").textContent=(ce>fl?fmt(ce):"—")+" N·m";
+  document.getElementById("w-w").textContent=fmt(width)+" N·m";
+  document.getElementById("w-b").textContent=osf<ov?"Tool wear":"Drive power";
 
-  // advice
+  const rate=RATE[S.variant], om=S.rpm*RAD;
+  const closeWear=TH[S.variant]*om/PWF_LO, closeCyc=Math.max(0,(closeWear-S.wear)/rate);
+  const wF=S.wear+120*rate, widthF=Math.max(0,ceilAt(S.rpm,wF,S.variant)-fl);
+  const shrink=width>0?(width-widthF)/width*100:0;
   const adv=document.getElementById("advice");
-  const rate=RATE[S.variant], omega=S.rpm*RAD;
-  const closureWear=TH[S.variant]*omega/PWF_LO;
-  const closeCyc=Math.max(0,(closureWear-S.wear)/rate);
-  const widthNow=Math.max(0,ce-fl);
-  const wFuture=S.wear+120*rate;
-  const ceF=ceilAt(S.rpm,wFuture,S.variant), widthF=Math.max(0,ceF-fl);
-  const shrink=widthNow>0? (widthNow-widthF)/widthNow*100 : 0;
 
   if(f.length){
-    const target=S.tq>ce ? ce*0.98 : fl*1.02;
-    const ok = target>fl && target<ce;
-    adv.innerHTML=`<div class="note crit"><b>${f.join(" + ")} violated.</b> `+
-      (ok? `Move torque to <b>${target.toFixed(1)} N·m</b>
-            (${(target-S.tq>=0?"+":"−")}${Math.abs(target-S.tq).toFixed(1)} N·m)
-            to return inside the envelope with 2% headroom.`
-         : `No torque satisfies every constraint at this speed and wear —
-            replace the tool or change speed.`)+`</div>`;
-  } else if(widthNow>0){
-    adv.innerHTML=`<div class="note"><b>Window ${widthNow.toFixed(1)} N·m wide</b>,
-      narrowing <b>${shrink.toFixed(0)}%</b> over the next 120 cycles.
-      It closes completely at <b>${Math.round(closureWear)} min</b> of wear
-      — ${closeCyc<9e3?Math.round(closeCyc)+" cycles away":"beyond this tool's life"}.</div>`;
-  } else {
-    adv.innerHTML=`<div class="note crit"><b>Envelope closed.</b>
+    const t=S.tq>ce?ce*.98:fl*1.02, ok=t>fl&&t<ce, dv=t-S.tq;
+    adv.innerHTML=`<div class="card act"><h3>${f.join(" + ")} violated</h3>`+
+      (ok?`Return inside the envelope with 2% headroom.
+        <div class="cta"><span>Set torque to</span><b class="num">${fmt(t)} N·m</b></div>
+        <div class="cta tight"><span>Change</span>
+        <b class="num">${dv>=0?"+":"−"}${fmt(Math.abs(dv))} N·m</b></div>`
+       :`No torque satisfies every constraint at this speed and wear.
+         Replace the tool, or change speed.`)+`</div>`;
+  }else if(width>0){
+    adv.innerHTML=`<div class="card"><h3>Window ${fmt(width)} N·m wide</h3>
+      Narrows <b>${shrink.toFixed(0)}%</b> over the next 120 cycles as the tool wears.
+      <div class="cta"><span>Closes at</span><b class="num">${Math.round(closeWear)} min</b></div>
+      <div class="cta tight"><span>That is</span>
+      <b class="num">${closeCyc<9e3?Math.round(closeCyc)+" cycles away":"beyond tool life"}</b></div>
+      </div>`;
+  }else{
+    adv.innerHTML=`<div class="card act"><h3>Envelope closed</h3>
       No torque is safe at ${Math.round(S.rpm)} rpm with ${Math.round(S.wear)} min of wear.</div>`;
   }
 
-  document.getElementById("v-wear").textContent=Math.round(S.wear)+" min";
-  document.getElementById("v-rpm").textContent=Math.round(S.rpm)+" rpm";
-  document.getElementById("v-tq").textContent=S.tq.toFixed(1)+" N·m";
-  document.getElementById("v-dt").textContent=S.dt.toFixed(1)+" K";
+  document.getElementById("v-wear").textContent=Math.round(S.wear);
+  document.getElementById("v-rpm").textContent=Math.round(S.rpm);
+  document.getElementById("v-tq").textContent=fmt(S.tq);
+  document.getElementById("v-dt").textContent=fmt(S.dt);
 }
 
-// ---- controls ---------------------------------------------------------
-const bind=(id,key,fn=Number)=>{
-  const e=document.getElementById(id);
-  e.addEventListener("input",()=>{S[key]=fn(e.value);render();});
-};
-bind("wear","wear"); bind("rpm","rpm"); bind("tq","tq"); bind("dt","dt");
-document.getElementById("project").addEventListener("change",e=>{
-  S.project=e.target.checked; render();});
+const bind=(id,key)=>{const e=document.getElementById(id);
+  e.addEventListener("input",()=>{S[key]=Number(e.value);render();});};
+["wear","rpm","tq","dt"].forEach(k=>bind(k,k));
+document.getElementById("project").addEventListener("change",e=>{S.project=e.target.checked;render();});
 document.getElementById("variant").addEventListener("click",e=>{
-  const b=e.target.closest("button"); if(!b) return;
+  const b=e.target.closest("button"); if(!b)return;
   [...e.currentTarget.children].forEach(c=>c.setAttribute("aria-pressed",String(c===b)));
   S.variant=b.dataset.v; render();});
 
-// ---- drag the setpoint ------------------------------------------------
 let dragging=false;
+/* Snap to the same step the sliders use. Without this the drag leaves S holding
+   a continuous value while the slider snaps and the readout rounds — three
+   slightly different numbers for one quantity. On a tool whose entire claim is
+   that its numbers can be trusted, that is not a rounding detail. */
+const snap=(v,step)=>Math.round(v/step)*step;
 const move=ev=>{
   const r=svg.getBoundingClientRect();
-  const pt=ev.touches? ev.touches[0] : ev;
-  const x=(pt.clientX-r.left)/r.width*760, y=(pt.clientY-r.top)/r.height*520;
-  S.rpm=Math.max(1200,Math.min(2600,rpmAt(x)));
-  S.tq =Math.max(5,Math.min(80,tqAt(y)));
+  const rpm=rpmAt((ev.clientX-r.left)/r.width*W);
+  const tq =tqAt((ev.clientY-r.top)/r.height*H);
+  S.rpm=Math.max(RPM_LO,Math.min(RPM_HI,snap(rpm,5)));
+  S.tq =Math.max(5,Math.min(TQ_HI,snap(tq,0.5)));
   document.getElementById("rpm").value=S.rpm;
   document.getElementById("tq").value=S.tq;
   render();
@@ -446,6 +509,7 @@ svg.addEventListener("pointermove",e=>{if(dragging)move(e);});
 svg.addEventListener("pointerup",e=>{dragging=false;svg.releasePointerCapture(e.pointerId);});
 
 render();
+addEventListener("resize",()=>render(),{passive:true});
 </script>
 </body>
 </html>
