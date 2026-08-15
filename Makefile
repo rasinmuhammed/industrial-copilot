@@ -8,7 +8,7 @@ help:  ## Show available targets
 	@grep -E '^[a-z-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 	  | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 	@echo ""
-	@echo "  Phase 2+ targets (chat, serve, stream, eval) land as the engine is built."
+	@echo "  Phase 4+ targets (serve, stream, eval) land as the engine is built."
 	@echo "  See docs/13-BUILD-PLAN.md."
 
 venv:  ## Create the virtualenv
@@ -29,6 +29,15 @@ discover:  ## Re-derive the documented thresholds from data alone
 
 bench:  ## Margin evaluation throughput
 	$(PY) scripts/bench.py
+
+chat:  ## Interactive terminal copilot
+	$(PY) -m copilot.cli chat
+
+ask:  ## One question: make ask Q="why did cycle 9016 fail?"
+	$(PY) -m copilot.cli ask "$(Q)"
+
+demo:  ## Scripted walkthrough of all four acceptance criteria
+	$(PY) -m copilot.cli demo
 
 test:  ## Run the test suite
 	$(PY) -m pytest tests/ -q

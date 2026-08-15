@@ -84,6 +84,8 @@ def trend(plan: AnalysisPlan, ctx: ExecutionContext) -> EvidenceBundle:
     rates = [(b["failures"] / b["n"] * 100.0) if b["n"] else 0.0 for b in buckets]
     for b, r in zip(buckets, rates):
         key = f"bucket.{_slug(b['label'])}"
+        # Bucket labels are numeric ranges; they must be slots, not prose.
+        bundle.put(f"{key}.label", str(b["label"]), unit="")
         bundle.put(f"{key}.n", b["n"], unit="count", sig_figs=8)
         bundle.put(f"{key}.failures", b["failures"], unit="count", sig_figs=8)
         ci = wilson_interval(b["failures"], b["n"], plan.confidence) if b["n"] else None
@@ -156,9 +158,15 @@ def _emit_slope(
     ci = Interval(lo=slope - half, hi=slope + half)
 
     significant = ci.verdict() != "straddles"
-    direction = "flat"
     if significant:
         direction = "rising" if slope > 0 else "falling"
+    else:
+        # An insignificant slope does not mean nothing is happening. A series
+        # that jumps at one end has a large residual and a wide interval, and
+        # calling it "flat" would be a worse error than admitting non-linearity.
+        spread = max(ys) - min(ys)
+        typical = sum(abs(y) for y in ys) / n or 1.0
+        direction = "not well described by a straight line" if spread > typical else "flat"
 
     # The axis step is a dimensionless bucket index, so the slope carries the
     # same unit as the delta it measures. "per step" is a note, not a unit —
@@ -265,6 +273,10 @@ def _metric_axis(plan: AnalysisPlan, ctx: ExecutionContext, where: str, params: 
         edges = [float(v) for v in row]
 
     edges = sorted(set(edges))
+    if len(edges) < 2:
+        # A filter has collapsed the axis to a single value. Emitting SQL here
+        # produces an empty CASE; abstaining is the honest outcome.
+        return [], label_for(plan.bin.field), axis_unit, ""
     span = edges[-1] - edges[0]
     cases = []
     for i in range(len(edges) - 1):

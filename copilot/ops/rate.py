@@ -57,6 +57,9 @@ def rate(plan: AnalysisPlan, ctx: ExecutionContext) -> EvidenceBundle:
         ci = wilson_interval(failures, n, plan.confidence)
         low = n < MIN_REPORTABLE_N
 
+        # The label is itself a number ("1168-1405"). It must be a slot, or the
+        # narrator would have to write digits and the verifier would reject it.
+        bundle.put(f"{prefix}.label", str(key), unit="")
         bundle.put(f"{prefix}.failures", failures, unit="count", sig_figs=8)
         bundle.put(f"{prefix}.n", n, unit="count", sig_figs=8)
         bundle.put(
@@ -150,6 +153,10 @@ def _binned_groups(plan: AnalysisPlan, ctx: ExecutionContext, where: str, params
 
     # Deduplicate while preserving order — quantiles collide on skewed columns.
     edges = sorted(set(edges))
+    if len(edges) < 2:
+        # The cohort has collapsed the axis to one value; fall back to an
+        # ungrouped rate rather than emitting an empty CASE expression.
+        return _overall(ctx, where, params)
     span = edges[-1] - edges[0]
     cases = []
     for i in range(len(edges) - 1):

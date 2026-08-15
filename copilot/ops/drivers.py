@@ -105,6 +105,10 @@ def drivers(plan: AnalysisPlan, ctx: ExecutionContext) -> EvidenceBundle:
 
     for rank, (metric, d, ci, mean_a, mean_b) in enumerate(ranked, start=1):
         unit = unit_for(metric)
+        # The rank is itself a number the narrator needs to state. Emitting it as
+        # a slot keeps the "no digits in prose" rule absolute rather than carving
+        # out an exception for list numbering.
+        bundle.put(f"rank{rank}.position", rank, unit="count", sig_figs=8)
         bundle.put(f"rank{rank}.metric", label_for(metric), unit="")
         bundle.put(f"rank{rank}.field", metric, unit="")
         bundle.put(
