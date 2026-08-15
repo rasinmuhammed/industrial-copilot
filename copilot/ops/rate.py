@@ -150,12 +150,14 @@ def _binned_groups(plan: AnalysisPlan, ctx: ExecutionContext, where: str, params
 
     # Deduplicate while preserving order — quantiles collide on skewed columns.
     edges = sorted(set(edges))
+    span = edges[-1] - edges[0]
     cases = []
     for i in range(len(edges) - 1):
         lo, hi = edges[i], edges[i + 1]
         last = i == len(edges) - 2
         cond = f"{col} >= {lo} AND {col} {'<=' if last else '<'} {hi}"
-        cases.append(f"WHEN {cond} THEN '{lo:.6g}-{hi:.6g}'")
+        label = f"{_fmt_edge(lo, span)}-{_fmt_edge(hi, span)}"
+        cases.append(f"WHEN {cond} THEN '{label}'")
     bucket = "CASE " + " ".join(cases) + " ELSE 'out_of_range' END"
 
     sql = (
@@ -214,3 +216,12 @@ def _verify_monotone_premise(
 
 
 __all__ = ["rate"]
+
+def _fmt_edge(value: float, span: float) -> str:
+    """Bin labels an engineer can read. 6 significant figures on a 0-253 range
+    produces '42.1667', which is noise, not precision."""
+    if span >= 100:
+        return f"{value:.0f}"
+    if span >= 10:
+        return f"{value:.1f}"
+    return f"{value:.2f}"

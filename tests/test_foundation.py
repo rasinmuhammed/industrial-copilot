@@ -451,3 +451,159 @@ class TestRootCause:
         bundle = _by_udi(ctx, udi)
         assert any("RNF" in w.message and "cannot be attributed" in w.message
                    for w in bundle.warnings)
+
+
+class TestTrend:
+    def test_failure_rate_climbs_with_tool_wear(self, ctx):
+        """Wear is a real degradation trajectory here, so the trend is physical."""
+        bundle = execute(
+            parse_plan(
+                {"op": "trend", "bin": {"field": "tool_wear_min", "method": "width", "bins": 6}}
+            ),
+            ctx,
+        )
+        assert bundle.slots["slope.failure_rate"].value > 0
+        assert bundle.slots["slope.failure_rate.direction"].value == "rising"
+        # The last bucket is dramatically worse than the first. Iterate by
+        # namespace prefix, not suffix: slope.failure_rate is not a bucket.
+        rates = [
+            s.value
+            for k, s in bundle.slots.items()
+            if k.startswith("bucket.") and k.endswith(".failure_rate")
+        ]
+        assert len(rates) == 6
+        assert rates[-1] > rates[0] * 5
+
+    def test_changepoint_lands_near_the_twf_window(self, ctx):
+        """Failure rate should shift around 200 min, where TWF and OSF bite."""
+        bundle = execute(
+            parse_plan(
+                {"op": "trend", "bin": {"field": "tool_wear_min", "method": "width", "bins": 6}}
+            ),
+            ctx,
+        )
+        low, high = (float(v) for v in bundle.slots["changepoint.at"].value.split("-"))
+        assert low <= 200 <= high or 150 < low < 220
+
+    def test_slope_carries_an_interval(self, ctx):
+        bundle = execute(
+            parse_plan(
+                {"op": "trend", "bin": {"field": "tool_wear_min", "method": "width", "bins": 6}}
+            ),
+            ctx,
+        )
+        assert bundle.slots["slope.failure_rate"].ci is not None
+
+    def test_trend_requires_an_axis(self):
+        with pytest.raises(PlanError) as exc:
+            parse_plan({"op": "trend", "metrics": ["torque_nm"]})
+        assert exc.value.stage is ValidationStage.VIABILITY
+
+    def test_time_axis_discloses_the_synthetic_timeline(self, ctx):
+        bundle = execute(parse_plan({"op": "trend", "time_grain": "day"}), ctx)
+        assert "ts" in bundle.provenance.synthetic_dimensions
+        assert any(w.code == "synthetic_dimension" for w in bundle.warnings)
+
+
+class TestDrivers:
+    def test_torque_is_the_top_driver(self, ctx):
+        bundle = execute(parse_plan({"op": "drivers"}), ctx)
+        assert bundle.slots["drivers.top"].value == "torque"
+        assert bundle.slots["rank1.separation"].value > 1.0
+        assert bundle.slots["rank1.direction"].value == "higher"
+
+    def test_ranking_is_ordered_by_absolute_separation(self, ctx):
+        bundle = execute(parse_plan({"op": "drivers"}), ctx)
+        n = bundle.slots["drivers.considered"].value
+        seps = [abs(bundle.slots[f"rank{i}.separation"].value) for i in range(1, n + 1)]
+        assert seps == sorted(seps, reverse=True)
+
+    def test_confounded_drivers_are_flagged(self, ctx):
+        """Torque and power correlate at ~0.98; both rank highly."""
+        bundle = execute(parse_plan({"op": "drivers"}), ctx)
+        assert any(w.code == "collinearity" for w in bundle.warnings)
+
+    def test_wording_stays_associational(self, ctx):
+        bundle = execute(parse_plan({"op": "drivers"}), ctx)
+        assert any("associational" in w.message for w in bundle.warnings)
+
+
+class TestDataQuality:
+    def test_reports_all_three_undocumented_findings(self, ctx):
+        bundle = execute(parse_plan({"op": "data_quality"}), ctx)
+        assert bundle.slots["orphan_failures.count"].value == 9
+        assert bundle.slots["rnf.flagged"].value == 19
+        assert bundle.slots["rnf.also_machine_failure"].value == 1
+        assert bundle.slots["twf.flagged"].value == 46
+        assert bundle.slots["twf.window_rows"].value == 790
+
+    def test_kb_and_data_agree(self, ctx):
+        """The rule audit is a build gate: any disagreement is a critical finding."""
+        bundle = execute(parse_plan({"op": "data_quality"}), ctx)
+        assert bundle.slots["rule_audit.total_disagreements"].value == 0
+        assert not any(w.code == "kb_drift" for w in bundle.warnings)
+
+    def test_invariants_hold(self, ctx):
+        bundle = execute(parse_plan({"op": "data_quality"}), ctx)
+        assert bundle.slots["invariant.I1.violations"].value == 0
+        assert bundle.slots["invariant.I2.mean_temp_delta"].value == pytest.approx(10.0, abs=0.01)
+        assert bundle.slots["invariant.I3.rpm_torque_corr"].value == pytest.approx(-0.875, abs=0.005)
+
+    def test_documented_twf_count_comes_from_a_field_not_prose(self, ctx):
+        """An earlier version scraped the first big number out of the note and
+        picked up the window size (790) instead of the event count (120)."""
+        bundle = execute(parse_plan({"op": "data_quality"}), ctx)
+        msg = next(w.message for w in bundle.warnings if "documentation describes" in w.message)
+        assert "120" in msg and "790" not in msg
+
+    def test_verdict_is_favourable_on_clean_data(self, ctx):
+        bundle = execute(parse_plan({"op": "data_quality"}), ctx)
+        assert bundle.slots["verdict"].value == "trustworthy with documented caveats"
+
+
+class TestRecords:
+    def test_returns_capped_rows_with_margins(self, ctx):
+        bundle = execute(
+            parse_plan(
+                {
+                    "op": "records",
+                    "limit": 5,
+                    "params": {"order": "closest_to_failure"},
+                    "filters": [{"field": "failure", "op": "=", "value": 0}],
+                }
+            ),
+            ctx,
+        )
+        assert bundle.slots["matched.count"].value == 9661
+        assert len(bundle.rows) == 5
+        assert "worst_normalised_margin" in bundle.rows[0]
+
+    def test_ordering_is_honoured(self, ctx):
+        bundle = execute(
+            parse_plan(
+                {
+                    "op": "records",
+                    "limit": 10,
+                    "params": {"order": "closest_to_failure"},
+                    "filters": [{"field": "failure", "op": "=", "value": 0}],
+                }
+            ),
+            ctx,
+        )
+        margins = [r["worst_normalised_margin"] for r in bundle.rows]
+        assert margins == sorted(margins)
+        assert all(m >= 0 for m in margins)  # no healthy row is past a boundary
+
+    def test_truncation_is_disclosed(self, ctx):
+        bundle = execute(parse_plan({"op": "records", "limit": 5}), ctx)
+        assert any("only 5 are shown" in w.message for w in bundle.warnings)
+
+    def test_empty_result_abstains(self, ctx):
+        bundle = execute(
+            parse_plan(
+                {"op": "records", "filters": [{"field": "tool_wear_min", "op": ">", "value": 999}]}
+            ),
+            ctx,
+        )
+        assert bundle.slots["records.first_udi"].quality is Quality.ABSTAIN
+        assert bundle.rows == []

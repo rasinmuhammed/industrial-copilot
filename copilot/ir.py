@@ -227,7 +227,9 @@ _OP_REQUIREMENTS: dict[OpName, dict[str, Any]] = {
     OpName.DESCRIBE: {"needs_metrics": True},
     OpName.RATE: {"needs_metrics": False},
     OpName.COMPARE: {"needs_metrics": True, "min_cohorts": 2},
-    OpName.TREND: {"needs_metrics": True},
+    # A trend needs an AXIS, not a metric: "how does failure rate vary with tool
+    # wear?" is a complete question with no metric in it.
+    OpName.TREND: {"needs_metrics": False, "needs_axis": True},
     OpName.DRIVERS: {"needs_metrics": False},
     OpName.ROOT_CAUSE: {"needs_metrics": False},
     OpName.COUNTERFACTUAL: {"needs_metrics": False, "required_params": ["changes"]},
@@ -330,6 +332,12 @@ def _validate_viability(plan: AnalysisPlan) -> None:
             ValidationStage.VIABILITY,
             f"op {plan.op.value!r} requires at least one metric",
             hint="Add the metrics the question is about.",
+        )
+    if spec.get("needs_axis") and plan.bin is None and plan.time_grain is None:
+        raise PlanError(
+            ValidationStage.VIABILITY,
+            f"op {plan.op.value!r} requires an axis",
+            hint="Set `bin` to trend over a metric, or `time_grain` to trend over time.",
         )
     min_cohorts = spec.get("min_cohorts", 0)
     if min_cohorts and len(plan.cohorts) < min_cohorts:

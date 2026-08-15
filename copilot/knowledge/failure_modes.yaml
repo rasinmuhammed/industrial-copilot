@@ -119,6 +119,8 @@ modes:
     calibration:
       window_rows: 790          # rows inside the 200-240 min window
       failures_in_window: 43    # of which were labelled TWF
+      documented_events: 120    # what the dataset page's prose claims
+      column_flags: 46          # what the published TWF column actually flags
       note: >
         43 of 790 rows inside the window are labelled TWF, so the in-window
         failure probability is about 5.4 percent per observation. Three further
