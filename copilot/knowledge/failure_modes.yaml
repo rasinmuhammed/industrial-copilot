@@ -1,0 +1,171 @@
+# Failure-mode knowledge base for the AI4I 2020 process.
+#
+# Source: UCI AI4I 2020 Predictive Maintenance Dataset, "Additional Variable
+# Information". Every rule below is transcribed from the dataset documentation,
+# NOT learned from data. `scripts/audit_rules.py` re-derives each threshold from
+# the data and fails the build if the knowledge base and the data disagree.
+#
+# Verified on all 10,000 rows (see evals/reports/rule_audit.json):
+#   HDF 115/115 exact, PWF 95/95 exact, OSF 98/98 exact  -> zero FP, zero FN.
+#   TWF is stochastic within a documented window and is modelled as a hazard.
+
+version: 1
+
+modes:
+  - code: HDF
+    name: Heat Dissipation Failure
+    kind: deterministic
+    labelled_rows: 115
+    plain_english: >
+      The process cannot shed heat fast enough. It occurs when the process runs
+      too close to ambient temperature while the tool turns slowly, so there is
+      neither a large thermal gradient nor enough airflow to carry heat away.
+    predicate:
+      all_of:
+        - metric: temp_delta_k
+          op: "<"
+          value: 8.6
+          unit: K
+        - metric: rotational_speed_rpm
+          op: "<"
+          value: 1380
+          unit: rpm
+    # Distance to the boundary, in native units. Negative == already violated.
+    margins:
+      - name: temp_delta_margin_k
+        expr: "temp_delta_k - 8.6"
+        unit: K
+        note: How much thermal headroom remains before the HDF temperature condition is met.
+      - name: speed_margin_rpm
+        expr: "rotational_speed_rpm - 1380"
+        unit: rpm
+    remedies:
+      - Raise rotational speed above 1380 rpm to restore forced convection.
+      - Lower process temperature or ambient air temperature to widen the gradient beyond 8.6 K.
+
+  - code: PWF
+    name: Power Failure
+    kind: deterministic
+    labelled_rows: 95
+    plain_english: >
+      Mechanical power at the tool (torque times angular velocity) leaves the
+      drive's usable band. Below 3500 W the process stalls; above 9000 W the
+      drive is overloaded. Both ends are failures.
+    predicate:
+      any_of:
+        - metric: power_w
+          op: "<"
+          value: 3500
+          unit: W
+        - metric: power_w
+          op: ">"
+          value: 9000
+          unit: W
+    derivation: "power_w = torque_nm * rotational_speed_rpm * 2 * pi / 60"
+    margins:
+      - name: power_low_margin_w
+        expr: "power_w - 3500"
+        unit: W
+        note: Headroom above the stall floor.
+      - name: power_high_margin_w
+        expr: "9000 - power_w"
+        unit: W
+        note: Headroom below the overload ceiling.
+    remedies:
+      - If below 3500 W, increase torque or speed to leave the stall region.
+      - If above 9000 W, reduce torque or speed to come back under the overload ceiling.
+
+  - code: OSF
+    name: Overstrain Failure
+    kind: deterministic
+    labelled_rows: 98
+    plain_english: >
+      Accumulated tool wear multiplied by applied torque exceeds what the tool
+      can carry. A worn tool tolerates far less torque than a fresh one. The
+      limit depends on the product quality variant, because higher-grade stock
+      is rated for more strain.
+    predicate:
+      metric: overstrain_min_nm
+      op: ">"
+      value_by_type:
+        L: 11000
+        M: 12000
+        H: 13000
+      unit: min*Nm
+    derivation: "overstrain_min_nm = tool_wear_min * torque_nm"
+    margins:
+      - name: overstrain_margin_min_nm
+        expr: "osf_threshold_min_nm - overstrain_min_nm"
+        unit: min*Nm
+        note: Strain budget remaining before the tool overstrains.
+    remedies:
+      - Replace the tool to reset tool wear to zero.
+      - Reduce torque so that wear x torque stays under the variant limit.
+
+  - code: TWF
+    name: Tool Wear Failure
+    kind: stochastic
+    labelled_rows: 46
+    plain_english: >
+      The tool reaches end of life. Unlike the other modes this is not a hard
+      threshold: somewhere between 200 and 240 minutes of wear the tool is
+      either replaced preventively or it fails. Which of the two happens is
+      random, so TWF can only be given as a probability, never as a certainty.
+    predicate:
+      metric: tool_wear_min
+      op: between
+      value: [200, 240]
+      unit: min
+    calibration:
+      window_rows: 790          # rows inside the 200-240 min window
+      failures_in_window: 43    # of which were labelled TWF
+      note: >
+        43 of 790 rows inside the window are labelled TWF, so the in-window
+        failure probability is about 5.4 percent per observation. Three further
+        TWF rows fall outside the window; they are reported as such rather than
+        explained away.
+    margins:
+      - name: wear_to_window_min
+        expr: "200 - tool_wear_min"
+        unit: min
+        note: Minutes of wear remaining before the tool enters its replacement window.
+    remedies:
+      - Schedule tool replacement before 200 minutes of wear to stay out of the window entirely.
+
+  - code: RNF
+    name: Random Failure
+    kind: stochastic
+    labelled_rows: 19
+    plain_english: >
+      A documented background failure rate of roughly 0.1 percent per process,
+      independent of every operating parameter. It cannot be predicted or
+      prevented from process data, and no root-cause analysis of RNF is valid.
+    predicate: null
+    margins: []
+    remedies: []
+
+# Known label-integrity issues in the published dataset. The assistant surfaces
+# these rather than silently absorbing them into an explanation.
+data_quality_notes:
+  - id: orphan_failures
+    severity: medium
+    finding: >
+      9 rows carry Machine failure = 1 while none of TWF, HDF, PWF or OSF is
+      set. These failures have no documented cause and are excluded from
+      root-cause attribution.
+    affects: root_cause
+  - id: rnf_not_counted
+    severity: medium
+    finding: >
+      19 rows have RNF = 1 but only 1 of them also has Machine failure = 1.
+      The published RNF flag therefore does not roll up into the Machine
+      failure label. Failure rates are reported against Machine failure and
+      RNF is reported separately.
+    affects: rate
+  - id: twf_doc_mismatch
+    severity: low
+    finding: >
+      The dataset documentation describes 120 tool-wear events (69 replacements
+      and 51 failures) but the published TWF column flags 46 rows. Statements
+      about TWF are computed from the column, not the prose.
+    affects: rate

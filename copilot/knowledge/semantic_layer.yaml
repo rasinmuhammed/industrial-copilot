@@ -1,0 +1,197 @@
+# Semantic layer: the ONLY vocabulary the planner may emit.
+#
+# Every metric / dimension / filter name in an Analysis Plan is validated
+# against this file before execution. A plan naming anything not listed here is
+# rejected and repaired. This is what makes "the model hallucinated a column"
+# a structurally impossible failure rather than a runtime surprise.
+
+version: 1
+
+metrics:
+  air_temp_k:
+    column: air_temperature_k
+    label: air temperature
+    unit: K
+    kind: continuous
+    description: Ambient air temperature, a random walk with sd 2 K around 300 K.
+    synonyms: [air temp, ambient temperature, ambient temp, air]
+
+  process_temp_k:
+    column: process_temperature_k
+    label: process temperature
+    unit: K
+    kind: continuous
+    description: Process temperature, air temperature plus about 10 K.
+    synonyms: [process temp, tool temperature, working temperature]
+
+  temp_delta_k:
+    column: temp_delta_k
+    label: temperature differential
+    unit: ΔK
+    kind: continuous
+    derived: process_temperature_k - air_temperature_k
+    description: >
+      Process minus air temperature. The thermal gradient available for heat
+      dissipation. Below 8.6 K it is one of the two HDF conditions.
+    synonyms: [temperature difference, delta t, temp delta, thermal gradient, temperature gap]
+    thresholds: {hdf_limit: 8.6}
+
+  rotational_speed_rpm:
+    column: rotational_speed_rpm
+    label: rotational speed
+    unit: rpm
+    kind: continuous
+    description: Tool rotational speed, derived from a 2860 W power target plus noise.
+    synonyms: [speed, rpm, rotation speed, spindle speed, rotational velocity]
+    thresholds: {hdf_limit: 1380}
+
+  torque_nm:
+    column: torque_nm
+    label: torque
+    unit: N·m
+    kind: continuous
+    description: Applied torque, normally distributed around 40 Nm with sd 10 Nm.
+    synonyms: [torque, load, moment]
+
+  tool_wear_min:
+    column: tool_wear_min
+    label: tool wear
+    unit: min
+    kind: continuous
+    description: Cumulative minutes of tool wear. H/M/L variants add 5/3/2 min per process.
+    synonyms: [wear, tool age, tool life, wear time]
+    thresholds: {twf_window_start: 200, twf_window_end: 240}
+
+  power_w:
+    column: power_w
+    label: mechanical power
+    unit: W
+    kind: continuous
+    derived: torque_nm * rotational_speed_rpm * 2 * pi / 60
+    description: >
+      Mechanical power at the tool. Outside the 3500-9000 W band the process
+      suffers a power failure (stall below, overload above).
+    synonyms: [power, wattage, mechanical power, power draw]
+    thresholds: {pwf_low: 3500, pwf_high: 9000}
+
+  overstrain_min_nm:
+    column: overstrain_min_nm
+    label: overstrain product
+    unit: min·N·m
+    kind: continuous
+    derived: tool_wear_min * torque_nm
+    description: >
+      Tool wear times torque. Exceeding the per-variant limit (11000 L /
+      12000 M / 13000 H) causes an overstrain failure.
+    synonyms: [overstrain, strain, wear-torque product, strain product]
+
+  # Margins: signed distance to each rule boundary. Negative means violated.
+  # These are what make root-cause answers quantitative instead of categorical.
+  temp_delta_margin_k:
+    column: temp_delta_margin_k
+    label: HDF temperature margin
+    unit: ΔK
+    kind: continuous
+    derived: temp_delta_k - 8.6
+    description: Thermal headroom before the HDF temperature condition is met.
+    synonyms: [temperature margin, thermal margin]
+
+  speed_margin_rpm:
+    column: speed_margin_rpm
+    label: HDF speed margin
+    unit: Δrpm
+    kind: continuous
+    derived: rotational_speed_rpm - 1380
+    description: Speed headroom before the HDF speed condition is met.
+    synonyms: [speed margin]
+
+  power_low_margin_w:
+    column: power_low_margin_w
+    label: power stall margin
+    unit: ΔW
+    kind: continuous
+    derived: power_w - 3500
+    description: Headroom above the 3500 W stall floor.
+    synonyms: [stall margin]
+
+  power_high_margin_w:
+    column: power_high_margin_w
+    label: power overload margin
+    unit: ΔW
+    kind: continuous
+    derived: 9000 - power_w
+    description: Headroom below the 9000 W overload ceiling.
+    synonyms: [overload margin]
+
+  overstrain_margin_min_nm:
+    column: overstrain_margin_min_nm
+    label: overstrain margin
+    unit: Δmin·N·m
+    kind: continuous
+    derived: osf_threshold_min_nm - overstrain_min_nm
+    description: Strain budget remaining before the per-variant overstrain limit.
+    synonyms: [strain margin, overstrain headroom]
+
+  failure:
+    column: machine_failure
+    label: machine failure
+    unit: rate
+    kind: binary
+    description: The published Machine failure label, 1 if the process failed.
+    synonyms: [failure, failed, breakdown, machine failure, fault]
+
+dimensions:
+  product_type:
+    column: product_type
+    label: product quality variant
+    values: [L, M, H]
+    value_labels: {L: low quality, M: medium quality, H: high quality}
+    description: Product quality variant. L is 50 percent of output, M 30 percent, H 20 percent.
+    synonyms: [type, variant, quality, product quality, grade, product variant]
+
+  machine_id:
+    column: machine_id
+    label: machine
+    description: >
+      Virtual machine identifier. SYNTHETIC OVERLAY - see README assumptions.
+      The published dataset has no machine column; rows are assigned round-robin
+      within each product type to give a fleet for demonstration.
+    synonyms: [machine, asset, equipment, unit, cell]
+
+  failure_mode:
+    column: null
+    label: failure mode
+    values: [TWF, HDF, PWF, OSF, RNF]
+    description: Which documented failure mode fired.
+    synonyms: [mode, failure type, root cause, cause]
+
+  shift:
+    column: shift
+    label: shift
+    values: [A, B, C]
+    description: >
+      Production shift. SYNTHETIC OVERLAY derived from the synthetic timestamp
+      (8-hour shifts). Not present in the published dataset.
+    synonyms: [shift, crew]
+
+time:
+  column: ts
+  label: timestamp
+  description: >
+    SYNTHETIC TIMELINE. The published dataset has only UDI, a row index. UDI is
+    interpreted as a production cycle at a fixed 2-minute takt, anchored at
+    2024-01-01T00:00:00Z, giving ~13.9 days of continuous production.
+  grains: [hour, day, shift]
+
+# Question intents the planner may choose. Each maps to exactly one op.
+intents:
+  describe:     Summarise the distribution of one or more metrics over a cohort.
+  rate:         Failure rate or counts, optionally broken out by a dimension or metric bins.
+  compare:      Contrast two cohorts (typically failed vs healthy) across metrics.
+  trend:        Behaviour over time or over a metric axis such as tool wear.
+  drivers:      Rank which variables most separate failures from healthy operation.
+  root_cause:   Evaluate the documented physics rules to attribute failures to modes.
+  counterfactual: Recompute mode triggers under a hypothetical parameter change.
+  envelope:     Report the safe operating window in which no failure mode fires.
+  records:      Return example rows as evidence.
+  data_quality: Report known label-integrity issues in the dataset.

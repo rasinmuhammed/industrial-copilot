@@ -1,0 +1,40 @@
+[project]
+name = "industrial-copilot"
+version = "0.1.0"
+description = "Margin Engine — an industrial copilot that computes distance to the failure boundary"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+dependencies = [
+    "duckdb>=1.0",       # in-process OLAP execution
+    "pydantic>=2.0",     # plan validation: the anti-hallucination mechanism
+    "numpy>=1.26",       # vectorised margin computation
+    "pyyaml>=6.0",       # knowledge base + semantic layer
+    "fastapi>=0.110",    # API surface
+    "uvicorn>=0.29",     # ASGI server
+    "httpx>=0.27",       # provider transport
+]
+
+[project.optional-dependencies]
+# Offline rule discovery only — never on the inference path.
+discovery = ["scikit-learn>=1.4"]
+# Optional LLM providers. The system is fully functional without any of these.
+llm = ["anthropic>=0.40"]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23"]
+all = ["scikit-learn>=1.4", "anthropic>=0.40", "pytest>=8.0", "pytest-asyncio>=0.23"]
+
+[project.scripts]
+copilot = "copilot.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["copilot*", "discovery*"]
+
+[tool.setuptools.package-data]
+copilot = ["knowledge/*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
