@@ -26,6 +26,9 @@ verify:  ## Reproduce every figure in docs/01-DATASET.md  (CI gate)
 discover:  ## Re-derive the documented thresholds from data alone
 	$(PY) scripts/discover_rules.py
 
+notebook:  ## Dry-run the Kaggle training notebook on the CPU path
+	$(PY) scripts/check_notebook.py
+
 calibrate:  ## Measure the exemplar-retrieval thresholds
 	$(PY) scripts/calibrate_exemplars.py
 
