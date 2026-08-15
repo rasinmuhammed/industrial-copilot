@@ -8,7 +8,6 @@ help:  ## Show available targets
 	@grep -E '^[a-z-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 	  | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 	@echo ""
-	@echo "  Phase 5+ targets (serve, stream) land as the engine is built."
 	@echo "  See docs/13-BUILD-PLAN.md."
 
 venv:  ## Create the virtualenv
@@ -38,6 +37,15 @@ ask:  ## One question: make ask Q="why did cycle 9016 fail?"
 
 demo:  ## Scripted walkthrough of all four acceptance criteria
 	$(PY) -m copilot.cli demo
+
+serve:  ## FastAPI + SSE console on :8000
+	.venv/bin/uvicorn copilot.api:app --reload --port 8000
+
+stream:  ## Replay the fleet as an event stream with live alerts
+	$(PY) -c "from copilot.stream import replay, StreamScorer; s=StreamScorer(); \
+[print(f'{a.machine_id:<6} {a.mode:<4} {a.kind.value:<12} ' + (f'crosses in ~{a.lead_time_min:.0f} min' if a.lead_time_min else a.message[:60])) \
+ for t in replay(scorer=s, speed=0) for a in t.alerts]; \
+print(f'\\n{s.ticks:,} cycles, {s.alerts_raised} alerts, {s.alerts_suppressed} suppressed')"
 
 eval:  ## Run the golden eval suite (hard gates fail the build)
 	$(PY) evals/run_evals.py
