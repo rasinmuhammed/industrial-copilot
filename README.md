@@ -163,12 +163,13 @@ make demo      # scripted walkthrough of all four acceptance criteria
 make chat      # interactive terminal copilot
 make ask Q="why did cycle 9016 fail?"
 make serve     # API, chat console, envelope explorer and fleet view on :8000
-               #   /            ask
-               #   /fleet/view  every machine ranked on one axis of risk
-               #   /explorer    the operating envelope, draggable
+               #   /             ask, with evidence drill-down on every answer
+               #   /fleet/view   every machine ranked on one axis of risk
+               #   /explorer     the operating envelope, draggable
+               #   /reliability  Gates 2 and 3, live and interactive
 make stream    # replay the fleet with live lead-time alerts
 make eval      # golden suite; hard gates fail the build
-make test      # 211 unit and adversarial tests
+make test      # 220 unit and adversarial tests
 make discover  # re-derive the documented thresholds from data alone
 make bench     # margin throughput benchmark
 ```
@@ -188,7 +189,7 @@ with **no credentials configured**:
 | Latency p50 / p95 | **3.1 / 20.6 ms** |
 | Planning p50 / p95 | **0.33 / 0.50 ms** |
 | Questions resolved below the LLM tier | **92%** |
-| Tests | **211 passing** |
+| Tests | **220 passing** |
 | Documented dataset claims reproduced | **46/46** |
 
 ---
@@ -261,6 +262,7 @@ arithmetic.
 | Verified-exemplar store (learns with no training) | ✅ |
 | Operating Envelope Explorer | ✅ |
 | Fleet control room (one ranking across all machines) | ✅ |
+| Reliability console — Gates 2 and 3, interactive | ✅ |
 | Verified-exemplar store (learns with no training) | ✅ |
 | Planner LoRA distilled from the store | roadmap |
 | Edge agent, multi-tenancy, rollup tiles | roadmap ([11-SCALE](docs/11-SCALE.md)) |

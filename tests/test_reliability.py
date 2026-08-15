@@ -225,3 +225,90 @@ class TestThresholdDiscovery:
             )
             widths[variant] = upper - lower
         assert widths["L"] < widths["H"]
+
+
+class TestReliabilityConsole:
+    """The two gates with no prior art existed only in tests. Exposing them over
+    HTTP is what makes them demonstrable rather than merely asserted."""
+
+    @pytest.fixture(scope="class")
+    def client(self):
+        from fastapi.testclient import TestClient
+
+        from copilot.api import app
+
+        return TestClient(app)
+
+    def test_baseline_reports_no_drift(self, client):
+        body = client.post("/reliability/drift",
+                           params={"sensor": "air_temperature_k", "delta": 0.0}).json()
+        assert body["verdict"] == "ok"
+        assert all(i["holds"] for i in body["invariants"])
+
+    def test_thermocouple_drift_is_called_an_instrument_fault(self, client):
+        """A 0.4 K drift HALVES heat-dissipation alerts — a conventional copilot
+        reports that as a good month."""
+        body = client.post("/reliability/drift",
+                           params={"sensor": "air_temperature_k", "delta": -0.4}).json()
+        assert body["verdict"] == "sensor"
+        assert abs(body["z"]["temp_delta"]) > 5
+        assert abs(body["z"]["rotational_speed"]) < 5
+        assert body["hdf_alerts"]["change_pct"] < -40
+        assert "instrument fault" in body["explanation"]
+
+    def test_process_slowdown_is_called_operations(self, client):
+        body = client.post("/reliability/drift",
+                           params={"sensor": "rotational_speed_rpm", "delta": -40.0}).json()
+        assert body["verdict"] == "process"
+        assert abs(body["z"]["rotational_speed"]) > 5
+
+    def test_kb_signal_is_zero_only_at_the_true_threshold(self, client):
+        signals = {}
+        for error in (-4.0, -2.0, 0.0, 2.0, 4.0):
+            body = client.post("/reliability/kb", params={"error_pct": error}).json()
+            osf = next(r for r in body["rules"] if r["mode"] == "OSF")
+            signals[error] = osf
+        assert signals[0.0]["total_signal"] == 0
+        assert all(signals[e]["total_signal"] > 0 for e in (-4.0, -2.0, 2.0, 4.0))
+
+    def test_kb_signal_is_directional(self, client):
+        """Which counter fires tells you which way to move the threshold."""
+        loose = client.post("/reliability/kb", params={"error_pct": 2.0}).json()
+        tight = client.post("/reliability/kb", params={"error_pct": -2.0}).json()
+        loose_osf = next(r for r in loose["rules"] if r["mode"] == "OSF")
+        tight_osf = next(r for r in tight["rules"] if r["mode"] == "OSF")
+        assert loose_osf["direction"] == "too_loose" and loose_osf["false_alarms"] == 0
+        assert tight_osf["direction"] == "too_tight" and tight_osf["surprise_failures"] == 0
+
+    def test_kb_signal_is_monotone_in_the_error(self, client):
+        seen = []
+        for error in (1.0, 2.0, 4.0):
+            body = client.post("/reliability/kb", params={"error_pct": error}).json()
+            seen.append(next(r for r in body["rules"] if r["mode"] == "OSF")["total_signal"])
+        assert seen == sorted(seen)
+
+    def test_threshold_discovery_bracket_width_tracks_support(self, client):
+        """The bracket width IS the honest uncertainty: L has 87 supporting
+        failures and lands within 0.01%; H has 2 and lands within 3.4%."""
+        estimates = {e["variant"]: e for e in client.get("/reliability/thresholds").json()["estimates"]}
+        assert estimates["L"]["error_pct"] < 0.1
+        assert estimates["H"]["error_pct"] < 4.0
+        assert estimates["L"]["width"] < estimates["H"]["width"]
+        assert estimates["L"]["support"] > estimates["H"]["support"]
+        for e in estimates.values():
+            assert e["lower"] < e["documented"] < e["upper"]
+
+    def test_console_pages_render(self, client):
+        for path in ("/", "/reliability", "/explorer", "/fleet/view"):
+            assert client.get(path).status_code == 200
+
+    def test_every_css_token_reference_resolves(self):
+        """A renamed token silently degrades a page to unstyled defaults."""
+        import re
+        from pathlib import Path
+
+        static = Path(__file__).resolve().parent.parent / "copilot" / "static"
+        defined = set(re.findall(r"^\s*(--[a-z0-9-]+)\s*:", (static / "app.css").read_text(), re.M))
+        for page in static.glob("*.html"):
+            used = set(re.findall(r"var\((--[a-z0-9-]+)", page.read_text()))
+            assert not (used - defined), f"{page.name} references {sorted(used - defined)}"

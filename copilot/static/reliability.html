@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reliability · Margin Engine</title>
+<link rel="stylesheet" href="/static/app.css">
+<style>
+main{overflow-y:auto;padding:24px 26px 40px}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:26px}
+
+.gate{border:1px solid var(--line-strong);border-radius:9px;background:var(--surface);overflow:hidden}
+.gate-h{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;
+  align-items:baseline;gap:12px;flex-wrap:wrap}
+.gate-n{font-family:var(--mono);font-size:11px;color:var(--live);letter-spacing:.04em}
+.gate-h h2{margin:0;font-size:14.5px;font-weight:600;letter-spacing:-.012em}
+.gate-h p{margin:0;flex:1 1 100%;color:var(--text-3);font-size:12.5px;line-height:1.55;
+  max-width:76ch;padding-top:3px}
+.gate-b{padding:16px 18px;display:grid;gap:18px}
+.split{display:grid;grid-template-columns:minmax(0,240px) minmax(0,1fr);gap:22px;align-items:start}
+@media (max-width:820px){.split{grid-template-columns:1fr}}
+
+.verdict{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:var(--r);
+  border:1px solid var(--line-strong);background:var(--raised);margin-bottom:14px}
+.verdict .lamp{width:8px;height:8px;border-radius:50%;background:var(--line-med);flex:none}
+.verdict .txt{font-size:13px;font-weight:600}
+.verdict.sensor{border-color:rgba(232,168,56,.45);background:var(--warn-soft)}
+.verdict.sensor .lamp,.verdict.sensor .txt{background:none;color:var(--warn)}
+.verdict.sensor .lamp{background:var(--warn)}
+.verdict.process{border-color:var(--live-line);background:var(--live-soft)}
+.verdict.process .lamp{background:var(--live)} .verdict.process .txt{color:var(--live)}
+.verdict.bad{border-color:rgba(236,106,76,.45);background:var(--crit-soft)}
+.verdict.bad .lamp{background:var(--crit)} .verdict.bad .txt{color:var(--crit)}
+
+.expl{color:var(--text-2);font-size:12.5px;line-height:1.6;margin-bottom:14px;max-width:74ch}
+
+table.t{width:100%;border-collapse:collapse;font-size:12px}
+table.t th,table.t td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line)}
+table.t th{color:var(--text-3);font-weight:500;font-size:10.5px}
+table.t tr:last-child td{border-bottom:0}
+table.t td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;
+  white-space:nowrap}
+td.ok{color:var(--live)} td.no{color:var(--crit)} td.warnc{color:var(--warn)}
+
+.scenarios{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+.scen{border:1px solid var(--line-strong);border-radius:7px;background:var(--raised);
+  color:var(--text-2);font:inherit;font-size:12px;padding:7px 12px;cursor:pointer;
+  text-align:left;transition:border-color .13s var(--ease-ui),color .13s var(--ease-ui)}
+.scen:hover{color:var(--text);border-color:var(--line-med)}
+.scen[aria-pressed=true]{border-color:var(--live-line);background:var(--live-soft);color:var(--live)}
+.scen small{display:block;color:var(--text-3);font-size:10.5px;margin-top:2px}
+.scen[aria-pressed=true] small{color:var(--live);opacity:.75}
+
+.spark{display:block;width:100%;height:96px}
+.legend{display:flex;gap:16px;font-size:11px;color:var(--text-3);margin-top:6px}
+.legend i{display:inline-block;width:9px;height:2px;vertical-align:middle;margin-right:5px}
+</style>
+</head>
+<body>
+
+<header>
+  <a class="brand" href="/">
+    <span class="brand-mark">
+      <svg viewBox="0 0 20 20"><path d="M10 2L3 7v6l7 5 7-5V7L10 2zm0 2.5l5 3.5-5 3.5L5 8l5-3.5zm-6 5l6 4.3 6-4.3V13l-6 4.3L4 13v-3.5z"/></svg>
+    </span>
+    Margin Engine
+  </a>
+  <nav class="topnav">
+    <a href="/fleet/view">Fleet</a>
+    <a href="/explorer">Envelope</a>
+    <a href="/">Copilot</a>
+    <a href="/reliability" aria-current="page">Reliability</a>
+  </nav>
+  <div class="hdr-spacer"></div>
+  <div class="status-pill"><span class="dot"></span>Self-diagnosis</div>
+</header>
+
+<main><div class="wrap">
+
+  <!-- ── Gate 2 ─────────────────────────────────────────────────────── -->
+  <section class="gate">
+    <div class="gate-h">
+      <span class="gate-n">GATE 2</span>
+      <h2>Is the instrument telling the truth?</h2>
+      <p>A drifting sensor and a genuinely changing process produce the <b>same symptom</b> —
+         the alert count moves. They demand opposite responses. The discriminator is physics
+         that must hold at any operating point: the process does not control ambient
+         temperature, so a thermal shift with steady mechanics can only be the instrument.</p>
+    </div>
+    <div class="gate-b">
+      <div class="scenarios" id="drift-scen"></div>
+      <div class="split">
+        <div>
+          <div class="verdict" id="d-verdict"><span class="lamp"></span><span class="txt">—</span></div>
+          <table class="t"><tbody id="d-z"></tbody></table>
+        </div>
+        <div>
+          <div class="expl" id="d-expl"></div>
+          <table class="t">
+            <thead><tr><th>invariant</th><th>must hold</th>
+              <th style="text-align:right">observed</th><th style="text-align:right">expected</th></tr></thead>
+            <tbody id="d-inv"></tbody></table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Gate 3 ─────────────────────────────────────────────────────── -->
+  <section class="gate">
+    <div class="gate-h">
+      <span class="gate-n">GATE 3</span>
+      <h2>Is the rule still valid?</h2>
+      <p>The dangerous drift is not the sensor — it is the <b>rule</b> silently becoming wrong.
+         A tool supplier changes and the real overstrain limit moves; every margin is then
+         verifiably computed, and wrong. Two counters catch it with no model and no
+         retraining: a failure at positive margin means the threshold is too loose, an alert
+         with no failure means too tight. Drag the slider to perturb the documented limit.</p>
+    </div>
+    <div class="gate-b">
+      <div class="field" style="max-width:420px">
+        <div class="field-top">
+          <label for="kb">Overstrain threshold error</label>
+          <span class="readout"><span class="num" id="v-kb">0.0</span><em>%</em></span></div>
+        <input type="range" id="kb" min="-6" max="6" step="0.5" value="0">
+      </div>
+      <div class="split">
+        <div>
+          <div class="verdict" id="k-verdict"><span class="lamp"></span><span class="txt">—</span></div>
+          <div class="expl" id="k-advice" style="margin:0"></div>
+        </div>
+        <div>
+          <svg class="spark" id="k-chart" viewBox="0 0 620 96" preserveAspectRatio="none"
+               role="img" aria-label="Detection signal against threshold error: zero only at the true value, rising in both directions."></svg>
+          <div class="legend">
+            <span><i style="background:var(--crit)"></i>surprise failures · too loose</span>
+            <span><i style="background:var(--warn)"></i>false alarms · too tight</span>
+          </div>
+          <table class="t" style="margin-top:10px">
+            <thead><tr><th>rule</th><th style="text-align:right">surprise</th>
+              <th style="text-align:right">false alarms</th><th style="text-align:right">direction</th></tr></thead>
+            <tbody id="k-rules"></tbody></table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Discovery ──────────────────────────────────────────────────── -->
+  <section class="gate">
+    <div class="gate-h">
+      <span class="gate-n">DISCOVERY</span>
+      <h2>The rules are recoverable from data alone</h2>
+      <p>The fair criticism of a physics-first system is that the dataset handed us its
+         thresholds. It did not have to. Bracketing between the largest non-failing value and
+         the smallest failing one estimates a deterministic boundary from outcomes — and the
+         <b>width of that bracket is the honest uncertainty</b>. L lands within 0.01% on 87
+         supporting failures; H within 3.4% on two. That is precisely why a knowledge-base
+         entry must carry an interval and never a point.</p>
+    </div>
+    <div class="gate-b">
+      <table class="t">
+        <thead><tr><th>variant</th><th style="text-align:right">bracket</th>
+          <th style="text-align:right">estimate</th><th style="text-align:right">documented</th>
+          <th style="text-align:right">error</th><th style="text-align:right">support</th></tr></thead>
+        <tbody id="t-rows"></tbody></table>
+    </div>
+  </section>
+
+</div></main>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+/* ── Gate 2 ───────────────────────────────────────────────────────── */
+const SCENARIOS = [
+  {k:"Nothing wrong",             s:"air_temperature_k",     d:0,    sub:"baseline"},
+  {k:"Thermocouple drifts",       s:"air_temperature_k",     d:-0.4, sub:"air sensor −0.4 K"},
+  {k:"Thermocouple drifts hard",  s:"air_temperature_k",     d:-1.2, sub:"air sensor −1.2 K"},
+  {k:"Line genuinely slows",      s:"rotational_speed_rpm",  d:-40,  sub:"process −40 rpm"},
+  {k:"Torque sensor bias",        s:"torque_nm",             d:+6,   sub:"torque sensor +6 N·m"},
+];
+let scenario = 0;
+
+$("drift-scen").innerHTML = SCENARIOS.map((s,i) =>
+  `<button class="scen" data-i="${i}" aria-pressed="${i===0}">${esc(s.k)}<small>${esc(s.sub)}</small></button>`
+).join("");
+$("drift-scen").addEventListener("click", e => {
+  const b = e.target.closest(".scen"); if (!b) return;
+  scenario = +b.dataset.i;
+  [...e.currentTarget.children].forEach((c,i) => c.setAttribute("aria-pressed", String(i===scenario)));
+  loadDrift();
+});
+
+async function loadDrift(){
+  const s = SCENARIOS[scenario];
+  const r = await fetch(`/reliability/drift?sensor=${s.s}&delta=${s.d}`, {method:"POST"});
+  const d = await r.json();
+
+  const cls = {sensor:"sensor", process:"process", ok:"", both:"bad"}[d.verdict] ?? "";
+  const label = {sensor:"Instrument fault", process:"Genuine process change",
+                 ok:"No drift detected", both:"Both signals moved"}[d.verdict] ?? d.verdict;
+  $("d-verdict").className = "verdict " + cls;
+  $("d-verdict").querySelector(".txt").textContent = label;
+
+  const a = d.hdf_alerts;
+  const dir = a.change_pct === 0 ? "unchanged"
+            : `${a.change_pct > 0 ? "up" : "down"} ${Math.abs(a.change_pct).toFixed(0)}%`;
+  $("d-z").innerHTML = `
+    <tr><td>Heat-dissipation alerts</td><td class="n">${a.baseline} → ${a.observed}
+      <span style="color:var(--text-3)">(${dir})</span></td></tr>
+    <tr><td>z · thermal gradient</td><td class="n ${Math.abs(d.z.temp_delta)>5?"warnc":""}">${d.z.temp_delta.toFixed(1)}</td></tr>
+    <tr><td>z · rotational speed</td><td class="n ${Math.abs(d.z.rotational_speed)>5?"warnc":""}">${d.z.rotational_speed.toFixed(1)}</td></tr>
+    <tr><td>z · torque</td><td class="n ${Math.abs(d.z.torque)>5?"warnc":""}">${d.z.torque.toFixed(1)}</td></tr>`;
+  $("d-expl").textContent = d.explanation;
+  $("d-inv").innerHTML = d.invariants.map(i => `
+    <tr><td class="n" style="text-align:left">${esc(i.code)}</td>
+        <td>${esc(i.description)}</td>
+        <td class="n ${i.holds?"ok":"no"}">${i.observed}</td>
+        <td class="n" style="color:var(--text-3)">${i.expected}</td></tr>`).join("");
+}
+
+/* ── Gate 3 ───────────────────────────────────────────────────────── */
+const SWEEP = [-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6];
+let curve = null;
+
+async function sweep(){
+  const out = [];
+  for (const e of SWEEP){
+    const r = await fetch(`/reliability/kb?error_pct=${e}`, {method:"POST"});
+    const d = await r.json();
+    const osf = d.rules.find(x => x.mode === "OSF");
+    out.push({e, surprise: osf.surprise_failures, false_alarms: osf.false_alarms});
+  }
+  curve = out; drawCurve();
+}
+
+function drawCurve(){
+  if (!curve) return;
+  const W = 620, H = 96, pad = 6;
+  const max = Math.max(8, ...curve.map(p => Math.max(p.surprise, p.false_alarms)));
+  const x = i => pad + i/(curve.length-1) * (W - 2*pad);
+  const y = v => H - pad - (v/max) * (H - 2*pad);
+  const line = (key, col) =>
+    `<polyline points="${curve.map((p,i) => `${x(i).toFixed(1)},${y(p[key]).toFixed(1)}`).join(" ")}"
+       fill="none" stroke="${col}" stroke-width="1.6" stroke-linejoin="round"/>`;
+  const zero = curve.findIndex(p => p.e === 0);
+  $("k-chart").innerHTML = `
+    <line x1="${x(zero)}" y1="0" x2="${x(zero)}" y2="${H}" stroke="var(--line-strong)"
+      stroke-dasharray="3 3"/>
+    <text x="${x(zero)+5}" y="12" fill="var(--text-3)" font-size="10"
+      font-family="system-ui">true threshold</text>
+    ${line("false_alarms","var(--warn)")}
+    ${line("surprise","var(--crit)")}
+    ${curve.map((p,i) => `<circle cx="${x(i)}" cy="${y(Math.max(p.surprise,p.false_alarms))}"
+       r="${p.e===current?3.5:0}" fill="var(--text)"/>`).join("")}`;
+}
+
+let current = 0;
+async function loadKB(){
+  const r = await fetch(`/reliability/kb?error_pct=${current}`, {method:"POST"});
+  const d = await r.json();
+  const osf = d.rules.find(x => x.mode === "OSF");
+
+  const cls = osf.direction === "ok" ? "process" : "sensor";
+  const label = {ok:"Rule agrees with outcomes", too_loose:"Threshold too loose",
+                 too_tight:"Threshold too tight",
+                 conflicted:"Rule form is wrong, not its value"}[osf.direction];
+  $("k-verdict").className = "verdict " + (osf.direction === "conflicted" ? "bad" : cls);
+  $("k-verdict").querySelector(".txt").textContent = label;
+  $("k-advice").textContent = osf.advice;
+
+  $("k-rules").innerHTML = d.rules.map(r => `
+    <tr><td>${esc(r.mode)}</td>
+        <td class="n ${r.surprise_failures?"no":""}">${r.surprise_failures}</td>
+        <td class="n ${r.false_alarms?"warnc":""}">${r.false_alarms}</td>
+        <td class="n" style="color:${r.direction==="ok"?"var(--live)":"var(--warn)"}">${esc(r.direction)}</td></tr>`).join("");
+  drawCurve();
+}
+
+$("kb").addEventListener("input", e => {
+  current = +e.target.value;
+  $("v-kb").textContent = current.toFixed(1);
+});
+$("kb").addEventListener("change", loadKB);
+
+/* ── Discovery ────────────────────────────────────────────────────── */
+async function loadThresholds(){
+  const d = await (await fetch("/reliability/thresholds")).json();
+  $("t-rows").innerHTML = d.estimates.map(t => `
+    <tr><td>${esc(t.variant)} variant</td>
+        <td class="n" style="color:var(--text-3)">[${t.lower.toFixed(0)}, ${t.upper.toFixed(0)}]</td>
+        <td class="n">${t.midpoint.toFixed(0)}</td>
+        <td class="n" style="color:var(--text-3)">${t.documented.toFixed(0)}</td>
+        <td class="n ${t.error_pct < 1 ? "ok" : "warnc"}">${t.error_pct.toFixed(2)}%</td>
+        <td class="n" style="color:var(--text-3)">${t.support}</td></tr>`).join("");
+}
+
+loadDrift(); loadKB(); loadThresholds(); sweep();
+</script>
+</body>
+</html>

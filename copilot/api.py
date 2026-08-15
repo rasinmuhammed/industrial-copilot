@@ -9,7 +9,8 @@
     GET  /fleet                 every machine ranked on one axis of risk
     GET  /fleet/view            the fleet control room
     GET  /health                readiness, versions, gate status
-    GET  /                      minimal console
+    GET  /                      the ask console, with evidence drill-down
+    GET  /reliability           Gates 2 and 3, live and interactive
 
 Thin by design. Every endpoint delegates to the same engine the CLI uses, so
 there is exactly one code path from question to verified answer and the API
@@ -31,7 +32,12 @@ from pydantic import BaseModel, Field
 from copilot.engine import Engine
 from copilot.ops import execute
 from copilot.ir import parse_plan, PlanError
-from copilot.reliability import audit_calibration, check_invariants
+from copilot.reliability import (
+    audit_calibration,
+    check_invariants,
+    diagnose_drift,
+    estimate_threshold,
+)
 from copilot.session import SessionState
 from copilot.ops.registry import TABLE
 from copilot.stream import StreamScorer, replay
@@ -81,6 +87,7 @@ class AskResponse(BaseModel):
     warnings: list[dict[str, str]] = []
     evidence: dict[str, Any] | None = None
     rows: list[dict[str, Any]] = []
+    plan_json: dict[str, Any] | None = None
 
 
 @app.post("/ask", response_model=AskResponse)
@@ -113,6 +120,7 @@ def ask(request: AskRequest) -> AskResponse:
             else None
         ),
         rows=bundle.rows if bundle else [],
+        plan_json=json.loads(answer.plan.model_dump_json(exclude_none=True)) if answer.plan else None,
     )
 
 
@@ -435,6 +443,124 @@ def fleet_view() -> str:
     return _static("fleet.html")
 
 
+@app.post("/reliability/drift")
+def drift_probe(
+    sensor: str = Query("air_temperature_k", pattern="^(air_temperature_k|rotational_speed_rpm|torque_nm)$"),
+    delta: float = Query(0.0),
+) -> dict[str, Any]:
+    """Inject a fault and watch the system diagnose its own inputs (Gate 2).
+
+    The point is the asymmetry. A drifting thermocouple and a genuinely slowing
+    process produce the SAME symptom — the heat-dissipation alert count moves —
+    but the process does not control ambient temperature, so the invariants
+    separate them. A 0.4 K drift halves HDF alerts, which a conventional copilot
+    reports as a good month.
+    """
+    from copilot.reliability.invariants import _window_stats, _z_of_mean
+
+    con = engine().ctx.con
+    con.execute(
+        f"""CREATE OR REPLACE TEMP VIEW _drifted AS
+            SELECT * EXCLUDE (temp_delta_k, {sensor}),
+                   {sensor} + {delta} AS {sensor},
+                   process_temperature_k - (CASE WHEN '{sensor}' = 'air_temperature_k'
+                       THEN air_temperature_k + {delta} ELSE air_temperature_k END) AS temp_delta_k
+            FROM {TABLE}"""  # noqa: S608
+    )
+    report = diagnose_drift(con, window_where="TRUE", table="_drifted", baseline_table=TABLE)
+
+    fires = con.execute(
+        "SELECT count(*) FROM _drifted WHERE temp_delta_k < 8.6 AND rotational_speed_rpm < 1380"
+    ).fetchone()[0]
+    baseline = con.execute(
+        f"SELECT count(*) FROM {TABLE} WHERE hdf_rule"  # noqa: S608
+    ).fetchone()[0]
+
+    return {
+        "sensor": sensor,
+        "delta": delta,
+        "verdict": report.verdict.value,
+        "explanation": report.explanation,
+        "z": {
+            "temp_delta": round(report.z_temp_delta, 2),
+            "rotational_speed": round(report.z_rotational_speed, 2),
+            "torque": round(report.z_torque, 2),
+        },
+        "hdf_alerts": {"baseline": int(baseline), "observed": int(fires),
+                       "change_pct": round((fires - baseline) / baseline * 100, 1) if baseline else 0.0},
+        "invariants": [
+            {"code": i.code, "description": i.description, "holds": i.holds,
+             "observed": round(i.observed, 4), "expected": round(i.expected, 4),
+             "detail": i.detail}
+            for i in report.invariants
+        ],
+    }
+
+
+@app.post("/reliability/kb")
+def kb_probe(error_pct: float = Query(0.0, ge=-20.0, le=20.0)) -> dict[str, Any]:
+    """Perturb a documented threshold and watch the KB audit itself (Gate 3).
+
+    Model-free and directional: surprise failures mean the rule is too loose,
+    false alarms mean too tight. Zero only at the true threshold, monotone in
+    the size of the error, and it works with the delayed labels a real CMMS
+    produces.
+    """
+    con = engine().ctx.con
+    factor = 1 + error_pct / 100.0
+    con.execute(
+        f"""CREATE OR REPLACE TEMP VIEW _perturbed AS
+            SELECT * EXCLUDE (osf_rule),
+                   (overstrain_min_nm > osf_threshold_min_nm * {factor}) AS osf_rule
+            FROM {TABLE}"""  # noqa: S608
+    )
+    report = audit_calibration(con, table="_perturbed")
+    return {
+        "error_pct": error_pct,
+        "healthy": report.healthy,
+        "summary": report.summary(),
+        "rules": [
+            {"mode": r.mode, "surprise_failures": r.surprise_failures,
+             "false_alarms": r.false_alarms, "total_signal": r.total_signal,
+             "direction": r.direction.value, "advice": r.advice()}
+            for r in report.rules
+        ],
+    }
+
+
+@app.get("/reliability/thresholds")
+def threshold_discovery() -> dict[str, Any]:
+    """Re-derive the documented limits from outcomes alone.
+
+    The bracket between the largest non-failing value and the smallest failing
+    one is a valid estimate of a deterministic boundary — and its WIDTH is the
+    honest uncertainty. L recovers to 0.01% on 87 supporting failures; H to
+    3.4% on 2. That is why a knowledge-base entry must carry an interval and
+    not a point.
+    """
+    con = engine().ctx.con
+    documented = {"L": 11000.0, "M": 12000.0, "H": 13000.0}
+    out = []
+    for variant, doc in documented.items():
+        lo, hi, mid, support = estimate_threshold(
+            con, metric_column="overstrain_min_nm", label_column="osf", product_type=variant
+        )
+        out.append({
+            "variant": variant, "documented": doc,
+            "lower": round(lo, 1), "upper": round(hi, 1), "midpoint": round(mid, 1),
+            "width": round(hi - lo, 1),
+            "error_pct": round(abs(mid - doc) / doc * 100, 3),
+            "support": support,
+        })
+    return {"metric": "overstrain_min_nm", "estimates": out}
+
+
+@app.get("/reliability", response_class=HTMLResponse)
+def reliability_view() -> str:
+    """The reliability console."""
+    return _static("reliability.html")
+
+
 @app.get("/health")
 def health() -> dict[str, Any]:
     eng = engine()
@@ -468,67 +594,4 @@ def health() -> dict[str, Any]:
 
 @app.get("/", response_class=HTMLResponse)
 def console() -> str:
-    return _CONSOLE
-
-
-_CONSOLE = """<!doctype html>
-<meta charset="utf-8"><title>Margin Engine</title>
-<style>
- body{font:14px ui-monospace,Menlo,monospace;margin:0;background:#0c1315;color:#e6edeb}
- header{padding:14px 20px;border-bottom:1px solid #26383a}
- h1{font-size:15px;margin:0;letter-spacing:.02em}
- .sub{color:#84989a;font-size:12px;margin-top:4px}
- main{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#26383a;min-height:calc(100vh - 62px)}
- section{background:#0c1315;padding:16px 20px;overflow:auto;max-height:calc(100vh - 62px)}
- h2{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#4ecfbb;margin:0 0 12px}
- input{width:100%;padding:9px 11px;background:#131e20;border:1px solid #26383a;color:#e6edeb;
-       font:inherit;border-radius:4px}
- pre{white-space:pre-wrap;line-height:1.55;margin:12px 0 0}
- .meta{color:#84989a;font-size:11px}
- .alert{border-left:2px solid #e0a54b;padding:6px 10px;margin:6px 0;background:#131e20}
- .alert.crossed{border-color:#ec7c6a}
- .alert.sensor{border-color:#84989a}
- .k{color:#4ecfbb}
-</style>
-<header>
-  <h1>Industrial Copilot — Margin Engine</h1>
-  <div class="sub">Distance to the failure boundary. No number is authored by a model.
-    &nbsp;·&nbsp; <a href="/fleet/view" style="color:#4ecfbb">Fleet</a>
-    &nbsp;·&nbsp; <a href="/explorer" style="color:#4ecfbb">Envelope explorer</a></div>
-</header>
-<main>
-  <section>
-    <h2>Ask</h2>
-    <input id="q" placeholder="Why are we seeing more failures at high rotational speeds?" autofocus>
-    <pre id="a" class="meta">Press Enter to ask.</pre>
-  </section>
-  <section>
-    <h2>Live alerts</h2>
-    <div id="alerts"></div>
-  </section>
-</main>
-<script>
-const q=document.getElementById('q'),a=document.getElementById('a');
-q.addEventListener('keydown',async e=>{
-  if(e.key!=='Enter'||!q.value.trim())return;
-  a.textContent='…';
-  const r=await fetch('/ask',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({question:q.value})});
-  const d=await r.json();
-  a.textContent=d.answer+'\\n\\n'+(d.verified?'✓ verified':'✗ UNVERIFIED')+
-    ` · ${d.tier} tier · ${d.elapsed_ms} ms`;
-});
-const es=new EventSource('/stream/alerts?speed=2000&limit=4000');
-const box=document.getElementById('alerts');
-es.addEventListener('alert',e=>{
-  const d=JSON.parse(e.data);
-  const el=document.createElement('div');
-  el.className='alert '+d.kind;
-  el.innerHTML=`<span class="k">${d.machine}</span> ${d.mode} · ${d.kind}` +
-    (d.lead_time_min!=null?` · crosses in ~${d.lead_time_min} min`:'') +
-    `<div class="meta">${d.message}${d.fix?'<br>fix: '+d.fix:''}</div>`;
-  box.prepend(el);
-  while(box.children.length>40)box.lastChild.remove();
-});
-</script>
-"""
+    return _static("ask.html")

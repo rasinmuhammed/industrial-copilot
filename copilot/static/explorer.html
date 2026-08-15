@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Operating Envelope · Margin Engine</title>
+<meta name="description" content="Operating Envelope Explorer — drag the crosshair to see the safe window narrow as conditions change.">
 <link rel="stylesheet" href="/static/app.css">
 <style>
 main{display:grid;grid-template-columns:236px minmax(0,1fr) 292px;min-height:0;overflow:hidden}
@@ -16,53 +17,79 @@ svg text{pointer-events:none}
   .rail.l{border-right:0;border-bottom:1px solid var(--line)}
   .rail.r{border-left:0;border-top:1px solid var(--line)}
 }
+/* override metric-row in explorer to use smaller padding */
+#margins .metric-row { padding: 7px 0; }
 </style>
 </head>
 <body>
 
 <header>
-  <a class="brand" href="/"><span class="glyph"></span>Margin Engine</a>
-  <nav class="nav">
+  <a class="brand" href="/">
+    <span class="brand-mark">
+      <svg viewBox="0 0 20 20"><path d="M10 2L3 7v6l7 5 7-5V7L10 2zm0 2.5l5 3.5-5 3.5L5 8l5-3.5zm-6 5l6 4.3 6-4.3V13l-6 4.3L4 13v-3.5z"/></svg>
+    </span>
+    Margin Engine
+  </a>
+
+  <nav class="topnav">
     <a href="/fleet/view">Fleet</a>
     <a href="/explorer" aria-current="page">Envelope</a>
-    <a href="/">Ask</a>
+    <a href="/">Copilot</a>
+    <a href="/reliability">Reliability</a>
   </nav>
-  <div class="crumb"><b id="asset">L-03</b></div>
-  <div class="spacer"></div>
-  <div class="pill" id="status"><span class="dot"></span><span id="status-text">Within envelope</span></div>
+
+  <div class="breadcrumb" style="margin-left:8px">
+    <span class="sep">/</span>
+    <b id="asset">L-03</b>
+  </div>
+
+  <div class="hdr-spacer"></div>
+
+  <div class="status-pill" id="status">
+    <span class="dot"></span>
+    <span id="status-text">Within envelope</span>
+  </div>
 </header>
 
 <main>
   <div class="rail l">
     <div class="block">
-      <h2>Setpoint</h2>
+      <div class="block-title">Setpoint</div>
       <div class="field">
-        <div class="field-top"><label for="rpm">Speed</label>
-          <span class="readout"><span class="num" id="v-rpm">1400</span><em>rpm</em></span></div>
+        <div class="field-header">
+          <label class="field-label" for="rpm">Rotational speed</label>
+          <span class="field-readout"><span class="num" id="v-rpm">1400</span><em>rpm</em></span>
+        </div>
         <input type="range" id="rpm" min="1200" max="2600" step="5" value="1400">
       </div>
       <div class="field">
-        <div class="field-top"><label for="tq">Torque</label>
-          <span class="readout"><span class="num" id="v-tq">45.0</span><em>N·m</em></span></div>
+        <div class="field-header">
+          <label class="field-label" for="tq">Torque</label>
+          <span class="field-readout"><span class="num" id="v-tq">45.0</span><em>N·m</em></span>
+        </div>
         <input type="range" id="tq" min="5" max="80" step="0.5" value="45">
       </div>
-      <p class="hint">Drag the crosshair to move both at once.</p>
+      <p class="hint">Drag the crosshair directly on the chart to move both axes at once.</p>
     </div>
 
     <div class="block">
-      <h2>Condition</h2>
+      <div class="block-title">Machine condition</div>
       <div class="field">
-        <div class="field-top"><label for="wear">Tool wear</label>
-          <span class="readout"><span class="num" id="v-wear">150</span><em>min</em></span></div>
+        <div class="field-header">
+          <label class="field-label" for="wear">Tool wear</label>
+          <span class="field-readout"><span class="num" id="v-wear">150</span><em>min</em></span>
+        </div>
         <input type="range" id="wear" min="0" max="260" step="1" value="150">
       </div>
       <div class="field">
-        <div class="field-top"><label for="dt">Thermal gradient</label>
-          <span class="readout"><span class="num" id="v-dt">10.0</span><em>K</em></span></div>
+        <div class="field-header">
+          <label class="field-label" for="dt">Thermal gradient</label>
+          <span class="field-readout"><span class="num" id="v-dt">10.0</span><em>K</em></span>
+        </div>
         <input type="range" id="dt" min="5" max="14" step="0.1" value="10">
       </div>
       <div class="field">
-        <div class="field-top"><label>Quality variant</label></div>
+        <div class="field-header"><label class="field-label">Quality variant</label></div>
         <div class="seg" id="variant">
           <button data-v="L" aria-pressed="true">L</button>
           <button data-v="M" aria-pressed="false">M</button>
@@ -73,10 +100,10 @@ svg text{pointer-events:none}
 
     <div class="block">
       <label class="switch">
-        <span class="lbl">Project wear forward</span>
+        <span class="switch-label">Project wear forward</span>
         <input type="checkbox" id="project" checked><span class="track"></span>
       </label>
-      <p class="hint">Shows where the ceiling falls to as the tool wears.</p>
+      <p class="hint">Shows where the ceiling falls to as the tool wears over 120 cycles.</p>
     </div>
   </div>
 
@@ -85,12 +112,12 @@ svg text{pointer-events:none}
 
   <div class="rail r">
     <div class="block">
-      <h2>Distance to boundary</h2>
+      <div class="block-title">Distance to boundary</div>
       <div id="margins"></div>
     </div>
     <div class="block">
-      <h2>Torque window</h2>
-      <dl style="margin:0">
+      <div class="block-title">Torque window</div>
+      <dl>
         <div class="kv"><dt>Floor</dt><dd class="num" id="w-lo">—</dd></div>
         <div class="kv"><dt>Ceiling</dt><dd class="num" id="w-hi">—</dd></div>
         <div class="kv"><dt>Width</dt><dd class="num" id="w-w">—</dd></div>
@@ -272,7 +299,7 @@ function render(){
   const f=fired(S), ms=margins(S);
 
   const pill=document.getElementById("status");
-  pill.className="pill"+(f.length?" bad":"");
+  pill.className="status-pill"+(f.length?" crit":"");
   document.getElementById("status-text").textContent =
     f.length ? `${f.join(" + ")} violated` : "Within envelope";
   document.getElementById("asset").textContent = `${S.variant}-03`;
@@ -281,11 +308,11 @@ function render(){
   for(const [label,val,unit,span] of ms){
     const frac=Math.max(0,Math.min(1,val/span)), tight=val>=0&&frac<.10;
     const row=document.createElement("div");
-    row.className="row"+(val<0?" neg":(tight?" tight":""));
+    row.className="metric-row"+(val<0?" neg":(tight?" tight":""));
     const mag=Math.abs(val);
-    row.innerHTML=`<div class="row-top"><span class="row-l">${label}</span>
-      <span class="row-v"><span class="num">${val<0?"−":"+"}${fmt(mag,mag<100?1:0)}</span>
-      <span class="u"> ${unit}</span></span></div>
+    row.innerHTML=`<div class="metric-row-top"><span class="metric-label">${label}</span>
+      <span class="metric-value"><span class="num">${val<0?"−":"+"}${fmt(mag,mag<100?1:0)}</span>
+      <span class="unit"> ${unit}</span></span></div>
       <div class="meter"><i style="width:${(frac*100).toFixed(1)}%"></i></div>`;
     rail.appendChild(row);
   }
@@ -307,16 +334,16 @@ function render(){
     const t=S.tq>ce?ce*.98:fl*1.02, ok=t>fl&&t<ce, dv=t-S.tq;
     adv.innerHTML=`<div class="card act"><h3>${f.join(" + ")} violated</h3>`+
       (ok?`Return inside the envelope with 2% headroom.
-        <div class="cta"><span>Set torque to</span><b class="num">${fmt(t)} N·m</b></div>
-        <div class="cta tight"><span>Change</span>
+        <div class="card-cta"><span>Set torque to</span><b class="num">${fmt(t)} N·m</b></div>
+        <div class="card-cta" style="padding-top:4px;margin-top:0;border:0"><span>Change</span>
         <b class="num">${dv>=0?"+":"−"}${fmt(Math.abs(dv))} N·m</b></div>`
        :`No torque satisfies every constraint at this speed and wear.
          Replace the tool, or change speed.`)+`</div>`;
   }else if(width>0){
     adv.innerHTML=`<div class="card"><h3>Window ${fmt(width)} N·m wide</h3>
       Narrows <b>${shrink.toFixed(0)}%</b> over the next 120 cycles as the tool wears.
-      <div class="cta"><span>Closes at</span><b class="num">${Math.round(closeWear)} min</b></div>
-      <div class="cta tight"><span>That is</span>
+      <div class="card-cta"><span>Closes at</span><b class="num">${Math.round(closeWear)} min</b></div>
+      <div class="card-cta" style="padding-top:4px;margin-top:0;border:0"><span>That is</span>
       <b class="num">${closeCyc<9e3?Math.round(closeCyc)+" cycles away":"beyond tool life"}</b></div>
       </div>`;
   }else{

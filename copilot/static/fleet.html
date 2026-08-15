@@ -4,257 +4,522 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Fleet · Margin Engine</title>
+<meta name="description" content="Fleet control room — every machine ranked on one axis of risk.">
 <link rel="stylesheet" href="/static/app.css">
 <style>
-main{display:grid;grid-template-columns:minmax(0,1fr) 300px;min-height:0;overflow:hidden}
-.floor{min-width:0;min-height:0;overflow-y:auto;padding:18px}
+body { grid-template-rows: 48px 1fr auto; overflow: hidden; }
 
-.summary{
-  display:flex;align-items:center;gap:22px;padding:0 2px 16px;margin-bottom:4px;
-  border-bottom:1px solid var(--line);
+main {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 288px;
+  min-height: 0;
+  overflow: hidden;
 }
-.stat{display:flex;flex-direction:column;gap:2px}
-.stat .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:22px;
-  letter-spacing:-.03em;line-height:1.1}
-.stat .k{font-size:11.5px;color:var(--text-3)}
-.stat.alert .n{color:var(--crit)}
-.stat.watch .n{color:var(--warn)}
-.summary .spacer{flex:1}
 
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(216px,1fr));gap:12px;padding-top:16px}
-
-.tile{
-  position:relative;border:1px solid var(--line-strong);border-radius:var(--r);
-  background:var(--surface);padding:13px 14px 11px;cursor:pointer;text-align:left;
-  font:inherit;color:inherit;overflow:hidden;
-  transition:border-color .15s var(--ease),background .15s var(--ease),transform .15s var(--ease);
+/* ── fleet header bar ─────────────────────────────────────────────── */
+.fleet-header {
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: flex-end;
+  gap: 28px;
+  background: var(--surface);
 }
-.tile:hover{border-color:var(--mute);transform:translateY(-1px)}
-.tile:focus-visible{outline:2px solid var(--live);outline-offset:2px}
-.tile[data-state=alert]{border-color:rgba(236,106,76,.45);background:var(--crit-soft)}
-.tile[data-state=watch]{border-color:rgba(232,168,56,.4);background:var(--warn-soft)}
-.tile[aria-pressed=true]{border-color:var(--live)}
 
-.tile-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
-.tile-id{font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:-.02em}
-.tile-var{font-size:11px;color:var(--text-3)}
-.tile-margin{
-  font-family:var(--mono);font-variant-numeric:tabular-nums;
-  font-size:25px;letter-spacing:-.035em;line-height:1.15;margin-top:7px;
+.fleet-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
-.tile[data-state=alert] .tile-margin{color:var(--crit)}
-.tile[data-state=watch] .tile-margin{color:var(--warn)}
-.tile-sub{font-size:11.5px;color:var(--text-3);margin-top:1px}
-.tile-sub b{color:var(--text-2);font-weight:500}
-.spark{display:block;width:100%;height:26px;margin-top:9px}
 
-/* ─── detail rail ───────────────────────────────────────────────────── */
-.empty{color:var(--text-3);font-size:12.5px;line-height:1.55}
-.bar{display:flex;height:5px;border-radius:3px;overflow:hidden;background:var(--field);margin:2px 0 14px}
-.bar i{display:block;height:100%}
-.bar i.a{background:var(--crit)} .bar i.w{background:var(--warn)} .bar i.n{background:var(--live);opacity:.55}
-
-.scrub{padding:13px 18px;border-top:1px solid var(--line);background:var(--surface);
-  display:flex;align-items:center;gap:16px}
-.scrub input[type=range]{flex:1}
-.scrub .lbl{font-size:12px;color:var(--text-3);white-space:nowrap}
-.scrub .lbl b{color:var(--text);font-weight:500}
-.btn{
-  height:28px;padding:0 13px;border:1px solid var(--line-strong);border-radius:6px;
-  background:var(--raised);color:var(--text-2);font:inherit;font-size:12px;font-weight:500;
-  cursor:pointer;white-space:nowrap;
-  transition:background .13s var(--ease),color .13s var(--ease),border-color .13s var(--ease);
+.fleet-stat-n {
+  font-size: 24px;
+  font-weight: 600;
+  font-family: var(--mono);
+  letter-spacing: -.04em;
+  line-height: 1;
+  color: var(--text);
 }
-.btn:hover{color:var(--text);border-color:var(--mute)}
-.btn[aria-pressed=true]{background:var(--live-soft);border-color:var(--live-line);color:var(--live)}
-.btn:focus-visible{outline:2px solid var(--live);outline-offset:2px}
+.fleet-stat-n.crit { color: var(--crit); }
+.fleet-stat-n.warn { color: var(--warn); }
 
-body{grid-template-rows:auto 1fr auto}
-@media (max-width:1000px){
-  main{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}
-  .rail.r{border-left:0;border-top:1px solid var(--line);max-height:38vh}
+.fleet-stat-label {
+  font-size: 11px;
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+.fleet-header-spacer { flex: 1; }
+
+.playback-info {
+  font-size: 12px;
+  color: var(--text-3);
+  padding-bottom: 2px;
+}
+.playback-info b { color: var(--text-2); font-family: var(--mono); font-weight: 500; }
+
+/* ── machine grid ────────────────────────────────────────────────── */
+.fleet-floor {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.machine-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  align-content: start;
+}
+
+/* ── machine tile ────────────────────────────────────────────────── */
+.machine-tile {
+  position: relative;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  padding: 12px 13px 10px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  overflow: hidden;
+  transition: border-color .14s var(--ease-ui), background .14s var(--ease-ui);
+}
+
+.machine-tile::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--line-strong);
+  transition: background .14s var(--ease-ui);
+}
+
+.machine-tile:hover { border-color: var(--line-med); background: var(--raised); }
+.machine-tile:focus-visible { outline: 2px solid var(--live-sat); outline-offset: 2px; }
+
+.machine-tile[data-state=alert] { border-color: var(--crit-line); background: var(--crit-soft); }
+.machine-tile[data-state=alert]::before { background: var(--crit); }
+.machine-tile[data-state=watch] { border-color: var(--warn-line); background: var(--warn-soft); }
+.machine-tile[data-state=watch]::before { background: var(--warn); }
+.machine-tile[aria-pressed=true] { border-color: var(--live-line) !important; }
+.machine-tile[aria-pressed=true]::before { background: var(--live-sat) !important; }
+
+.tile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.tile-id {
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--mono);
+  color: var(--text);
+  letter-spacing: -.02em;
+}
+
+.tile-variant {
+  font-size: 10px;
+  color: var(--text-3);
+  background: var(--raised);
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+
+.tile-margin {
+  font-size: 22px;
+  font-weight: 600;
+  font-family: var(--mono);
+  letter-spacing: -.04em;
+  line-height: 1.1;
+  color: var(--text);
+}
+
+.machine-tile[data-state=alert] .tile-margin { color: var(--crit); }
+.machine-tile[data-state=watch] .tile-margin { color: var(--warn); }
+
+.tile-constraint {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+.tile-constraint b { color: var(--text-2); font-weight: 500; }
+
+.spark {
+  display: block;
+  width: 100%;
+  height: 24px;
+  margin-top: 8px;
+}
+
+/* ── detail rail ─────────────────────────────────────────────────── */
+.detail-rail {
+  background: var(--surface);
+  border-left: 1px solid var(--line);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-empty {
+  padding: 20px 16px;
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.6;
+}
+
+.detail-machine-header {
+  padding: 16px 16px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.detail-machine-id {
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--mono);
+  letter-spacing: -.03em;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.detail-machine-status {
+  font-size: 12px;
+  color: var(--text-3);
+}
+.detail-machine-status.alert { color: var(--crit); }
+.detail-machine-status.watch { color: var(--warn); }
+.detail-machine-status.normal { color: var(--live-sat); }
+
+.detail-section {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.detail-section-title {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--text-3);
+  margin-bottom: 10px;
+}
+
+.mode-bar {
+  display: flex;
+  height: 3px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--field);
+  margin-top: 6px;
+}
+.mode-bar i { display: block; height: 100%; transition: width .2s var(--ease-out); }
+.mode-bar-ok   i { background: var(--live-sat); opacity: .7; }
+.mode-bar-warn i { background: var(--warn); }
+.mode-bar-crit i { background: var(--crit); }
+
+.open-envelope-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r);
+  background: var(--raised);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color .12s, color .12s, background .12s;
+}
+.open-envelope-btn:hover { border-color: var(--line-med); color: var(--text); background: var(--overlay); }
+.open-envelope-btn svg { width: 12px; height: 12px; fill: currentColor; opacity: .6; }
+
+/* ── scrubber ────────────────────────────────────────────────────── */
+.scrubber {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.scrubber input[type=range] { flex: 1; }
+
+.scrubber-label {
+  font-size: 11.5px;
+  color: var(--text-3);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.scrubber-label b { color: var(--text-2); font-family: var(--mono); font-weight: 500; }
+
+@media (max-width: 900px) {
+  main { grid-template-columns: 1fr; }
+  .detail-rail { border-left: 0; border-top: 1px solid var(--line); max-height: 35vh; }
 }
 </style>
 </head>
 <body>
 
 <header>
-  <a class="brand" href="/"><span class="glyph"></span>Margin Engine</a>
-  <nav class="nav">
+  <a class="brand" href="/">
+    <span class="brand-mark">
+      <svg viewBox="0 0 20 20"><path d="M10 2L3 7v6l7 5 7-5V7L10 2zm0 2.5l5 3.5-5 3.5L5 8l5-3.5zm-6 5l6 4.3 6-4.3V13l-6 4.3L4 13v-3.5z"/></svg>
+    </span>
+    Margin Engine
+  </a>
+
+  <nav class="topnav">
     <a href="/fleet/view" aria-current="page">Fleet</a>
     <a href="/explorer">Envelope</a>
-    <a href="/">Ask</a>
+    <a href="/">Copilot</a>
+    <a href="/reliability">Reliability</a>
   </nav>
-  <div class="spacer"></div>
-  <div class="pill" id="status"><span class="dot"></span><span id="status-text">All within envelope</span></div>
+
+  <div class="hdr-spacer"></div>
+
+  <div class="status-pill" id="status-pill">
+    <span class="dot"></span>
+    <span id="status-text">Loading…</span>
+  </div>
 </header>
 
 <main>
-  <div class="floor">
-    <div class="summary">
-      <div class="stat alert"><span class="n" id="c-alert">0</span><span class="k">Violating</span></div>
-      <div class="stat watch"><span class="n" id="c-watch">0</span><span class="k">Within 5%</span></div>
-      <div class="stat"><span class="n" id="c-normal">0</span><span class="k">Normal</span></div>
-      <div class="spacer"></div>
-      <div class="stat" style="align-items:flex-end">
-        <span class="n" id="c-worst">—</span><span class="k">Closest approach</span>
+  <div class="fleet-floor">
+    <div class="fleet-header">
+      <div class="fleet-stat">
+        <span class="fleet-stat-n crit" id="c-alert">—</span>
+        <span class="fleet-stat-label">Boundary violation</span>
+      </div>
+      <div class="fleet-stat">
+        <span class="fleet-stat-n warn" id="c-watch">—</span>
+        <span class="fleet-stat-label">Within 5 %</span>
+      </div>
+      <div class="fleet-stat">
+        <span class="fleet-stat-n" id="c-normal">—</span>
+        <span class="fleet-stat-label">Normal</span>
+      </div>
+
+      <div class="fleet-header-spacer"></div>
+
+      <div class="fleet-stat" style="align-items:flex-end">
+        <span class="fleet-stat-n" id="c-worst" style="font-size:18px">—</span>
+        <span class="fleet-stat-label">Closest approach</span>
+      </div>
+      <div class="playback-info">
+        Cycle <b id="playhead-lbl">—</b>
       </div>
     </div>
-    <div class="grid" id="grid"></div>
+
+    <div class="machine-grid" id="machine-grid"></div>
   </div>
 
-  <div class="rail r">
-    <div class="block">
-      <h2>Machine detail</h2>
-      <div id="detail"><p class="empty">Select a machine to see which rule is binding and how far it is from firing.</p></div>
+  <aside class="detail-rail">
+    <div id="detail-content">
+      <div class="detail-empty">Select a machine to inspect its constraint distances and operating point.</div>
     </div>
-  </div>
+  </aside>
 </main>
 
-<div class="scrub">
-  <span class="lbl">Cycle <b class="num" id="ph">—</b></span>
-  <input type="range" id="playhead" min="30" max="10000" step="1" value="10000">
-  <button class="btn" id="play" aria-pressed="false">Play</button>
-  <button class="btn" id="jump">Jump to first alert</button>
+<div class="scrubber">
+  <span class="scrubber-label">Cycle <b id="scrub-lbl">—</b></span>
+  <input type="range" id="scrubber" min="30" max="10000" step="1" value="10000">
+  <button class="btn" id="play-btn" aria-pressed="false">Play</button>
+  <button class="btn" id="jump-btn">Jump to first alert</button>
 </div>
 
 <script>
 "use strict";
-/* Every machine ranked on ONE axis. Margins are normalised by their own
-   threshold, so a thermal risk and a torque risk are directly comparable —
-   which is what makes a single ordering meaningful. Probabilities from separate
-   models are not comparable and cannot be ranked together. */
-const MODE={HDF:"Heat dissipation",PWF:"Drive power",OSF:"Overstrain"};
-let DATA=null, selected=null, timer=null;
 
-const $=id=>document.getElementById(id);
-const pct=v=>(v*100).toFixed(1)+"%";
+const MODE = { HDF: 'Heat dissipation', PWF: 'Drive power', OSF: 'Overstrain' };
+let DATA = null, selected = null, timer = null;
 
-async function load(udi){
-  const r=await fetch(`/fleet?through_udi=${udi}`);
-  DATA=await r.json();
-  paint();
-}
+const $ = id => document.getElementById(id);
+const pct = v => (v * 100).toFixed(1) + ' %';
 
-function sparkline(history,state){
-  const w=190,h=26,n=history.length;
-  if(n<2) return "";
-  const lo=Math.min(0,...history), hi=Math.max(...history), span=(hi-lo)||1;
-  const pt=(v,i)=>`${(i/(n-1)*w).toFixed(1)},${(h-((v-lo)/span)*h).toFixed(1)}`;
-  const line=history.map(pt).join(" ");
-  const zero=lo<0 ? (h-((0-lo)/span)*h).toFixed(1) : null;
-  const col=state==="alert"?"var(--crit)":state==="watch"?"var(--warn)":"var(--live)";
+/* ── sparkline ───────────────────────────────────────────────────── */
+function sparkline(history, state) {
+  const w = 180, h = 24, n = history.length;
+  if (n < 2) return '';
+  const lo = Math.min(0, ...history), hi = Math.max(...history);
+  const span = (hi - lo) || 1;
+  const pts = history.map((v, i) => `${(i/(n-1)*w).toFixed(1)},${(h - ((v-lo)/span)*h).toFixed(1)}`).join(' ');
+  const zero = lo < 0 ? (h - ((0-lo)/span)*h).toFixed(1) : null;
+  const col = state === 'alert' ? 'var(--crit)' : state === 'watch' ? 'var(--warn)' : 'var(--live-sat)';
   return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
-    ${zero!==null?`<line x1="0" y1="${zero}" x2="${w}" y2="${zero}"
-        stroke="var(--line-strong)" stroke-width="1" stroke-dasharray="3 3"/>`:""}
-    <polyline points="${line}" fill="none" stroke="${col}" stroke-width="1.4"
-      stroke-linejoin="round" opacity=".85"/></svg>`;
+    ${zero !== null ? `<line x1="0" y1="${zero}" x2="${w}" y2="${zero}" stroke="rgba(255,255,255,.12)" stroke-width="1"/>` : ''}
+    <polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linejoin="round" opacity=".9"/>
+  </svg>`;
 }
 
-function paint(){
-  const {machines,counts,worst,playhead,max_udi}=DATA;
-  $("c-alert").textContent=counts.alert;
-  $("c-watch").textContent=counts.watch;
-  $("c-normal").textContent=counts.normal;
-  $("c-worst").textContent=worst?pct(worst.worst_margin):"—";
-  $("ph").textContent=playhead.toLocaleString();
-  $("playhead").max=max_udi;
+/* ── paint grid ──────────────────────────────────────────────────── */
+function paint() {
+  const { machines, counts, worst, playhead, max_udi } = DATA;
 
-  const pill=$("status");
-  pill.className="pill"+(counts.alert?" bad":(counts.watch?" warn":""));
-  $("status-text").textContent = counts.alert
-    ? `${counts.alert} machine${counts.alert>1?"s":""} violating`
-    : counts.watch ? `${counts.watch} within 5% of a boundary` : "All within envelope";
+  $('c-alert').textContent  = counts.alert;
+  $('c-watch').textContent  = counts.watch;
+  $('c-normal').textContent = counts.normal;
+  $('c-worst').textContent  = worst ? pct(worst.worst_margin) : '—';
+  $('playhead-lbl').textContent = playhead.toLocaleString();
+  $('scrub-lbl').textContent    = playhead.toLocaleString();
+  $('scrubber').max = max_udi;
 
-  $("grid").innerHTML=machines.map(m=>`
-    <button class="tile" data-state="${m.state}" data-machine="${m.machine}"
-            aria-pressed="${selected===m.machine}">
-      <div class="tile-top">
+  const pill     = $('status-pill');
+  const pillText = $('status-text');
+  if (counts.alert) {
+    pill.className = 'status-pill crit';
+    pillText.textContent = `${counts.alert} violation${counts.alert > 1 ? 's' : ''}`;
+  } else if (counts.watch) {
+    pill.className = 'status-pill warn';
+    pillText.textContent = `${counts.watch} near boundary`;
+  } else {
+    pill.className = 'status-pill';
+    pillText.textContent = 'All within envelope';
+  }
+
+  $('machine-grid').innerHTML = machines.map(m => `
+    <button class="machine-tile" data-state="${m.state}" data-machine="${m.machine}"
+            aria-pressed="${selected === m.machine}">
+      <div class="tile-header">
         <span class="tile-id">${m.machine}</span>
-        <span class="tile-var">${m.variant} variant</span>
+        <span class="tile-variant">${m.variant}</span>
       </div>
-      <div class="tile-margin">${m.worst_margin<0?"−":""}${pct(Math.abs(m.worst_margin))}</div>
-      <div class="tile-sub">to <b>${MODE[m.binding]}</b></div>
-      ${sparkline(m.history,m.state)}
-    </button>`).join("");
+      <div class="tile-margin">${m.worst_margin < 0 ? '−' : ''}${pct(Math.abs(m.worst_margin))}</div>
+      <div class="tile-constraint">to <b>${MODE[m.binding]}</b></div>
+      ${sparkline(m.history, m.state)}
+    </button>`).join('');
 
-  if(selected && !machines.some(m=>m.machine===selected)) selected=null;
-  detail();
+  if (selected && !machines.some(m => m.machine === selected)) selected = null;
+  renderDetail();
 }
 
-function detail(){
-  const box=$("detail");
-  if(!selected){
-    box.innerHTML=`<p class="empty">Select a machine to see which rule is binding
-      and how far it is from firing.</p>`;
+/* ── detail rail ─────────────────────────────────────────────────── */
+function renderDetail() {
+  const box = $('detail-content');
+  if (!selected) {
+    box.innerHTML = '<div class="detail-empty">Select a machine to inspect its constraint distances and operating point.</div>';
     return;
   }
-  const m=DATA.machines.find(x=>x.machine===selected);
-  if(!m) return;
-  const order=Object.entries(m.distances).sort((a,b)=>a[1]-b[1]);
-  const rows=order.map(([mode,dist])=>{
-    const frac=Math.max(0,Math.min(1,dist/0.30));
-    const cls=dist<0?" neg":(dist<0.05?" tight":"");
-    return `<div class="row${cls}"><div class="row-top">
-      <span class="row-l">${MODE[mode]}</span>
-      <span class="row-v"><span class="num">${dist<0?"−":"+"}${pct(Math.abs(dist))}</span></span>
-      </div><div class="meter"><i style="width:${(frac*100).toFixed(1)}%"></i></div></div>`;
-  }).join("");
+  const m = DATA.machines.find(x => x.machine === selected);
+  if (!m) return;
 
-  const cls=m.state==="alert"?"card act":m.state==="watch"?"card attn":"card";
-  const head=m.state==="alert"?`${MODE[m.binding]} violated`
-           :m.state==="watch"?`Approaching ${MODE[m.binding].toLowerCase()}`
-           :"Within envelope";
+  const statusCls  = m.state;
+  const statusText = m.state === 'alert'
+    ? `${MODE[m.binding]} violated`
+    : m.state === 'watch'
+    ? `Approaching ${MODE[m.binding].toLowerCase()}`
+    : 'Within envelope';
 
-  box.innerHTML=`
-    <div class="${cls}" style="margin-bottom:14px">
-      <h3>${m.machine} · ${head}</h3>
-      Binding constraint is <b>${MODE[m.binding].toLowerCase()}</b> at
-      <b>${m.worst_margin<0?"−":""}${pct(Math.abs(m.worst_margin))}</b> of its threshold.
-      <div class="cta"><span>Cycle</span><b class="num">${m.udi.toLocaleString()}</b></div>
+  const distances = Object.entries(m.distances).sort((a,b) => a[1] - b[1]);
+  const distRows = distances.map(([mode, dist]) => {
+    const tight = dist >= 0 && dist < 0.05;
+    const neg   = dist < 0;
+    const frac  = Math.max(0, Math.min(1, dist / 0.30));
+    const barCls = neg ? 'mode-bar-crit' : tight ? 'mode-bar-warn' : 'mode-bar-ok';
+    const valCls = neg ? 'style="color:var(--crit)"' : tight ? 'style="color:var(--warn)"' : '';
+    return `<div class="metric-row ${neg ? 'neg' : tight ? 'tight' : ''}">
+      <div class="metric-row-top">
+        <span class="metric-label">${MODE[mode]}</span>
+        <span class="metric-value" ${valCls}>${dist < 0 ? '−' : '+'}${pct(Math.abs(dist))}</span>
+      </div>
+      <div class="meter mode-bar ${barCls}"><i style="width:${(frac*100).toFixed(1)}%"></i></div>
+    </div>`;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="detail-machine-header">
+      <div class="detail-machine-id">${m.machine}</div>
+      <div class="detail-machine-status ${m.state}">${statusText}</div>
     </div>
-    <h2 style="margin:0 0 10px;font-size:12px;font-weight:600;color:var(--text-2)">
-      Normalised distance by rule</h2>
-    ${rows}
-    <h2 style="margin:18px 0 8px;font-size:12px;font-weight:600;color:var(--text-2)">
-      Operating point</h2>
-    <dl style="margin:0">
-      <div class="kv"><dt>Speed</dt><dd class="num">${m.rpm.toFixed(0)} rpm</dd></div>
-      <div class="kv"><dt>Torque</dt><dd class="num">${m.torque.toFixed(1)} N·m</dd></div>
-      <div class="kv"><dt>Power</dt><dd class="num">${m.power.toLocaleString()} W</dd></div>
-      <div class="kv"><dt>Tool wear</dt><dd class="num">${m.wear.toFixed(0)} min</dd></div>
-    </dl>
-    <a class="btn" style="display:inline-block;margin-top:14px;line-height:26px;text-decoration:none"
-       href="/explorer?rpm=${m.rpm}&torque=${m.torque}&wear=${m.wear}&variant=${m.variant}">
-       Open in envelope →</a>`;
+
+    <div class="detail-section">
+      <div class="detail-section-title">Distance to boundary</div>
+      ${distRows}
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Operating point</div>
+      <dl>
+        <div class="kv"><dt>Rotational speed</dt><dd class="num">${m.rpm.toFixed(0)} rpm</dd></div>
+        <div class="kv"><dt>Torque</dt><dd class="num">${m.torque.toFixed(1)} N·m</dd></div>
+        <div class="kv"><dt>Power</dt><dd class="num">${m.power.toLocaleString()} W</dd></div>
+        <div class="kv"><dt>Tool wear</dt><dd class="num">${m.wear.toFixed(0)} min</dd></div>
+        <div class="kv"><dt>Worst margin</dt><dd class="num ${m.state}">${m.worst_margin < 0 ? '−' : ''}${pct(Math.abs(m.worst_margin))}</dd></div>
+        <div class="kv"><dt>At cycle</dt><dd class="num">${m.udi.toLocaleString()}</dd></div>
+      </dl>
+    </div>
+
+    <div class="detail-section">
+      <a class="open-envelope-btn"
+         href="/explorer?rpm=${m.rpm}&torque=${m.torque}&wear=${m.wear}&variant=${m.variant}">
+        Open in Envelope Explorer
+        <svg viewBox="0 0 12 12"><path d="M7 1h4v4M11 1L5 7M2 3H1v8h8v-1"/></svg>
+      </a>
+    </div>
+  `;
 }
 
-$("grid").addEventListener("click",e=>{
-  const t=e.target.closest(".tile"); if(!t) return;
-  selected = selected===t.dataset.machine ? null : t.dataset.machine;
+/* ── event delegation ────────────────────────────────────────────── */
+$('machine-grid').addEventListener('click', e => {
+  const tile = e.target.closest('.machine-tile');
+  if (!tile) return;
+  selected = selected === tile.dataset.machine ? null : tile.dataset.machine;
   paint();
 });
 
-const ph=$("playhead");
-ph.addEventListener("input",()=>{ $("ph").textContent=(+ph.value).toLocaleString(); });
-ph.addEventListener("change",()=>load(+ph.value));
+/* ── scrubber ────────────────────────────────────────────────────── */
+async function load(udi) {
+  const r = await fetch(`/fleet?through_udi=${udi}`);
+  DATA = await r.json();
+  paint();
+}
 
-$("play").addEventListener("click",e=>{
-  const on=e.currentTarget.getAttribute("aria-pressed")==="true";
-  e.currentTarget.setAttribute("aria-pressed",String(!on));
-  e.currentTarget.textContent = on ? "Play" : "Pause";
-  if(on){ clearInterval(timer); timer=null; return; }
-  timer=setInterval(()=>{
-    const next=Math.min(+ph.max, +ph.value+37);
-    ph.value=next; load(next);
-    if(next>=+ph.max){ clearInterval(timer); timer=null;
-      $("play").setAttribute("aria-pressed","false"); $("play").textContent="Play"; }
-  },700);
+const scrubber = $('scrubber');
+scrubber.addEventListener('input', () => $('scrub-lbl').textContent = (+scrubber.value).toLocaleString());
+scrubber.addEventListener('change', () => load(+scrubber.value));
+
+/* ── playback ────────────────────────────────────────────────────── */
+$('play-btn').addEventListener('click', e => {
+  const btn = e.currentTarget;
+  const playing = btn.getAttribute('aria-pressed') === 'true';
+  btn.setAttribute('aria-pressed', String(!playing));
+  btn.textContent = playing ? 'Play' : 'Pause';
+
+  if (playing) { clearInterval(timer); timer = null; return; }
+
+  timer = setInterval(() => {
+    const next = Math.min(+scrubber.max, +scrubber.value + 37);
+    scrubber.value = next;
+    load(next);
+    if (next >= +scrubber.max) {
+      clearInterval(timer); timer = null;
+      btn.setAttribute('aria-pressed', 'false');
+      btn.textContent = 'Play';
+    }
+  }, 700);
 });
 
-$("jump").addEventListener("click",async()=>{
-  // The replay's first genuine boundary violation.
-  ph.value=51; await load(51);
+$('jump-btn').addEventListener('click', async () => {
+  scrubber.value = 51;
+  await load(51);
 });
 
 load(10000);

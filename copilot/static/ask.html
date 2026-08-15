@@ -1,0 +1,1160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Copilot · Margin Engine</title>
+<meta name="description" content="Industrial copilot — every answer is computed and verified, never generated.">
+<link rel="stylesheet" href="/static/app.css">
+<style>
+/* ── page layout ─────────────────────────────────────────────────────── */
+body { grid-template-rows: 48px 1fr; overflow: hidden; }
+
+.layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0,1fr) 240px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── left rail: context + suggestions ───────────────────────────────── */
+.ctx-rail {
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ctx-section {
+  padding: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.ctx-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--text-3);
+  margin-bottom: 10px;
+}
+
+.suggestion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.suggestion-btn {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: var(--r);
+  padding: 7px 9px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-3);
+  cursor: pointer;
+  line-height: 1.45;
+  transition: background .1s var(--ease-ui), color .1s var(--ease-ui);
+}
+.suggestion-btn:hover {
+  background: var(--raised);
+  color: var(--text-2);
+}
+.suggestion-btn:focus-visible { outline: 2px solid var(--live-sat); outline-offset: 1px; }
+
+/* ── main thread ─────────────────────────────────────────────────────── */
+.thread-wrap {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.thread {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 32px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── empty state ─────────────────────────────────────────────────────── */
+.empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  max-width: 560px;
+  gap: 20px;
+}
+
+.empty-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.empty-hero-mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--live);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.empty-hero-mark svg { width: 20px; height: 20px; fill: #061812; }
+
+.empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -.02em;
+}
+
+.empty-sub {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.65;
+  max-width: 500px;
+}
+
+.empty-props {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+
+.prop-item {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+}
+
+.prop-item-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-3);
+  margin-bottom: 3px;
+}
+
+.prop-item-value {
+  font-size: 12px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* ── query/answer pair ───────────────────────────────────────────────── */
+.qa-block {
+  margin-bottom: 1px;
+  animation: fadeSlideUp .18s var(--ease-out) both;
+}
+
+.qa-block + .qa-block {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.query-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.query-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background: var(--raised);
+  border: 1px solid var(--line-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.query-avatar svg { width: 12px; height: 12px; fill: var(--text-2); }
+
+.query-text {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: -.01em;
+  line-height: 1.4;
+  padding-top: 2px;
+}
+
+/* ── answer area ─────────────────────────────────────────────────────── */
+.answer-body {
+  padding-left: 32px;
+}
+
+/* Warning banners */
+.warning-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: var(--r);
+  margin-bottom: 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.warning-banner.crit {
+  background: var(--crit-soft);
+  border: 1px solid var(--crit-line);
+  color: var(--text);
+}
+.warning-banner.crit svg { fill: var(--crit); flex-shrink: 0; margin-top: 1px; }
+.warning-banner.info {
+  background: var(--info-soft);
+  border: 1px solid var(--info-line);
+  color: var(--text-2);
+}
+.warning-banner.info svg { fill: var(--info); flex-shrink: 0; margin-top: 1px; }
+
+/* Narration text */
+.narration {
+  font-size: 13.5px;
+  color: var(--text-2);
+  line-height: 1.72;
+  white-space: pre-wrap;
+  letter-spacing: -.005em;
+}
+
+.narration strong { color: var(--text); font-weight: 600; }
+
+/* Caveat strip */
+.caveat {
+  margin-top: 8px;
+  font-size: 11.5px;
+  color: var(--text-3);
+  line-height: 1.5;
+  padding-left: 10px;
+  border-left: 2px solid var(--line-strong);
+}
+
+/* ── answer metadata strip ───────────────────────────────────────────── */
+.meta-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.meta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.meta-badge.verified {
+  background: var(--live-soft);
+  border-color: var(--live-line);
+  color: var(--live-sat);
+}
+.meta-badge.verified svg { width: 10px; height: 10px; fill: var(--live-sat); }
+
+.meta-badge.unverified {
+  background: var(--crit-soft);
+  border-color: var(--crit-line);
+  color: var(--crit);
+}
+
+.meta-badge.tier-grammar  { background: rgba(46,168,128,.1);  border-color: rgba(46,168,128,.25);  color: var(--tier-grammar); }
+.meta-badge.tier-exemplar { background: rgba(59,128,232,.1);  border-color: rgba(59,128,232,.25);  color: var(--tier-exemplar); }
+.meta-badge.tier-llm      { background: rgba(155,89,208,.1);  border-color: rgba(155,89,208,.25);  color: var(--tier-llm); }
+.meta-badge.tier-cache    { background: rgba(78,89,104,.12);  border-color: rgba(78,89,104,.25);   color: var(--text-2); }
+
+.meta-badge.latency { color: var(--text-3); background: none; border: none; font-family: var(--mono); padding: 0; }
+.meta-badge.op { color: var(--text-3); background: none; border: none; padding: 0; }
+
+.meta-sep { width: 1px; height: 12px; background: var(--line-strong); }
+
+/* ── drill-down controls ─────────────────────────────────────────────── */
+.drill-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.drill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 99px;
+  background: none;
+  color: var(--text-3);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: color .1s, border-color .1s, background .1s;
+}
+.drill-btn:hover { color: var(--text-2); border-color: var(--line-med); background: var(--raised); }
+.drill-btn[aria-expanded=true] {
+  background: var(--raised);
+  border-color: var(--line-med);
+  color: var(--text);
+}
+.drill-btn svg { width: 11px; height: 11px; fill: currentColor; }
+
+/* ── collapsible evidence panel ──────────────────────────────────────── */
+.evidence-panel {
+  display: none;
+  margin-top: 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--surface);
+}
+.evidence-panel.open { display: block; animation: fadeIn .15s var(--ease-out); }
+
+.evidence-panel-header {
+  padding: 8px 12px;
+  background: var(--raised);
+  border-bottom: 1px solid var(--line);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-3);
+}
+
+table.ev-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+table.ev-table th {
+  padding: 6px 12px;
+  text-align: left;
+  background: var(--surface);
+  color: var(--text-3);
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  border-bottom: 1px solid var(--line);
+}
+
+table.ev-table th.r { text-align: right; }
+
+table.ev-table td {
+  padding: 5px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+table.ev-table tr:last-child td { border-bottom: 0; }
+
+table.ev-table td.slot-id {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+table.ev-table td.slot-val {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+  text-align: right;
+  white-space: nowrap;
+}
+
+table.ev-table td.slot-n {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-3);
+  text-align: right;
+}
+
+table.ev-table tr.abstain td.slot-val { color: var(--warn); }
+
+.json-panel pre {
+  padding: 12px;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-2);
+  margin: 0;
+}
+
+/* ── thinking indicator ──────────────────────────────────────────────── */
+.thinking {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 32px;
+  height: 28px;
+}
+
+.thinking span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text-3);
+  display: inline-block;
+  animation: thinking 1.2s ease-in-out infinite;
+}
+
+.thinking span:nth-child(2) { animation-delay: .16s; }
+.thinking span:nth-child(3) { animation-delay: .32s; }
+
+/* ── copy flash ──────────────────────────────────────────────────────── */
+.copy-flash {
+  position: fixed;
+  bottom: 88px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--overlay);
+  border: 1px solid var(--line-strong);
+  border-radius: 99px;
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--text-2);
+  pointer-events: none;
+  animation: fadeIn .15s var(--ease-out), fadeOut .3s var(--ease-out) 1.2s both;
+  z-index: 100;
+}
+
+@keyframes fadeOut {
+  to { opacity: 0; transform: translateX(-50%) translateY(4px); }
+}
+
+/* ── composer ────────────────────────────────────────────────────────── */
+.composer {
+  padding: 14px 32px 20px;
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+  position: relative;
+}
+
+.composer-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  padding: 4px 4px 4px 14px;
+  transition: border-color .15s var(--ease-ui), box-shadow .15s var(--ease-ui);
+}
+
+.composer-box:focus-within {
+  border-color: var(--live-line);
+  box-shadow: 0 0 0 3px var(--live-soft);
+}
+
+.composer-box textarea {
+  flex: 1;
+  background: none;
+  border: 0;
+  outline: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13.5px;
+  resize: none;
+  padding: 7px 0;
+  min-height: 38px;
+  max-height: 120px;
+  overflow-y: auto;
+  line-height: 1.5;
+}
+
+.composer-box textarea::placeholder { color: var(--text-3); }
+
+.composer-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-end;
+  padding-bottom: 4px;
+}
+
+.send-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--r);
+  background: var(--live-sat);
+  cursor: pointer;
+  transition: background .12s var(--ease-ui), opacity .12s;
+  flex-shrink: 0;
+}
+
+.send-btn:disabled { opacity: .35; cursor: default; }
+.send-btn:not(:disabled):hover { background: #3ddca8; }
+.send-btn svg { width: 15px; height: 15px; fill: #061812; }
+
+.composer-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 16px;
+  padding: 0 4px;
+  background: var(--raised);
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  font-size: 10px;
+  font-family: var(--mono);
+  color: var(--text-3);
+}
+
+/* ── right rail: session stats ───────────────────────────────────────── */
+.stats-rail {
+  background: var(--surface);
+  border-left: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.stat-group {
+  padding: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.stat-group-title {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--text-3);
+  margin-bottom: 12px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.stat-item-label { font-size: 12px; color: var(--text-2); }
+
+.stat-item-value {
+  font-size: 12px;
+  color: var(--text);
+  font-family: var(--mono);
+  letter-spacing: -.02em;
+}
+
+.pipeline-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.pipeline-step .step-n {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--raised);
+  border: 1px solid var(--line-strong);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pipeline-step .step-label { color: var(--text-2); font-weight: 500; font-size: 12px; }
+.pipeline-step .step-sub { color: var(--text-3); font-size: 11px; }
+
+/* ── tier distribution bar ───────────────────────────────────────────── */
+.tier-bar {
+  display: flex;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  gap: 1px;
+  margin-top: 8px;
+}
+.tier-bar-seg { height: 100%; transition: width .3s var(--ease-out); }
+.tier-bar-seg.grammar  { background: var(--tier-grammar); }
+.tier-bar-seg.exemplar { background: var(--tier-exemplar); }
+.tier-bar-seg.llm      { background: var(--tier-llm); }
+.tier-bar-seg.cache    { background: var(--tier-cache); }
+
+/* ── responsive ──────────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .layout { grid-template-columns: 0 minmax(0,1fr) 220px; }
+  .ctx-rail { display: none; }
+}
+
+@media (max-width: 800px) {
+  .layout { grid-template-columns: 1fr; }
+  .stats-rail { display: none; }
+  .thread { padding: 20px 20px 12px; }
+  .composer { padding: 12px 20px 16px; }
+  .answer-body { padding-left: 0; }
+  .thinking { padding-left: 0; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <a class="brand" href="/">
+    <span class="brand-mark">
+      <svg viewBox="0 0 20 20"><path d="M10 2L3 7v6l7 5 7-5V7L10 2zm0 2.5l5 3.5-5 3.5L5 8l5-3.5zm-6 5l6 4.3 6-4.3V13l-6 4.3L4 13v-3.5z"/></svg>
+    </span>
+    Margin Engine
+  </a>
+
+  <nav class="topnav">
+    <a href="/fleet/view">Fleet</a>
+    <a href="/explorer">Envelope</a>
+    <a href="/" aria-current="page">Copilot</a>
+    <a href="/reliability">Reliability</a>
+  </nav>
+
+  <div class="hdr-spacer"></div>
+
+  <div class="status-pill" id="status-pill">
+    <span class="dot"></span>
+    <span id="status-text">Ready</span>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- Left: context + suggestions -->
+  <aside class="ctx-rail rail">
+    <div class="ctx-section">
+      <div class="ctx-label">Sample questions</div>
+      <div class="suggestion-list" id="suggestions"></div>
+    </div>
+    <div class="ctx-section">
+      <div class="ctx-label">Session context</div>
+      <div id="session-ctx" style="font-size:12px;color:var(--text-3);line-height:1.55">
+        No active scope
+      </div>
+    </div>
+  </aside>
+
+  <!-- Centre: thread -->
+  <div class="thread-wrap">
+    <div class="thread" id="thread">
+      <!-- empty state -->
+      <div class="empty-state" id="empty">
+        <div class="empty-hero">
+          <div class="empty-hero-mark">
+            <svg viewBox="0 0 20 20"><path d="M10 2L3 7v6l7 5 7-5V7L10 2zm0 2.5l5 3.5-5 3.5L5 8l5-3.5zm-6 5l6 4.3 6-4.3V13l-6 4.3L4 13v-3.5z"/></svg>
+          </div>
+          <div>
+            <div class="empty-title">Industrial Copilot</div>
+          </div>
+        </div>
+        <p class="empty-sub">
+          Ask questions about machine behaviour, failure patterns, operating conditions, and process trends. Every number in every answer is computed arithmetic — not model output.
+        </p>
+        <div class="empty-props">
+          <div class="prop-item">
+            <div class="prop-item-label">Latency p50</div>
+            <div class="prop-item-value">7 ms</div>
+          </div>
+          <div class="prop-item">
+            <div class="prop-item-label">Below model tier</div>
+            <div class="prop-item-value">92 %</div>
+          </div>
+          <div class="prop-item">
+            <div class="prop-item-label">Unsourced numerals</div>
+            <div class="prop-item-value">0.000</div>
+          </div>
+          <div class="prop-item">
+            <div class="prop-item-label">Golden eval pass</div>
+            <div class="prop-item-value">25 / 25</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Composer -->
+    <div class="composer">
+      <div class="composer-box">
+        <textarea
+          id="q"
+          placeholder="Ask about operating conditions, failures, trends, or safe windows…"
+          rows="1"
+          autofocus
+          autocomplete="off"
+          spellcheck="false"
+        ></textarea>
+        <div class="composer-actions">
+          <button class="send-btn" id="send-btn" disabled aria-label="Send">
+            <svg viewBox="0 0 16 16"><path d="M1.5 1.5l13 6.5-13 6.5V9.5l8.5-1.5L1.5 6.5V1.5z"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="composer-hint">
+        <span>Context is maintained across follow-up questions</span>
+        <span><kbd class="kbd">Enter</kbd> to send &nbsp; <kbd class="kbd">Shift</kbd><kbd class="kbd">Enter</kbd> for newline</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: session stats + pipeline explainer -->
+  <aside class="stats-rail">
+    <div class="stat-group">
+      <div class="stat-group-title">This session</div>
+      <div class="stat-item">
+        <span class="stat-item-label">Answers</span>
+        <span class="stat-item-value" id="s-n">—</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-item-label">Verified</span>
+        <span class="stat-item-value" id="s-v">—</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-item-label">Median latency</span>
+        <span class="stat-item-value" id="s-lat">—</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-item-label">Below model tier</span>
+        <span class="stat-item-value" id="s-cheap">—</span>
+      </div>
+      <div class="tier-bar" id="tier-bar">
+        <div class="tier-bar-seg grammar" id="bar-grammar" style="width:0"></div>
+        <div class="tier-bar-seg exemplar" id="bar-exemplar" style="width:0"></div>
+        <div class="tier-bar-seg llm" id="bar-llm" style="width:0"></div>
+        <div class="tier-bar-seg cache" id="bar-cache" style="width:0"></div>
+      </div>
+    </div>
+
+    <div class="stat-group">
+      <div class="stat-group-title">Answer pipeline</div>
+      <div class="pipeline-step">
+        <span class="step-n">1</span>
+        <div>
+          <div class="step-label">Route</div>
+          <div class="step-sub">cache → grammar → exemplars → model</div>
+        </div>
+      </div>
+      <div class="pipeline-step" style="margin-top:8px">
+        <span class="step-n">2</span>
+        <div>
+          <div class="step-label">Validate plan</div>
+          <div class="step-sub">against semantic layer</div>
+        </div>
+      </div>
+      <div class="pipeline-step" style="margin-top:8px">
+        <span class="step-n">3</span>
+        <div>
+          <div class="step-label">Execute</div>
+          <div class="step-sub">typed operator over DuckDB</div>
+        </div>
+      </div>
+      <div class="pipeline-step" style="margin-top:8px">
+        <span class="step-n">4</span>
+        <div>
+          <div class="step-label">Narrate</div>
+          <div class="step-sub">slot references, never digits</div>
+        </div>
+      </div>
+      <div class="pipeline-step" style="margin-top:8px">
+        <span class="step-n">5</span>
+        <div>
+          <div class="step-label">Verify</div>
+          <div class="step-sub">bare numeral → rejected</div>
+        </div>
+      </div>
+      <p class="hint" style="margin-top:12px">
+        A verified plan is stored so the next similar question is answered from the cheap tier — no model call.
+      </p>
+    </div>
+
+    <div class="stat-group">
+      <div class="stat-group-title">Data</div>
+      <div class="stat-item">
+        <span class="stat-item-label">Dataset</span>
+        <span class="stat-item-value" style="font-size:11px;color:var(--text-2)">AI4I 2020</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-item-label">Rows</span>
+        <span class="stat-item-value">10,000</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-item-label">Failures</span>
+        <span class="stat-item-value">339</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-item-label">Explained</span>
+        <span class="stat-item-value">287 / 339</span>
+      </div>
+    </div>
+  </aside>
+
+</div><!-- .layout -->
+
+<script>
+"use strict";
+
+const SUGGESTIONS = [
+  "Why are we seeing more failures at high rotational speeds?",
+  "Compare the operating conditions of machines that failed versus those that did not.",
+  "Why did cycle 9016 fail?",
+  "What causes failures in this dataset?",
+  "How does failure rate vary with tool wear?",
+  "What if we reduce torque by 5 Nm?",
+  "Can I trust this data?",
+  "Show me the cycles closest to failing.",
+  "What are the typical operating conditions for H variants?",
+  "Which variables best separate failures from healthy operation?",
+];
+
+const SESSION_ID = "web-" + Math.random().toString(36).slice(2, 8);
+
+/* ── utils ──────────────────────────────────────────────────────────── */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ── session stats ───────────────────────────────────────────────────── */
+const session = { n: 0, verified: 0, cheap: 0, llm: 0, exemplar: 0, grammar: 0, cache: 0, times: [] };
+
+function updateStats(d) {
+  session.n++;
+  if (d.verified) session.verified++;
+  const t = d.tier;
+  if (t === 'grammar' || t === 'cache' || t === 'exemplar') session.cheap++;
+  session[t] = (session[t] || 0) + 1;
+
+  const med = [...session.times].sort((a,b) => a-b)[Math.floor(session.times.length/2)] | 0;
+  $('s-n').textContent    = session.n;
+  $('s-v').textContent    = session.verified + ' / ' + session.n;
+  $('s-lat').textContent  = med + ' ms';
+  $('s-cheap').textContent = Math.round(session.cheap / session.n * 100) + ' %';
+
+  // Tier bar
+  ['grammar','exemplar','llm','cache'].forEach(k => {
+    const pct = ((session[k]||0) / session.n * 100).toFixed(1) + '%';
+    $('bar-' + k).style.width = pct;
+  });
+}
+
+/* ── suggestions ─────────────────────────────────────────────────────── */
+const sugList = $('suggestions');
+SUGGESTIONS.forEach(s => {
+  const btn = document.createElement('button');
+  btn.className = 'suggestion-btn';
+  btn.textContent = s;
+  btn.addEventListener('click', () => { if (!busy) { $('q').value = s; autoResize(); ask(); } });
+  sugList.appendChild(btn);
+});
+
+/* ── textarea auto-resize ────────────────────────────────────────────── */
+const qEl = $('q');
+const sendBtn = $('send-btn');
+
+function autoResize() {
+  qEl.style.height = 'auto';
+  qEl.style.height = Math.min(qEl.scrollHeight, 120) + 'px';
+  sendBtn.disabled = !qEl.value.trim();
+}
+
+qEl.addEventListener('input', autoResize);
+
+qEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    if (!busy && qEl.value.trim()) ask();
+  }
+});
+
+sendBtn.addEventListener('click', ask);
+
+/* ── tier badge ──────────────────────────────────────────────────────── */
+function tierBadge(tier) {
+  const labels = { grammar: 'Grammar tier', exemplar: 'Exemplar tier', llm: 'Model tier', cache: 'Cache hit', refused: 'Refused' };
+  const label = labels[tier] || tier;
+  return `<span class="meta-badge tier-${tier}">${esc(label)}</span>`;
+}
+
+/* ── evidence table ──────────────────────────────────────────────────── */
+function evidenceTable(ev) {
+  if (!ev || !Object.keys(ev).length) return '<div style="padding:12px;font-size:12px;color:var(--text-3)">No evidence returned.</div>';
+  const rows = Object.entries(ev).map(([id, s]) => {
+    const abstain = s.value === null;
+    const val = abstain ? 'ABSTAIN'
+      : (typeof s.value === 'number'
+          ? s.value.toLocaleString(undefined, { maximumFractionDigits: 4 })
+          : String(s.value));
+    const unit = s.unit && !['', 'count', 'ratio'].includes(s.unit) ? ' ' + esc(s.unit) : '';
+    return `<tr class="${abstain ? 'abstain' : ''}">
+      <td class="slot-id">${esc(id)}</td>
+      <td class="slot-val">${esc(val)}${unit}</td>
+      <td class="slot-n">${s.n != null ? s.n.toLocaleString() : ''}</td>
+    </tr>`;
+  }).join('');
+  return `<table class="ev-table">
+    <thead><tr>
+      <th>Slot</th>
+      <th class="r">Value</th>
+      <th class="r">n</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+/* ── render a QA block ───────────────────────────────────────────────── */
+let blockCount = 0;
+
+function renderBlock(question, d) {
+  const id = 'b' + (++blockCount);
+
+  // Warnings split by severity
+  const critical = (d.warnings || []).filter(w => w.severity === 'critical');
+  const caveats  = (d.warnings || []).filter(w => w.severity !== 'critical');
+
+  const warnHtml = critical.map(w => `
+    <div class="warning-banner crit">
+      <svg viewBox="0 0 16 16" width="14" height="14"><path d="M8 1L1 14h14L8 1zm0 3l5 9H3l5-9zm-1 4v2h2V8H7zm0 3v2h2v-2H7z"/></svg>
+      <span>${esc(w.message)}</span>
+    </div>`).join('');
+
+  const caveatsHtml = caveats.map(w => `
+    <div class="caveat">${esc(w.message)}</div>`).join('');
+
+  const verifiedBadge = d.verified
+    ? `<span class="meta-badge verified"><svg viewBox="0 0 12 12"><path d="M10 2L5 9 2 6"/></svg>Verified</span>`
+    : `<span class="meta-badge unverified">Unverified</span>`;
+
+  const block = document.createElement('div');
+  block.className = 'qa-block';
+  block.id = id;
+  block.innerHTML = `
+    <div class="query-row">
+      <span class="query-avatar">
+        <svg viewBox="0 0 16 16"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.31 2.69-6 6-6s6 2.69 6 6"/></svg>
+      </span>
+      <span class="query-text">${esc(question)}</span>
+    </div>
+
+    <div class="answer-body">
+      ${warnHtml}
+      <div class="narration">${esc(d.narration)}</div>
+      ${caveatsHtml}
+
+      <div class="meta-strip">
+        ${verifiedBadge}
+        <div class="meta-sep"></div>
+        ${tierBadge(d.tier)}
+        ${d.op ? `<span class="meta-badge op">${esc(d.op)}</span>` : ''}
+        <div class="meta-sep"></div>
+        <span class="meta-badge latency">${d.elapsed_ms} ms</span>
+        ${d.replay_handle ? `<span class="meta-badge latency" title="Plan hash">plan/${esc(d.replay_handle.slice(0,8))}</span>` : ''}
+      </div>
+
+      <div class="drill-row">
+        <button class="drill-btn" id="${id}-ev-btn" aria-expanded="false" onclick="togglePanel('${id}-ev','${id}-ev-btn')">
+          <svg viewBox="0 0 12 12"><rect x="1" y="3" width="10" height="1.5" rx=".75"/><rect x="1" y="6.25" width="7" height="1.5" rx=".75"/><rect x="1" y="9.5" width="9" height="1.5" rx=".75"/></svg>
+          Evidence
+        </button>
+        <button class="drill-btn" id="${id}-plan-btn" aria-expanded="false" onclick="togglePanel('${id}-plan','${id}-plan-btn')">
+          <svg viewBox="0 0 12 12"><path d="M2 2h8v8H2V2zm2 2v4h4V4H4z"/></svg>
+          Plan
+        </button>
+        ${d.rows && d.rows.length ? `
+        <button class="drill-btn" id="${id}-rows-btn" aria-expanded="false" onclick="togglePanel('${id}-rows','${id}-rows-btn')">
+          <svg viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="3" rx="1"/><rect x="1" y="5.5" width="10" height="3" rx="1"/></svg>
+          Rows · ${d.rows.length}
+        </button>` : ''}
+        <button class="drill-btn" onclick="copyAnswer(this,'${id}')" title="Copy answer">
+          <svg viewBox="0 0 12 12"><rect x="4" y="1" width="7" height="9" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M1 3v8h7" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
+          Copy
+        </button>
+      </div>
+
+      <div class="evidence-panel" id="${id}-ev">
+        <div class="evidence-panel-header">Evidence Slots</div>
+        ${evidenceTable(d.evidence)}
+      </div>
+
+      <div class="evidence-panel json-panel" id="${id}-plan">
+        <div class="evidence-panel-header">Analysis Plan · JSON</div>
+        <pre>${esc(JSON.stringify(d.plan_json, null, 2))}</pre>
+      </div>
+
+      ${d.rows && d.rows.length ? `
+      <div class="evidence-panel json-panel" id="${id}-rows">
+        <div class="evidence-panel-header">Raw Rows (first 20)</div>
+        <pre>${esc(d.rows.slice(0,20).map(r => JSON.stringify(r)).join('\n'))}</pre>
+      </div>` : ''}
+    </div>
+  `;
+  return block;
+}
+
+/* ── toggle drill panels ─────────────────────────────────────────────── */
+function togglePanel(panelId, btnId) {
+  const panel = $(panelId);
+  const btn = $(btnId);
+  const open = panel.classList.toggle('open');
+  btn.setAttribute('aria-expanded', String(open));
+}
+
+/* ── copy answer ─────────────────────────────────────────────────────── */
+function copyAnswer(btn, id) {
+  const block = $(id);
+  const narr = block.querySelector('.narration');
+  if (!narr) return;
+  navigator.clipboard.writeText(narr.textContent).then(() => {
+    const flash = document.createElement('div');
+    flash.className = 'copy-flash';
+    flash.textContent = 'Copied to clipboard';
+    document.body.appendChild(flash);
+    setTimeout(() => flash.remove(), 1600);
+  });
+}
+
+/* ── ask ─────────────────────────────────────────────────────────────── */
+let busy = false;
+
+async function ask() {
+  const question = qEl.value.trim();
+  if (!question || busy) return;
+
+  busy = true;
+  sendBtn.disabled = true;
+  qEl.value = '';
+  autoResize();
+
+  // Hide empty state
+  $('empty') && $('empty').remove();
+
+  const thread = $('thread');
+
+  // Placeholder while loading
+  const placeholder = document.createElement('div');
+  placeholder.className = 'qa-block';
+  placeholder.innerHTML = `
+    <div class="query-row">
+      <span class="query-avatar">
+        <svg viewBox="0 0 16 16"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.31 2.69-6 6-6s6 2.69 6 6"/></svg>
+      </span>
+      <span class="query-text">${esc(question)}</span>
+    </div>
+    <div class="thinking"><span></span><span></span><span></span></div>
+  `;
+  thread.appendChild(placeholder);
+  thread.scrollTop = thread.scrollHeight;
+
+  // Update status
+  const pill = $('status-pill');
+  const pillText = $('status-text');
+  pill.className = 'status-pill';
+  pillText.textContent = 'Thinking…';
+
+  const t0 = performance.now();
+
+  try {
+    const resp = await fetch('/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, include_evidence: true, session_id: SESSION_ID }),
+    });
+
+    const d = await resp.json();
+    const elapsed = Math.round(performance.now() - t0);
+    session.times.push(elapsed);
+
+    // Replace placeholder
+    const block = renderBlock(question, d);
+    placeholder.replaceWith(block);
+    thread.scrollTop = thread.scrollHeight;
+
+    // Update session ctx
+    if (d.scope) {
+      $('session-ctx').textContent = d.scope || 'No active scope';
+    }
+
+    // Status pill
+    if (d.refused) {
+      pill.className = 'status-pill';
+      pillText.textContent = 'Refused';
+    } else if (!d.verified) {
+      pill.className = 'status-pill warn';
+      pillText.textContent = 'Unverified';
+    } else {
+      pill.className = 'status-pill';
+      pillText.textContent = 'Verified · ' + d.elapsed_ms + ' ms';
+    }
+
+    updateStats(d);
+
+  } catch (err) {
+    placeholder.innerHTML = `
+      <div class="query-row">
+        <span class="query-avatar"><svg viewBox="0 0 16 16"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.31 2.69-6 6-6s6 2.69 6 6"/></svg></span>
+        <span class="query-text">${esc(question)}</span>
+      </div>
+      <div class="answer-body">
+        <div class="warning-banner crit">
+          <svg viewBox="0 0 16 16" width="14" height="14"><path d="M8 1L1 14h14L8 1zm0 3l5 9H3l5-9zm-1 4v2h2V8H7zm0 3v2h2v-2H7z"/></svg>
+          <span>Request failed: ${esc(err.message)}</span>
+        </div>
+      </div>`;
+    pill.className = 'status-pill warn';
+    pillText.textContent = 'Error';
+  } finally {
+    busy = false;
+    sendBtn.disabled = !qEl.value.trim();
+    qEl.focus();
+  }
+}
+
+// Init send button state
+sendBtn.disabled = true;
+</script>
+</body>
+</html>
