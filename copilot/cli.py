@@ -159,18 +159,28 @@ def cmd_chat(args: argparse.Namespace) -> int:
 def cmd_replay(args: argparse.Namespace) -> int:
     """Re-execute a previous answer from its plan hash.
 
-    The cache holds plans, so a handle from this session replays exactly. A
-    handle from a previous session needs the plan store, which is roadmap.
+    Resolved against the exemplar store, which persists across sessions. The
+    cache holds entity-free shapes and cannot answer this: a shape has no hash
+    until it is bound to a question.
     """
-    engine = Engine.build(show_evidence=True)
-    for entry in engine.router.cache._entries.values():  # noqa: SLF001
-        if entry.plan.hash == args.handle:
-            from copilot.ops import execute
+    from copilot.ir import parse_plan
+    from copilot.ops import execute
 
-            bundle = execute(entry.plan, engine.ctx)
-            print(bundle.evidence_table())
+    engine = Engine.build(show_evidence=True)
+    for exemplar in engine.router.exemplars._exemplars:  # noqa: SLF001
+        try:
+            plan = parse_plan(exemplar.shape)
+        except Exception:
+            continue
+        if plan.hash == args.handle:
+            print(f"  {exemplar.question}\n")
+            print(execute(plan, engine.ctx).evidence_table())
             return 0
-    print(f"No plan with handle {args.handle} in this session's cache.", file=sys.stderr)
+    print(
+        f"No plan with handle {args.handle} is stored. Replay resolves against "
+        "verified exemplars; a handle from an unstored answer cannot be rebuilt.",
+        file=sys.stderr,
+    )
     return 1
 
 

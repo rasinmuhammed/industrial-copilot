@@ -218,15 +218,40 @@ passed the PCN verifier, or it did not. No human annotation, no preference
 model. This is Reinforcement Learning from Verifiable Rewards, and semantic
 parsing is close to the ideal task for it.
 
-### 8.2 Fast loop — instant, zero training
+### 8.2 Fast loop — instant, zero training  ✅ BUILT
 
-A **verified-exemplar store**. Embed the question with a frozen encoder (~5 ms),
-kNN against exemplars that previously verified, reuse the matched plan template
-with slot substitution.
+A **verified-exemplar store** (`copilot/planner/exemplars.py`). Embed the
+question, kNN against exemplars whose plans previously verified, rebind the
+matched shape onto the current question's entities.
 
-Add one exemplar and it is live on the very next query. This is the
-"constantly improving, fast and light" property, and it carries *no* training
-risk because nothing is being trained.
+Add one exemplar and it is live on the very next query. No training step, so no
+catastrophic forgetting, no eval drift, and nothing to roll back but a row.
+
+Two decisions worth recording:
+
+**The embedder is hashed character 3-grams plus word unigrams, not a neural
+encoder.** It is deterministic, dependency-free, runs in microseconds, and needs
+no model artifact shipped to 1,000 sites. A learned encoder can swap in behind
+the same interface if it ever earns the deployment cost.
+
+**Thresholds are measured, not chosen** (`make calibrate`):
+
+```
+paraphrase pairs   0.426 .. 0.863
+unrelated pairs    0.000 .. 0.179
+threshold 0.55     3.1x the highest unrelated score
+```
+
+The asymmetry sets the direction: escalating costs latency, while reusing a
+wrong shape answers the wrong question. An initial guess of 0.78, set by taste
+rather than measurement, rejected most genuine paraphrases.
+
+**What is stored is the plan's SHAPE, never the plan.** Filters name rows; the
+shape names the analysis. Building this surfaced the same confusion as a live
+bug in the plan cache: its key normalised "cycle 9016" to "cycle <n>", so every
+such question shared one entry — but the cached *value* retained the concrete
+filter, and "why did cycle 2750 fail" returned cycle 4045's answer. Both now
+store shapes and rebind entities from the question being asked.
 
 ### 8.3 Slow loop — nightly, this is where Unsloth belongs
 
