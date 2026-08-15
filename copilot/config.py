@@ -23,6 +23,13 @@ class Settings:
     # --- data ---
     csv_path: Path = field(default_factory=lambda: Path(os.environ.get("COPILOT_CSV", ROOT / "data" / "ai4i2020.csv")))
     db_path: Path = field(default_factory=lambda: Path(os.environ.get("COPILOT_DB", ROOT / "data" / "warehouse.duckdb")))
+    # Verified plan shapes, accumulated across sessions. This is the corpus a
+    # distilled planner would be trained from (docs/08-DISCOVERY.md §8).
+    exemplar_path: Path = field(
+        default_factory=lambda: Path(
+            os.environ.get("COPILOT_EXEMPLARS", ROOT / "data" / "exemplars.jsonl")
+        )
+    )
 
     # --- synthetic overlays (see README "Assumptions") ---
     takt_seconds: int = 120

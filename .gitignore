@@ -4,3 +4,4 @@ __pycache__/
 data/warehouse.duckdb
 evals/reports/
 .DS_Store
+data/exemplars.jsonl

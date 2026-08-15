@@ -9,6 +9,11 @@ number of sites.
 
 Normalisation deliberately erases specifics — entity ids, numbers, punctuation —
 so "why did cycle 9016 fail" and "why did cycle 4045 fail" share one entry.
+
+Because the KEY erases entities, the stored VALUE must not contain them. The
+cache therefore holds a plan *shape* and rebinds filters from the question being
+asked now. Storing whole plans instead is a correctness bug, not an
+optimisation: it answers the new question with the old question's rows.
 """
 
 from __future__ import annotations
@@ -61,7 +66,7 @@ def normalise(question: str) -> str:
 
 @dataclass(slots=True)
 class _Entry:
-    plan: AnalysisPlan
+    shape: dict
     hits: int = 0
 
 
@@ -84,20 +89,30 @@ class PlanCache:
         digest = hashlib.sha256(f"{shape}|{scope}".encode()).hexdigest()[:16]
         return digest
 
-    def get(self, question: str, *, scope: str = "") -> AnalysisPlan | None:
+    def get(
+        self, question: str, *, scope: str = "", state=None
+    ) -> AnalysisPlan | None:
+        """Rebind the cached shape onto the question being asked now."""
+        from copilot.planner.exemplars import rebind
+
         self.lookups += 1
         k = self.key(question, scope=scope)
         entry = self._entries.get(k)
         if entry is None:
             return None
+        plan = rebind(entry.shape, question, state)
+        if plan is None:
+            return None
         self._entries.move_to_end(k)
         entry.hits += 1
         self.hits += 1
-        return entry.plan
+        return plan
 
     def put(self, question: str, plan: AnalysisPlan, *, scope: str = "") -> None:
+        from copilot.planner.exemplars import plan_shape
+
         k = self.key(question, scope=scope)
-        self._entries[k] = _Entry(plan=plan)
+        self._entries[k] = _Entry(shape=plan_shape(plan))
         self._entries.move_to_end(k)
         while len(self._entries) > self.capacity:
             self._entries.popitem(last=False)

@@ -165,11 +165,15 @@ class TestRouting:
             "what is the average rotational speed"
         )
 
-    def test_cache_returns_the_same_plan(self):
+    def test_cache_returns_an_equivalent_plan(self):
+        """The cache stores a SHAPE and rebinds entities, so the returned plan is
+        equivalent rather than identical — that is what stops one cache entry
+        answering every "why did cycle N fail" with the same row."""
         cache = PlanCache()
         plan = parse_plan({"op": "rate", "group_by": ["product_type"]})
         cache.put("failure rate by variant", plan)
-        assert cache.get("failure rate by variant") is plan
+        got = cache.get("failure rate by variant")
+        assert got is not None and got.hash == plan.hash
         assert cache.hit_rate == 1.0
 
     def test_cache_evicts_beyond_capacity(self):

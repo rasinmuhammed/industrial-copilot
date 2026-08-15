@@ -21,7 +21,7 @@ from copilot.session import SessionState
 
 BANNER = """Industrial Copilot — Margin Engine
 Computes distance to the failure boundary. No number is authored by a model.
-Commands: /evidence  /plan  /state  /reset  /tier  /help  /quit"""
+Commands: /evidence  /plan  /state  /learned  /reset  /tier  /help  /quit"""
 
 DEMO = [
     ("Understand machine behaviour", "What are the typical operating conditions?"),
@@ -100,6 +100,7 @@ def cmd_chat(args: argparse.Namespace) -> int:
         try:
             question = input("› ").strip()
         except (EOFError, KeyboardInterrupt):
+            engine.router.exemplars.save()
             print()
             return 0
         if not question:
@@ -108,6 +109,7 @@ def cmd_chat(args: argparse.Namespace) -> int:
         if question.startswith("/"):
             command = question[1:].split()[0].lower()
             if command in {"quit", "exit", "q"}:
+                engine.router.exemplars.save()
                 return 0
             if command == "reset":
                 state.clear()
@@ -123,6 +125,17 @@ def cmd_chat(args: argparse.Namespace) -> int:
                 continue
             if command == "evidence" and last is not None and last.bundle is not None:
                 print(textwrap.indent(last.bundle.evidence_table(), "  "))
+                print()
+                continue
+            if command == "learned":
+                stats = engine.router.exemplars.stats()
+                print(f"  {stats['exemplars']} verified exemplars  "
+                      f"{stats['hit_rate']:.0%} hit rate")
+                for op, n in stats["by_op"].items():
+                    print(f"    {op:<16} {n}")
+                for row in stats["most_used"]:
+                    if row["uses"]:
+                        print(f"    used {row['uses']}x  {row['question'][:52]}")
                 print()
                 continue
             if command == "tier":

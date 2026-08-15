@@ -7,10 +7,13 @@ rather than a silent guess.
 
     tier 0  plan cache        ~0 ms   repeat question shapes, shared across tenants
     tier 1  grammar           ~1 ms   the common plant vocabulary
-    tier 3  model             ~400 ms novel questions, when a provider exists
+    tier 2  exemplars         ~1 ms   questions whose plans previously VERIFIED
+    tier 3  model             ~400 ms genuinely novel questions
 
-Tier 2 (a kNN store over verified exemplars) is specified in
-docs/08-DISCOVERY.md and slots in here without disturbing the others.
+Tier 2 is where the system gets better with use. Every verified answer deposits
+its plan shape, so a question the model had to solve once is answered from the
+cheap tier forever after — and the store doubles as the training corpus for a
+distilled planner.
 
 With no provider configured the router still answers everything tiers 0 and 1
 cover, and refuses the rest honestly instead of fabricating a plan.
@@ -23,6 +26,7 @@ from dataclasses import dataclass, field
 
 from copilot.ir import AnalysisPlan, PlanError
 from copilot.planner.cache import PlanCache
+from copilot.planner.exemplars import ExemplarStore
 from copilot.planner.grammar import plan_from_text
 from copilot.planner.llm import LLMPlanner, available_provider
 from copilot.session import SessionState
@@ -46,13 +50,30 @@ class RoutedPlan:
 @dataclass(slots=True)
 class Router:
     cache: PlanCache = field(default_factory=PlanCache)
+    exemplars: ExemplarStore = field(default_factory=ExemplarStore)
     llm: LLMPlanner | None = None
-    counts: dict[str, int] = field(default_factory=lambda: {"cache": 0, "grammar": 0, "llm": 0})
+    counts: dict[str, int] = field(
+        default_factory=lambda: {"cache": 0, "grammar": 0, "exemplar": 0, "llm": 0}
+    )
 
     @classmethod
-    def build(cls) -> Router:
+    def build(cls, *, exemplar_path=None) -> Router:
         provider = available_provider()
-        return cls(llm=LLMPlanner(provider) if provider is not None else None)
+        store = ExemplarStore(path=exemplar_path).load()
+        return cls(
+            exemplars=store,
+            llm=LLMPlanner(provider) if provider is not None else None,
+        )
+
+    def learn(self, question: str, plan: AnalysisPlan, tier: str) -> bool:
+        """Deposit a plan shape that verified. Called only on success.
+
+        Cache hits and exemplar reuses teach nothing new, so they are skipped —
+        the store should grow with novelty, not with traffic.
+        """
+        if tier in {"cache", "exemplar"}:
+            return False
+        return self.exemplars.record(question, plan, tier=tier)
 
     @property
     def provider_name(self) -> str:
@@ -68,7 +89,7 @@ class Router:
         # --- tier 0: cache -------------------------------------------------
         # Skipped for follow-ups, whose meaning depends on state the key erases.
         cacheable = state is None or state.last_plan is None
-        if cacheable and (cached := self.cache.get(question, scope=scope)) is not None:
+        if cacheable and (cached := self.cache.get(question, scope=scope, state=state)) is not None:
             self.counts["cache"] += 1
             return RoutedPlan(cached, "cache", 1.0, elapsed(), "cache hit")
 
@@ -79,6 +100,13 @@ class Router:
             if cacheable:
                 self.cache.put(question, match.plan, scope=scope)
             return RoutedPlan(match.plan, "grammar", match.confidence, elapsed(), match.reason)
+
+        # --- tier 2: verified exemplars ------------------------------------
+        suggestion = self.exemplars.suggest(question, state)
+        if suggestion is not None:
+            plan, score, reason = suggestion
+            self.counts["exemplar"] += 1
+            return RoutedPlan(plan, "exemplar", score, elapsed(), reason)
 
         # --- tier 3: model -------------------------------------------------
         if self.llm is not None:

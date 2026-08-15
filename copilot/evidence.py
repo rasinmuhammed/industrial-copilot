@@ -213,7 +213,7 @@ class Provenance(BaseModel):
     kb_version: str
     data_version: str
     op: str
-    tier: Literal["cache", "grammar", "encoder", "slm", "llm"] = "grammar"
+    tier: Literal["cache", "grammar", "exemplar", "slm", "llm"] = "grammar"
     filters: list[str] = Field(default_factory=list)
     row_count: int = 0
     elapsed_ms: float = 0.0

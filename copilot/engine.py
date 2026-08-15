@@ -67,7 +67,7 @@ class Engine:
     def build(cls, *, read_only: bool = True, show_evidence: bool = False) -> Engine:
         con = connect(read_only=read_only)
         return cls(
-            router=Router.build(),
+            router=Router.build(exemplar_path=settings().exemplar_path),
             ctx=ExecutionContext(
                 con=con, kb_version=kb_version(), data_version=data_fingerprint(con)
             ),
@@ -109,6 +109,12 @@ class Engine:
             question, routed.plan, bundle
         )
         narrate_ms = (time.perf_counter() - narrate_started) * 1000.0
+
+        # Close the learning loop. A plan only becomes an exemplar if its
+        # answer survived numeric verification — an unverified plan is not
+        # evidence of anything, and storing it would teach the wrong lesson.
+        if verified and not degraded:
+            self.router.learn(question, routed.plan, routed.tier)
 
         state.record(question, routed.plan, bundle.summary)
 
