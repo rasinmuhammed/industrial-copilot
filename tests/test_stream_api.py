@@ -149,3 +149,53 @@ class TestAPI:
         response = client.get("/")
         assert response.status_code == 200
         assert "Margin Engine" in response.text
+
+
+class TestEnvelopeProjection:
+    """The window is a function of tool wear, so it closes over time. This turns
+    'how much room do I have?' and 'how long have I got?' into one picture."""
+
+    def test_window_narrows_as_the_tool_wears(self, client):
+        body = client.get(
+            "/envelope/projection",
+            params={"rotational_speed_rpm": 1300, "tool_wear_min": 100, "horizon_cycles": 150},
+        ).json()
+        widths = [f["width"] for f in body["frames"]]
+        assert widths == sorted(widths, reverse=True)
+        assert body["shrink_pct"] > 50
+
+    def test_binding_constraint_switches_from_overload_to_overstrain(self, client):
+        """Early in a tool's life the drive limits you; late, the tool does."""
+        body = client.get(
+            "/envelope/projection",
+            params={"rotational_speed_rpm": 1300, "tool_wear_min": 100, "horizon_cycles": 150},
+        ).json()
+        assert body["binding_switches"]
+        assert body["frames"][0]["binding"] == "overload"
+        assert body["frames"][-1]["binding"] == "overstrain"
+
+    def test_closure_wear_is_where_the_ceiling_meets_the_floor(self, client):
+        import math
+
+        body = client.get(
+            "/envelope/projection", params={"rotational_speed_rpm": 1400, "tool_wear_min": 150}
+        ).json()
+        omega = 1400 * 2 * math.pi / 60
+        assert body["closure_wear_min"] == pytest.approx(11000 * omega / 3500, rel=1e-3)
+        assert body["floor"] == pytest.approx(3500 / omega, rel=1e-3)
+
+    def test_floor_is_fixed_while_the_ceiling_descends(self, client):
+        body = client.get(
+            "/envelope/projection",
+            params={"rotational_speed_rpm": 1300, "tool_wear_min": 120, "horizon_cycles": 200},
+        ).json()
+        floors = {f["torque_min"] for f in body["frames"]}
+        ceilings = [f["torque_max"] for f in body["frames"]]
+        assert len(floors) == 1                      # the stall floor never moves
+        assert ceilings == sorted(ceilings, reverse=True)
+
+    def test_explorer_page_is_served(self, client):
+        response = client.get("/explorer")
+        assert response.status_code == 200
+        assert "Operating Envelope" in response.text
+        assert "ISA-101" in response.text  # the design rationale is in the source

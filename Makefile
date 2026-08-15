@@ -38,7 +38,7 @@ ask:  ## One question: make ask Q="why did cycle 9016 fail?"
 demo:  ## Scripted walkthrough of all four acceptance criteria
 	$(PY) -m copilot.cli demo
 
-serve:  ## FastAPI + SSE console on :8000
+serve:  ## API, console and envelope explorer on :8000
 	.venv/bin/uvicorn copilot.api:app --reload --port 8000
 
 stream:  ## Replay the fleet as an event stream with live alerts

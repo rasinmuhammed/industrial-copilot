@@ -36,7 +36,11 @@ BASE = dict(
 
 @pytest.fixture(scope="module")
 def con():
-    return connect(read_only=False)
+    """Read-only. Temporary views work fine on a read-only DuckDB connection, so
+    the drift-injection tests need no write lock — which means the suite runs
+    while the API server is up, and mirrors production, where every reader is
+    read-only and only ingest writes."""
+    return connect(read_only=True)
 
 
 def _drifted(con, column: str, delta: float) -> str:

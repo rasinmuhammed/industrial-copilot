@@ -1,0 +1,7 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "copilot-api", "runtimeExecutable": ".venv/bin/uvicorn",
+      "runtimeArgs": ["copilot.api:app", "--port", "8009"], "port": 8009 }
+  ]
+}

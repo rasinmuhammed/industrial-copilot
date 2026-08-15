@@ -4,6 +4,8 @@
     GET  /stream/alerts         SSE feed of alerts with lead time
     GET  /stream/margins        SSE feed of scored cycles
     GET  /envelope              the true failure boundary, for plotting
+    GET  /envelope/projection   the boundary as a function of FUTURE wear
+    GET  /explorer              the Operating Envelope Explorer
     GET  /health                readiness, versions, gate status
     GET  /                      minimal console
 
@@ -17,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import AsyncIterator
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query
@@ -29,6 +32,8 @@ from copilot.ir import parse_plan, PlanError
 from copilot.reliability import audit_calibration, check_invariants
 from copilot.session import SessionState
 from copilot.stream import StreamScorer, replay
+
+_HERE = Path(__file__).resolve().parent
 
 app = FastAPI(
     title="Industrial Copilot — Margin Engine",
@@ -245,6 +250,88 @@ def envelope(
 # --------------------------------------------------------------------------
 
 
+@app.get("/envelope/projection")
+def envelope_projection(
+    rotational_speed_rpm: float = Query(1400.0, gt=0.0),
+    tool_wear_min: float = Query(150.0, ge=0.0),
+    torque_nm: float = Query(45.0, ge=0.0),
+    product_type: str = Query("L", pattern="^[LMH]$"),
+    horizon_cycles: int = Query(120, ge=1, le=2000),
+    steps: int = Query(5, ge=2, le=12),
+) -> dict[str, Any]:
+    """The safe operating window as a function of FUTURE tool wear.
+
+    The novel view. An envelope is usually drawn as a static region — "are we
+    inside it?" But the overstrain ceiling is threshold/wear, so the window
+    *closes* as the tool wears, and its binding constraint switches from power
+    overload to overstrain part-way through the tool's life.
+
+    That turns two separate questions — "how much room do I have?" and "how long
+    have I got?" — into one picture: how fast the room is disappearing. It is
+    drawable only because the boundary is computed rather than learned.
+    """
+    from copilot.physics import OSF_THRESHOLD, PWF_HIGH, PWF_LOW, RAD_PER_RPM, WEAR_RATE_PER_CYCLE
+
+    omega = rotational_speed_rpm * RAD_PER_RPM
+    threshold = OSF_THRESHOLD[product_type]
+    wear_rate = WEAR_RATE_PER_CYCLE[product_type]
+    floor = PWF_LOW / omega
+    overload_ceiling = PWF_HIGH / omega
+
+    # Wear at which the overstrain ceiling meets the stall floor: beyond this,
+    # NO torque satisfies every constraint at this speed.
+    closure_wear = threshold * omega / PWF_LOW
+    closure_cycles = max(0.0, (closure_wear - tool_wear_min) / wear_rate)
+
+    frames = []
+    for i in range(steps):
+        cycles = horizon_cycles * i / (steps - 1)
+        wear = tool_wear_min + cycles * wear_rate
+        osf_ceiling = threshold / wear if wear > 0 else float("inf")
+        ceiling = min(overload_ceiling, osf_ceiling)
+        frames.append(
+            {
+                "cycles_ahead": round(cycles, 1),
+                "minutes_ahead": round(cycles * 120 / 60, 1),
+                "wear_min": round(wear, 1),
+                "torque_min": round(floor, 2),
+                "torque_max": round(max(floor, ceiling), 2),
+                "width": round(max(0.0, ceiling - floor), 2),
+                "binding": "overstrain" if osf_ceiling < overload_ceiling else "overload",
+                "open": ceiling > floor,
+            }
+        )
+
+    first, last = frames[0], frames[-1]
+    shrink = (
+        (first["width"] - last["width"]) / first["width"] * 100.0 if first["width"] > 0 else 0.0
+    )
+    return {
+        "at": {
+            "rotational_speed_rpm": rotational_speed_rpm,
+            "tool_wear_min": tool_wear_min,
+            "torque_nm": torque_nm,
+            "product_type": product_type,
+        },
+        "floor": round(floor, 2),
+        "overload_ceiling": round(overload_ceiling, 2),
+        "closure_wear_min": round(closure_wear, 1),
+        "closure_cycles": round(closure_cycles, 1),
+        "shrink_pct": round(shrink, 1),
+        "binding_switches": first["binding"] != last["binding"],
+        "frames": frames,
+    }
+
+
+@app.get("/explorer", response_class=HTMLResponse)
+def explorer() -> str:
+    """The Operating Envelope Explorer."""
+    path = _HERE / "static" / "explorer.html"
+    if not path.exists():
+        raise HTTPException(500, "explorer.html is missing from the package")
+    return path.read_text(encoding="utf-8")
+
+
 @app.get("/health")
 def health() -> dict[str, Any]:
     eng = engine()
@@ -302,7 +389,8 @@ _CONSOLE = """<!doctype html>
 </style>
 <header>
   <h1>Industrial Copilot — Margin Engine</h1>
-  <div class="sub">Distance to the failure boundary. No number is authored by a model.</div>
+  <div class="sub">Distance to the failure boundary. No number is authored by a model.
+    &nbsp;·&nbsp; <a href="/explorer" style="color:#4ecfbb">Operating Envelope Explorer →</a></div>
 </header>
 <main>
   <section>
