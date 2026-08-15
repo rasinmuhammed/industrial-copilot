@@ -607,3 +607,312 @@ class TestRecords:
         )
         assert bundle.slots["records.first_udi"].quality is Quality.ABSTAIN
         assert bundle.rows == []
+
+
+# --------------------------------------------------------------------------
+# Physics model
+# --------------------------------------------------------------------------
+
+
+class TestPhysics:
+    def test_derived_quantities_match_documentation(self):
+        from copilot.physics import OperatingPoint
+
+        p = OperatingPoint(
+            air_temp_k=298.1, process_temp_k=308.6,
+            rotational_speed_rpm=1551, torque_nm=42.8, tool_wear_min=100,
+        )
+        assert p.temp_delta_k == pytest.approx(10.5)
+        assert p.power_w == pytest.approx(42.8 * 1551 * 2 * 3.141592653589793 / 60, rel=1e-9)
+        assert p.overstrain_min_nm == pytest.approx(4280.0)
+
+    def test_perturbing_torque_moves_power_and_overstrain_together(self):
+        """The coupling most implementations miss: one change, two boundaries."""
+        from copilot.physics import OperatingPoint
+
+        base = OperatingPoint(300.0, 310.0, 1500.0, 50.0, 200.0)
+        moved = base.perturb(torque_nm=-5.0)
+        assert moved.power_w < base.power_w
+        assert moved.overstrain_min_nm < base.overstrain_min_nm
+
+    def test_derived_quantities_cannot_be_perturbed(self):
+        from copilot.physics import OperatingPoint
+
+        with pytest.raises(ValueError, match="derived"):
+            OperatingPoint(300.0, 310.0, 1500.0, 40.0, 0.0).perturb(power_w=-500.0)
+
+    def test_margins_agree_with_the_warehouse(self, ctx):
+        """The Python model and the ingest SQL must not drift apart."""
+        from copilot.physics import OperatingPoint, evaluate
+
+        rows = ctx.con.execute(
+            "SELECT air_temperature_k, process_temperature_k, rotational_speed_rpm, "
+            "torque_nm, tool_wear_min, product_type, temp_delta_margin_k, "
+            "power_low_margin_w, overstrain_margin_min_nm FROM observations "
+            "USING SAMPLE 200 ROWS (reservoir, 42)"
+        ).fetchall()
+        assert rows
+        for air, proc, rpm, tq, wear, ptype, m_temp, m_low, m_strain in rows:
+            m = evaluate(OperatingPoint(air, proc, rpm, tq, wear, ptype))
+            assert m.temp_delta_k == pytest.approx(m_temp, abs=1e-9)
+            assert m.power_low_w == pytest.approx(m_low, abs=1e-6)
+            assert m.overstrain_min_nm == pytest.approx(m_strain, abs=1e-6)
+
+
+class TestCounterfactual:
+    def test_torque_reduction_is_a_tradeoff_not_a_win(self, ctx):
+        """Cutting torque relieves overstrain but drops power under the stall
+        floor. A column-edit implementation would report only the improvement."""
+        bundle = execute(
+            parse_plan({"op": "counterfactual", "params": {"changes": {"torque_nm": -5.0}}}),
+            ctx,
+        )
+        assert bundle.slots["before.OSF"].value == 98
+        assert bundle.slots["after.OSF"].value < 98        # overstrain improves
+        assert bundle.slots["after.PWF"].value > bundle.slots["before.PWF"].value  # stall worsens
+        assert bundle.slots["cf.verdict"].value == "degradation"
+        assert any("trade-off" in w.message for w in bundle.warnings)
+
+    def test_baseline_matches_the_deterministic_failure_count(self, ctx):
+        bundle = execute(
+            parse_plan({"op": "counterfactual", "params": {"changes": {"torque_nm": -0.0}}}),
+            ctx,
+        )
+        assert bundle.slots["before.any_mode"].value == 287
+
+    def test_derived_quantity_is_refused(self, ctx):
+        bundle = execute(
+            parse_plan({"op": "counterfactual", "params": {"changes": {"power_w": -500.0}}}),
+            ctx,
+        )
+        assert bundle.slots["cf.verdict"].quality is Quality.ABSTAIN
+        assert any("derived" in w.message for w in bundle.warnings)
+
+    def test_tool_replacement_clears_overstrain(self, ctx):
+        bundle = execute(
+            parse_plan(
+                {"op": "counterfactual", "params": {"changes": {"tool_wear_min": -300.0}}}
+            ),
+            ctx,
+        )
+        assert bundle.slots["after.OSF"].value == 0
+
+
+class TestEnvelope:
+    def test_prescribes_a_verified_minimal_change(self, ctx):
+        bundle = execute(
+            parse_plan(
+                {
+                    "op": "envelope",
+                    "params": {
+                        "tool_wear_min": 214, "torque_nm": 58.1,
+                        "rotational_speed_rpm": 1412, "product_type": "L",
+                    },
+                }
+            ),
+            ctx,
+        )
+        assert bundle.slots["current.fired"].value == "OSF"
+        assert bundle.slots["fix.available"].value == "yes"
+        assert bundle.slots["fix.action"].value == "reduce torque"
+        assert bundle.slots["fix.delta"].value < 0
+        # The prescription must land INSIDE the boundary, not on it.
+        assert bundle.slots["fix.resulting_overstrain_margin"].value > 0
+
+    def test_safety_factor_creates_real_headroom(self, ctx):
+        def margin(sf):
+            return execute(
+                parse_plan(
+                    {
+                        "op": "envelope",
+                        "params": {
+                            "tool_wear_min": 214, "torque_nm": 58.1,
+                            "rotational_speed_rpm": 1412, "product_type": "L",
+                            "safety_factor": sf,
+                        },
+                    }
+                ),
+                ctx,
+            ).slots["fix.resulting_overstrain_margin"].value
+
+        assert margin(0.02) > margin(0.0)
+
+    def test_torque_band_is_closed_and_ordered(self, ctx):
+        bundle = execute(
+            parse_plan(
+                {
+                    "op": "envelope",
+                    "params": {
+                        "tool_wear_min": 100, "torque_nm": 40,
+                        "rotational_speed_rpm": 1500, "product_type": "L",
+                    },
+                }
+            ),
+            ctx,
+        )
+        lo = bundle.slots["safe.torque_min"].value
+        hi = bundle.slots["safe.torque_max"].value
+        assert 0 < lo < hi
+
+    def test_hdf_constrains_speed_only_when_gradient_is_narrow(self, ctx):
+        bundle = execute(
+            parse_plan(
+                {
+                    "op": "envelope",
+                    "params": {
+                        "air_temp_k": 300.0, "process_temp_k": 307.5,
+                        "rotational_speed_rpm": 1300, "torque_nm": 45,
+                        "tool_wear_min": 50, "product_type": "L",
+                    },
+                }
+            ),
+            ctx,
+        )
+        assert bundle.slots["hdf.constrains_speed"].value == "yes"
+        assert bundle.slots["fix.action"].value == "increase speed"
+        assert bundle.slots["fix.new_value"].value >= 1380
+
+    def test_refuses_when_no_single_change_suffices(self, ctx):
+        bundle = execute(
+            parse_plan(
+                {
+                    "op": "envelope",
+                    "params": {
+                        "tool_wear_min": 250, "torque_nm": 70,
+                        "rotational_speed_rpm": 1250, "air_temp_k": 300.0,
+                        "process_temp_k": 307.0, "product_type": "L",
+                    },
+                }
+            ),
+            ctx,
+        )
+        assert bundle.slots["fix.available"].value == "no"
+
+
+class TestForecast:
+    def test_crossing_time_shrinks_as_wear_grows(self, ctx):
+        def cycles(wear):
+            return execute(
+                parse_plan(
+                    {
+                        "op": "forecast",
+                        "params": {"tool_wear_min": wear, "torque_nm": 48, "product_type": "L"},
+                    }
+                ),
+                ctx,
+            ).slots["osf.cycles_to_crossing"].value
+
+        assert cycles(150) > cycles(180) > cycles(205)
+
+    def test_forecast_carries_an_interval_and_a_lead_time(self, ctx):
+        bundle = execute(
+            parse_plan(
+                {
+                    "op": "forecast",
+                    "params": {"tool_wear_min": 180, "torque_nm": 52, "product_type": "L"},
+                }
+            ),
+            ctx,
+        )
+        slot = bundle.slots["osf.cycles_interval"]
+        assert slot.ci is not None and slot.ci.contains(slot.value)
+        assert bundle.slots["osf.lead_time_min"].value > 0
+
+    def test_crossing_wear_matches_the_closed_form(self, ctx):
+        bundle = execute(
+            parse_plan(
+                {
+                    "op": "forecast",
+                    "params": {"tool_wear_min": 150, "torque_nm": 50, "product_type": "L"},
+                }
+            ),
+            ctx,
+        )
+        assert bundle.slots["osf.crossing_wear"].value == pytest.approx(11000 / 50, rel=1e-9)
+
+    def test_twf_returns_a_probability_never_a_crossing(self, ctx):
+        bundle = execute(
+            parse_plan(
+                {
+                    "op": "forecast",
+                    "params": {"tool_wear_min": 205, "torque_nm": 48, "product_type": "L"},
+                }
+            ),
+            ctx,
+        )
+        assert bundle.slots["twf.status"].value == "inside the replacement window"
+        assert 0 < bundle.slots["twf.cumulative_probability"].value < 100
+        assert "twf.cycles_to_crossing" not in bundle.slots
+
+    def test_already_exceeded_abstains(self, ctx):
+        bundle = execute(
+            parse_plan(
+                {
+                    "op": "forecast",
+                    "params": {"tool_wear_min": 250, "torque_nm": 60, "product_type": "L"},
+                }
+            ),
+            ctx,
+        )
+        assert bundle.slots["osf.cycles_to_crossing"].quality is Quality.ABSTAIN
+        assert bundle.slots["osf.status"].value == "already exceeded"
+
+
+class TestSqlExplore:
+    def test_executes_and_labels_itself_exploratory(self, ctx):
+        bundle = execute(
+            parse_plan(
+                {
+                    "op": "sql_explore",
+                    "params": {
+                        "sql": "SELECT product_type, count(*) AS n FROM observations GROUP BY 1"
+                    },
+                }
+            ),
+            ctx,
+        )
+        assert bundle.slots["explore.rows"].value == 3
+        assert any(w.code == "exploratory" for w in bundle.warnings)
+
+    def test_unknown_source_is_refused(self, ctx):
+        bundle = execute(
+            parse_plan({"op": "sql_explore", "params": {"sql": "SELECT * FROM secrets"}}), ctx
+        )
+        assert bundle.slots["explore.status"].quality is Quality.ABSTAIN
+
+    def test_pragma_is_stopped_at_validation_not_at_execution(self):
+        """Defence in depth: the plan validator rejects it before the op runs."""
+        with pytest.raises(PlanError) as exc:
+            parse_plan({"op": "sql_explore", "params": {"sql": "PRAGMA database_list"}})
+        assert exc.value.stage is ValidationStage.OP_SPECIFIC
+
+    def test_non_select_that_passes_validation_is_refused_by_the_op(self, ctx):
+        """Second line of defence, for anything the keyword list does not cover."""
+        bundle = execute(
+            parse_plan({"op": "sql_explore", "params": {"sql": "VALUES (1), (2)"}}), ctx
+        )
+        assert bundle.slots["explore.status"].quality is Quality.ABSTAIN
+        assert any("SELECT" in w.message for w in bundle.warnings)
+
+    @pytest.mark.parametrize("sql", ["DROP TABLE observations", "DELETE FROM observations"])
+    def test_destructive_statements_never_reach_the_op(self, sql):
+        with pytest.raises(PlanError) as exc:
+            parse_plan({"op": "sql_explore", "params": {"sql": sql}})
+        assert exc.value.stage is ValidationStage.OP_SPECIFIC
+
+    def test_scalar_results_become_bindable_slots(self, ctx):
+        bundle = execute(
+            parse_plan(
+                {"op": "sql_explore", "params": {"sql": "SELECT count(*) AS total FROM observations"}}
+            ),
+            ctx,
+        )
+        assert bundle.slots["explore.total"].value == 10000
+
+
+def test_every_declared_operator_is_implemented():
+    """A declared-but-missing op would fail only when a user hit it."""
+    from copilot.ir import OpName
+    from copilot.ops import registered
+
+    assert set(registered()) == {op.value for op in OpName}
