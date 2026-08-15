@@ -11,10 +11,12 @@
 | Measurement | Result |
 |---|---|
 | Vectorised margin evaluation | **419 M samples/sec/core** |
-| Scalar, per event | **0.22 µs → 4.6 M events/sec/core** |
-| Interval-valued (2 endpoints) | ~0.44 µs → 2.3 M events/sec/core |
+| Scalar raw arithmetic, per event | **0.22 µs → 4.6 M events/sec/core** |
+| `evaluate()` returning a margin object | **1.09 µs → 918 k/sec/core** |
+| Full stream scorer (robust track + alerting) | **~14 µs** → ~72 k/sec/core |
 | Requirement, 2,000-machine site @ 1 Hz | 2,000 events/sec |
-| **Headroom on one core** | **2,310×** |
+| **Headroom on one core — raw arithmetic** | **2,310×** |
+| **Headroom on one core — full scorer** | **~36×** |
 
 This is not the result of optimisation. **There is no model to run at inference
 time.** Intelligence lives in the knowledge base, built offline; online is

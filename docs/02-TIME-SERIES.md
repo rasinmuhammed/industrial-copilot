@@ -194,8 +194,10 @@ auditable.
 |---|---|
 | Per-sample margin evaluation | **0.22 µs** (4.6 M events/sec/core, scalar Python) |
 | Vectorised | **419 M samples/sec/core** |
-| Requirement for a 2,000-machine site @ 1 Hz | 2,000 events/sec |
-| **Headroom on a single core** | **2,310×** |
+| Full stream scorer (robust track + alerting) | **~14 µs** → ~72 k/sec/core |
+| Requirement, 2,000-machine site @ 1 Hz | 2,000 events/sec |
+| **Headroom on one core — raw arithmetic** | **2,310×** |
+| **Headroom on one core — full scorer** | **~36×** |
 | Numeric error | **0** — arithmetic, not estimation |
 | Context tokens for a 10-million-row question | **~400** (the evidence bundle) |
 
