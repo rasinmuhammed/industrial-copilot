@@ -68,6 +68,9 @@ docker:  ## Build the deployment image
 serve:  ## Run the copilot in a container on :8000
 	docker compose up --build
 
+coverage:  ## Risk-coverage: how much do we answer, and how sound is it
+	$(PY) evals/coverage.py
+
 onboard:  ## Discover a process definition from a dataset, and audit it
 	$(PY) scripts/onboard.py --csv data/ai4i2020.csv --label "Machine failure" \
 		--audit --out artifacts/discovered.yaml

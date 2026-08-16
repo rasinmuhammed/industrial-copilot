@@ -33,8 +33,11 @@ HEALTHY_COHORT = Cohort(name="healthy", filters=[Filter(field="failure", op="=",
 # the generic "fail" signal that would otherwise route to `rate`.
 _INTENT_PATTERNS: list[tuple[OpName, float, re.Pattern[str]]] = [
     (OpName.DATA_QUALITY, 0.95, re.compile(
-        r"\b(can i trust|data quality|quality of (the )?data|any (issues|problems) with"
-        r"|is the data|label integrity|are the (thresholds|rules) still)\b")),
+        r"\b(can i trust|data quality|quality of (the )?data"
+        r"|(any|are there( any)?) (issues|problems) (with|in)"
+        r"|is the data|label integrity|are the (thresholds|rules) still"
+        r"|is the labell?ing|labell?ing (is )?(reliable|trustworthy|correct)"
+        r"|trust (this|the) (data|dataset))\b")),
     (OpName.COUNTERFACTUAL, 0.95, re.compile(
         r"\b(what if|if (we|i) (reduce|reduced|cut|increase|increased|raise|lower)"
         r"|suppose we|were we to)\b")),
@@ -43,15 +46,19 @@ _INTENT_PATTERNS: list[tuple[OpName, float, re.Pattern[str]]] = [
         r"|remaining useful life|when do(es)? .* cross|lead time|predict when)\b")),
     (OpName.ENVELOPE, 0.9, re.compile(
         r"\b(safe (operating|range|window|torque|speed)|operating (window|envelope)"
-        r"|what should i (do|set|change)|how (do|can) i fix|recommend"
+        r"|what should i (do|set|change)|what \w+ should i (run|set|use|choose)"
+        r"|how (do|can) i fix|recommend"
         r"|within limits|acceptable range)\b")),
     (OpName.ROOT_CAUSE, 0.9, re.compile(
         r"\b(why did|root cause|what caused|what causes|causes? of|what made .* fail"
-        r"|reason for (the )?fail|diagnose|what went wrong|attribut)\b")),
+        r"|reason for (the )?fail|diagnose|what went wrong|attribut"
+        r"|failure modes?|which modes|modes are (firing|active)"
+        r"|main (cause|mode)s?|more than one mode|multi.?mode)\b")),
     (OpName.DRIVERS, 0.85, re.compile(
         r"\b(what (drives|separates|distinguishes|predicts)|which (variables|factors|"
         r"parameters|metrics) (best )?(separate|distinguish|drive|matter|predict)"
-        r"|most important (variable|factor)|biggest (driver|factor))\b")),
+        r"|most important (variable|factor)s?|biggest (driver|factor)s?"
+        r"|(factors|drivers) (behind|of|for))\b")),
     (OpName.COMPARE, 0.85, re.compile(
         r"\b(compare|versus|vs\.?|difference between|contrast"
         r"|how do .* differ|failed .* (and|versus|vs) .* (did not|didn't|healthy))\b")),
@@ -65,12 +72,20 @@ _INTENT_PATTERNS: list[tuple[OpName, float, re.Pattern[str]]] = [
         r"\b(show me|list|give me examples|which (cycles|rows|records)|examples of"
         r"|closest to (failing|failure))\b")),
     (OpName.RATE, 0.75, re.compile(
-        r"\b(failure rate|how often|how (many|much) fail|rate of failure"
-        r"|percentage .* fail|proportion .* fail|breakdown (of|by)|by (variant|type)"
-        r"|more failures)\b")),
+        r"\b(failure rate|how often|how (many|much) fail\w*|rate of failure"
+        r"|percentage .* fail\w*|proportion .* fail\w*|breakdown (of|by)"
+        r"|by (variant|type)|more failures|group(ed)? by"
+        # A causal claim about a continuous metric — "is torque causing so many
+        # failures?" — is a premise, and premise verification is the flagship
+        # capability. It was silently unreachable from the natural phrasing:
+        # the binned rate this routes to already runs the monotone test.
+        r"|(causing|driving|responsible for|to blame for|behind) [^.?]{0,30}fail\w*"
+        r"|fail\w* (because of|due to|driven by|caused by)"
+        r"|how many .*(variant|cycle|record|machine)s?)\b")),
     (OpName.DESCRIBE, 0.7, re.compile(
         r"\b(what (are|is) (the )?(typical|normal|usual|average)|describe|summar[iy]"
         r"|operating conditions|what.s (been )?happening|conditions (on|for|at)"
+        r"|what does .* look like|normal look|spread (on|of)"
         r"|how (hot|fast|much))\b")),
 ]
 

@@ -27,6 +27,7 @@ from copilot.narrate import format_answer, template_narrate
 from copilot.ops import ExecutionContext, data_fingerprint, execute, kb_version
 from copilot.planner.router import Router, RoutingError
 from copilot.session import SessionState
+from copilot.planner.unknown import detect_unknown_quantity
 from copilot.verify import VerificationResult, verify
 
 __all__ = ["Answer", "Engine"]
@@ -81,6 +82,27 @@ class Engine:
     def ask(self, question: str, state: SessionState | None = None) -> Answer:
         started = time.perf_counter()
         state = state if state is not None else SessionState()
+
+        # --- refuse before planning ------------------------------------------
+        #
+        # A question naming a quantity we do not measure must be declined here,
+        # not answered with the nearest thing we do have. The grammar tier will
+        # happily match an intent verb ("show me", "how much") and fall back to
+        # a default metric, which produces a fully verified, entirely correct
+        # answer about the wrong sensor — the worst outcome available to an
+        # industrial copilot, because every downstream guarantee still holds.
+        unknown = detect_unknown_quantity(question)
+        if unknown is not None:
+            return Answer(
+                text=unknown.message,
+                narration=unknown.message,
+                question=question,
+                plan=None,
+                bundle=None,
+                tier="refused",
+                elapsed_ms=(time.perf_counter() - started) * 1000.0,
+                refused=True,
+            )
 
         # --- plan ----------------------------------------------------------
         try:

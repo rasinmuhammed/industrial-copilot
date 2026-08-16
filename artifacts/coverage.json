@@ -1,0 +1,16 @@
+{
+  "questions": 74,
+  "coverage": 0.9683,
+  "soundness": 1.0,
+  "refusal_precision": 0.8462,
+  "silent_failures": 0,
+  "missed": 2,
+  "latency_ms_p50": 3.25,
+  "latency_ms_p95": 18.91,
+  "degraded": 0,
+  "tiers": {
+    "grammar": 59,
+    "refused": 13,
+    "exemplar": 2
+  }
+}
