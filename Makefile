@@ -62,6 +62,9 @@ eval:  ## Run the golden eval suite (hard gates fail the build)
 eval-json:  ## Machine-readable eval report
 	$(PY) evals/run_evals.py --json
 
+adversarial:  ## Run only the adversarial suite
+	$(PY) -m pytest tests/test_adversarial.py -q
+
 test:  ## Run the test suite
 	$(PY) -m pytest tests/ -q
 

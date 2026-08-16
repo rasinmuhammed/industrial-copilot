@@ -72,6 +72,13 @@ def _describe(plan: AnalysisPlan, bundle: EvidenceBundle) -> str:
 
 def _rate(plan: AnalysisPlan, bundle: EvidenceBundle) -> str:
     lines = []
+    if _has(bundle, "premise.verdict") and bundle.slots["premise.verdict"].value == "refuted":
+        lines.append(
+            f"{_ref('premise.subject')} is not the worst group: it fails at "
+            f"{_ref('premise.subject_rate')}, ranking {_ref('premise.rank')} of "
+            f"{_ref('premise.groups')}. {_ref('premise.highest_group')} is highest at "
+            f"{_ref('premise.highest_rate')}."
+        )
     if _has(bundle, "premise.shape"):
         shape = _ref("premise.shape")
         lines.append(

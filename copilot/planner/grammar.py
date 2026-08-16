@@ -98,6 +98,37 @@ _CHANGE = re.compile(
 )
 
 _VARIANT_WORDS = {"low": "L", "medium": "M", "high": "H"}
+
+# A comparative claim about a NAMED group — "why do H variants fail more" — is a
+# premise, and it can be false. Gate 1 previously only tested monotone premises
+# over a binned axis, so a false categorical claim sailed through and the system
+# answered a different question entirely.
+_CATEGORICAL_CLAIM = re.compile(
+    r"\b(fail|failing|failure|break|breaking|breakdown)\w*\b[^.?]{0,40}?"
+    r"\b(more|most|worse|worst|higher|highest|often|frequently)\b"
+    r"|\b(more|most|worse|worst|higher|highest)\b[^.?]{0,40}?"
+    r"\b(fail|failing|failure|break|breaking|breakdown)\w*\b",
+    re.IGNORECASE,
+)
+
+
+def _categorical_premise(text: str) -> dict[str, str] | None:
+    """Extract a claim of the form "<group> fails more" if one is asserted."""
+    if not _CATEGORICAL_CLAIM.search(text):
+        return None
+    variant = None
+    if (m := _VARIANT_WORD.search(text)) is not None:
+        variant = _VARIANT_WORDS[m.group(1).lower()]
+    elif re.search(r"\b(variants?|types?|grades?)\b", text) and (
+        v := _VARIANT.search(text.upper())
+    ):
+        variant = v.group(1)
+    if variant:
+        return {"field": "product_type", "value": variant, "direction": "more"}
+    for shift in ("a", "b", "c"):
+        if re.search(rf"\bshift {shift}\b", text, re.IGNORECASE):
+            return {"field": "shift", "value": shift.upper(), "direction": "more"}
+    return None
 _UNIT_TO_METRIC = {
     "nm": "torque_nm", "n·m": "torque_nm",
     "rpm": "rotational_speed_rpm",
@@ -127,6 +158,19 @@ def plan_from_text(question: str, state: SessionState | None = None) -> GrammarM
         followup = _try_followup(text, state)
         if followup is not None:
             return followup
+
+    # A comparative claim about a named group must be TESTED, whatever else the
+    # question asks for. Answering around an unchallenged false premise is the
+    # failure mode this gate exists to prevent.
+    claim = _categorical_premise(text)
+    if claim is not None:
+        plan = AnalysisPlan(
+            op=OpName.RATE,
+            group_by=[claim["field"]],
+            params={"premise": claim},
+            verify_premise=True,
+        )
+        return GrammarMatch(plan, 0.9, f"testing the claim that {claim['value']} fails more")
 
     op, confidence = _match_intent(text)
     if op is None:

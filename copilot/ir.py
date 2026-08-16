@@ -14,9 +14,10 @@ Validation runs cheapest-rejection-first:
     1. structural    Pydantic types and enums
     2. vocabulary    every field exists in the semantic layer   <- the barrier
     3. dimensional   comparisons are unit-coherent
-    4. cardinality   grouping cannot explode
-    5. viability     the op has what it needs to run
-    6. op-specific   params match the op's own schema
+    4. domain        values are physically possible
+    5. cardinality   grouping cannot explode
+    6. viability     the op has what it needs to run
+    7. op-specific   params match the op's own schema
 """
 
 from __future__ import annotations
@@ -85,6 +86,7 @@ class ValidationStage(StrEnum):
     STRUCTURAL = "structural"
     VOCABULARY = "vocabulary"
     DIMENSIONAL = "dimensional"
+    DOMAIN = "domain"
     CARDINALITY = "cardinality"
     VIABILITY = "viability"
     OP_SPECIFIC = "op_specific"
@@ -304,6 +306,64 @@ def _validate_dimensional(plan: AnalysisPlan) -> None:
             ) from exc
 
 
+# Params that name an operating point, so they carry a metric's physical domain.
+_POINT_PARAMS = frozenset(
+    {"air_temp_k", "process_temp_k", "rotational_speed_rpm", "torque_nm", "tool_wear_min"}
+)
+
+
+def _validate_domain(plan: AnalysisPlan) -> None:
+    """Reject physically impossible values.
+
+    Negative tool wear or zero rotational speed is not a rare query — it is a
+    state that cannot occur. Accepting it silently is how a system produces a
+    confident forecast about something impossible, which is worse than refusing.
+    """
+    metrics = metric_index()
+
+    def check(field: str, value: Any, where: str) -> None:
+        domain = metrics.get(field, {}).get("domain")
+        if not domain or not isinstance(value, (int, float)) or isinstance(value, bool):
+            return
+        low, high = domain.get("min"), domain.get("max")
+        if low is not None and value < low:
+            raise PlanError(
+                ValidationStage.DOMAIN,
+                f"{field} = {value} is below its physical minimum of {low}",
+                hint=f"{metrics[field]['label']} cannot be less than {low} "
+                     f"{metrics[field].get('unit', '')}".strip() + ".",
+            )
+        if high is not None and value > high:
+            raise PlanError(
+                ValidationStage.DOMAIN,
+                f"{field} = {value} exceeds its physical maximum of {high}",
+                hint=f"{metrics[field]['label']} above {high} is outside the "
+                     "modelled regime.",
+            )
+
+    for f in [*plan.filters, *(f for c in plan.cohorts for f in c.filters)]:
+        values = f.value if isinstance(f.value, list) else [f.value]
+        for v in values:
+            check(f.field, v, "filter")
+
+    for key, value in (plan.params or {}).items():
+        if key in _POINT_PARAMS:
+            check(key, value, "params")
+    # A counterfactual delta is a CHANGE, so only the resulting value has a
+    # domain — but an absurd delta still signals a misread question.
+    for field, delta in (plan.params.get("changes") or {}).items():
+        if isinstance(delta, (int, float)):
+            domain = metrics.get(field, {}).get("domain") or {}
+            span = (domain.get("max") or 0) - (domain.get("min") or 0)
+            if span and abs(delta) > span:
+                raise PlanError(
+                    ValidationStage.DOMAIN,
+                    f"a change of {delta:+g} to {field} exceeds its entire "
+                    f"physical range of {span:g}",
+                    hint="Check the units in the question.",
+                )
+
+
 def _validate_cardinality(plan: AnalysisPlan) -> None:
     dims = dimension_index()
     for name in plan.group_by:
@@ -346,6 +406,22 @@ def _validate_viability(plan: AnalysisPlan) -> None:
             f"op {plan.op.value!r} requires {min_cohorts} cohorts, got {len(plan.cohorts)}",
             hint="Define cohorts, e.g. failed vs healthy.",
         )
+    # Grouping AND filtering the same field is fine in general — "failure rate
+    # for L variants" is a scoped breakdown. It is only invalid when a premise
+    # claim about that field is being tested, because the test needs the other
+    # groups to compare against.
+    claimed = ((plan.params or {}).get("premise") or {}).get("field")
+    if claimed:
+        for f in plan.filters:
+            if f.field == claimed:
+                raise PlanError(
+                    ValidationStage.VIABILITY,
+                    f"cannot test a claim about {claimed!r} while filtering to one of "
+                    "its values",
+                    hint=f"Verifying that a group is worst requires the other groups. "
+                         f"Remove the {claimed} filter.",
+                )
+
     names = [c.name for c in plan.cohorts]
     if len(names) != len(set(names)):
         raise PlanError(
@@ -410,6 +486,7 @@ def validate_plan(plan: AnalysisPlan) -> AnalysisPlan:
     """
     _validate_vocabulary(plan)
     _validate_dimensional(plan)
+    _validate_domain(plan)
     _validate_cardinality(plan)
     _validate_viability(plan)
     _validate_op_specific(plan)

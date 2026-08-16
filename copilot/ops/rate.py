@@ -92,6 +92,7 @@ def rate(plan: AnalysisPlan, ctx: ExecutionContext) -> EvidenceBundle:
             sig_figs=3,
         )
         _verify_monotone_premise(bundle, plan, groups, axis_label)
+    _verify_categorical_premise(bundle, plan, groups)
 
     bundle.provenance = bundle.provenance.model_copy(
         update={"sql": sql, "row_count": total_n}
@@ -173,6 +174,56 @@ def _binned_groups(plan: AnalysisPlan, ctx: ExecutionContext, where: str, params
     )
     rows = ctx.con.execute(sql, params).fetchall()
     return [(r[0], int(r[1] or 0), int(r[2])) for r in rows], sql
+
+
+def _verify_categorical_premise(bundle: EvidenceBundle, plan: AnalysisPlan, groups) -> None:
+    """Gate 1, categorical form. Test a claim that a NAMED group fails more.
+
+    "Why do high quality variants fail more often?" is false on this data — H
+    fails at 2.09% against L at 3.92%. Before this existed the question routed
+    to `describe` and was answered with air-temperature statistics while the
+    premise went unchallenged, which is the worst available outcome: a confident
+    answer to a question nobody asked.
+    """
+    claim = (plan.params or {}).get("premise")
+    if not plan.verify_premise or not claim or len(groups) < 2:
+        return
+
+    rates = {str(key).upper(): (f / n * 100.0 if n else 0.0) for key, f, n in groups}
+    subject = str(claim["value"]).upper()
+    if subject not in rates:
+        return
+
+    ranked = sorted(rates.items(), key=lambda kv: kv[1], reverse=True)
+    highest, highest_rate = ranked[0]
+    subject_rate = rates[subject]
+    position = [k for k, _ in ranked].index(subject) + 1
+
+    bundle.put("premise.subject", subject, unit="")
+    bundle.put("premise.subject_rate", subject_rate, unit="%", sig_figs=3)
+    bundle.put("premise.highest_group", highest, unit="")
+    bundle.put("premise.highest_rate", highest_rate, unit="%", sig_figs=3)
+    bundle.put("premise.rank", position, unit="count", sig_figs=8)
+    bundle.put("premise.groups", len(ranked), unit="count", sig_figs=8)
+
+    if subject == highest:
+        bundle.put("premise.verdict", "supported", unit="")
+        return
+
+    bundle.put("premise.verdict", "refuted", unit="")
+    if subject_rate > 0:
+        bundle.put("premise.ratio", highest_rate / subject_rate, unit="ratio", sig_figs=2)
+    # No digits here. Critical warnings are prepended into the NARRATED region,
+    # which the numeric verifier scans — so the figures belong in slots and the
+    # warning stays qualitative. The verifier caught this on its own author.
+    bundle.warn(
+        "premise_refuted",
+        f"That premise is not supported by the data. {subject} is not the group "
+        f"with the highest failure rate; {highest} is. The ranking and the rates "
+        "are stated below, before anything else.",
+        severity=Severity.CRITICAL,
+        affects=["premise.verdict"],
+    )
 
 
 def _verify_monotone_premise(

@@ -10,6 +10,7 @@ version: 1
 metrics:
   air_temp_k:
     column: air_temperature_k
+    domain: {min: 0, max: 400}
     label: air temperature
     unit: K
     kind: continuous
@@ -18,6 +19,7 @@ metrics:
 
   process_temp_k:
     column: process_temperature_k
+    domain: {min: 0, max: 500}
     label: process temperature
     unit: K
     kind: continuous
@@ -38,6 +40,7 @@ metrics:
 
   rotational_speed_rpm:
     column: rotational_speed_rpm
+    domain: {min: 1, max: 20000}
     label: rotational speed
     unit: rpm
     kind: continuous
@@ -47,6 +50,7 @@ metrics:
 
   torque_nm:
     column: torque_nm
+    domain: {min: 0, max: 500}
     label: torque
     unit: N·m
     kind: continuous
@@ -55,6 +59,7 @@ metrics:
 
   tool_wear_min:
     column: tool_wear_min
+    domain: {min: 0, max: 100000}
     label: tool wear
     unit: min
     kind: continuous
@@ -64,6 +69,7 @@ metrics:
 
   power_w:
     column: power_w
+    domain: {min: 0, max: 1000000}
     label: mechanical power
     unit: W
     kind: continuous
@@ -76,6 +82,7 @@ metrics:
 
   overstrain_min_nm:
     column: overstrain_min_nm
+    domain: {min: 0}
     label: overstrain product
     unit: min·N·m
     kind: continuous

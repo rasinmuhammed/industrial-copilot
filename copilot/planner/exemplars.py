@@ -42,6 +42,7 @@ from copilot.planner.cache import normalise
 from copilot.session import SessionState
 
 __all__ = [
+    "polarity",
     "rebind",
     "plan_shape",
     "Embedder",
@@ -70,6 +71,22 @@ EXACT_THRESHOLD = 0.90
 
 DIM = 512
 _WORD = re.compile(r"[a-z0-9_]+")
+
+# Bag-of-ngram similarity is nearly blind to negation: "why did cycle 9016 fail"
+# and "why did cycle 9016 NOT fail" score 0.885, comfortably above the reuse
+# threshold. Polarity is therefore checked exactly and separately, because
+# retrieving the affirmative plan for a negated question is a false answer, not
+# a near miss.
+_NEGATION = re.compile(
+    r"\b(not|never|without|excluding|except|besides|didn't|doesn't|don't|"
+    r"isn't|aren't|wasn't|weren't|no longer|failed to|non-)\b"
+)
+
+
+def polarity(text: str) -> bool:
+    """True when the question carries a negation. Compared exactly, not scored."""
+    return bool(_NEGATION.search(text.lower()))
+
 
 # Fields that describe the ANALYSIS. Everything else is entity-specific and is
 # re-derived from the question being asked now.
@@ -164,6 +181,16 @@ def rebind(
     payload = dict(shape)
     try:
         filters = _extract_filters(question.lower(), state, OpName(payload["op"]))
+        # A premise claim needs the cross-group comparison, so a filter on the
+        # claimed field would defeat the very test being run — you cannot ask
+        # "is H the worst" while looking only at H. Scoped breakdowns like
+        # "failure rate for L variants" legitimately group AND filter, so this
+        # is narrowed to the premise case rather than banned outright. Without
+        # it the grammar and cache tiers silently disagreed: the first ask
+        # refuted the premise and an identical repeat did not.
+        claimed = ((payload.get("params") or {}).get("premise") or {}).get("field")
+        if claimed:
+            filters = [f for f in filters if f.field != claimed]
         payload["filters"] = [f.model_dump(mode="json") for f in filters]
     except Exception:
         payload["filters"] = []
@@ -302,6 +329,14 @@ class ExemplarStore:
 
         exemplar, score = matches[0]
         if score < REUSE_THRESHOLD:
+            return None
+        # Polarity is a hard gate, not a similarity contribution: a negated
+        # question asks about the complement of the stored cohort.
+        if polarity(question) != polarity(exemplar.question):
+            return None
+        # Polarity is a hard gate, not a similarity contribution. A negated
+        # question asks about the complement of the stored cohort.
+        if polarity(question) != polarity(exemplar.question):
             return None
 
         payload = dict(exemplar.shape)
