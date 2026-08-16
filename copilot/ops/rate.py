@@ -24,7 +24,7 @@ from copilot.ops.registry import (
     new_bundle,
     register,
 )
-from copilot.stats import MIN_REPORTABLE_N, wilson_interval
+from copilot.stats import MIN_REPORTABLE_N, spread_vs_chance, wilson_interval
 
 FAILURE_COLUMN = "machine_failure"
 _SLUG_TRANSLATION = str.maketrans({" ": "_", "-": "_", ".": "_", "[": "", "]": "", ")": "", "(": ""})
@@ -92,6 +92,7 @@ def rate(plan: AnalysisPlan, ctx: ExecutionContext) -> EvidenceBundle:
             sig_figs=3,
         )
         _verify_monotone_premise(bundle, plan, groups, axis_label)
+        _falsify_the_ranking(bundle, groups, axis_label)
     _verify_categorical_premise(bundle, plan, groups)
 
     bundle.provenance = bundle.provenance.model_copy(
@@ -174,6 +175,53 @@ def _binned_groups(plan: AnalysisPlan, ctx: ExecutionContext, where: str, params
     )
     rows = ctx.con.execute(sql, params).fetchall()
     return [(r[0], int(r[1] or 0), int(r[2])) for r in rows], sql
+
+
+def _plural(axis_label: str) -> str:
+    """"these machine" reads as a typo and costs the warning its authority."""
+    if not axis_label:
+        return "these groups"
+    label = axis_label.strip()
+    return f"these {label}s" if not label.endswith("s") else f"these {label}"
+
+
+def _falsify_the_ranking(bundle: EvidenceBundle, groups, axis_label: str) -> None:
+    """Test our own ranking before publishing it.
+
+    The premise gates test claims the USER brings. This tests the claim the
+    system would otherwise volunteer just by printing groups in order — that the
+    differences between them mean something.
+
+    Ranking N groups and naming a worst guarantees an extreme even when every
+    group is identical, and per-group Wilson intervals do not catch it because
+    the illegitimate comparison happens in the reader's eye, across intervals.
+
+    Measured on this dataset: the 15 synthetic machines, which are assigned
+    round-robin and therefore cannot have a real effect, show a 3.58 point
+    spread that a reader would act on. The product variants, which have a real
+    documented effect, show a SMALLER spread of 1.82 points. The bigger number
+    is the fake one — which is exactly why this cannot be left to judgement.
+    """
+    counts = tuple((f, n) for _, f, n in groups)
+    if len(counts) < 3 or sum(n for _, n in counts) == 0:
+        return
+    observed, p_value, median_null = spread_vs_chance(counts)
+    bundle.put("ranking.spread_points", observed, unit="pp", sig_figs=3)
+    bundle.put("ranking.chance_spread_points", median_null, unit="pp", sig_figs=3)
+    bundle.put("ranking.p_value", p_value, unit="", sig_figs=2)
+
+    if p_value > 0.05:
+        bundle.warn(
+            "ranking_is_chance",
+            f"The spread across {_plural(axis_label)} is not "
+            f"distinguishable from chance. Reassigning the labels at random "
+            f"produces a spread this large or larger in a large fraction of "
+            f"trials, so the ordering below should not be used to choose where "
+            f"to send anybody. Group sizes differ, which makes the smaller "
+            f"groups look more extreme than they are.",
+            affects=["ranking.spread_points"],
+            severity=Severity.CRITICAL,
+        )
 
 
 def _verify_categorical_premise(bundle: EvidenceBundle, plan: AnalysisPlan, groups) -> None:

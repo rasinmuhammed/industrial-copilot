@@ -198,6 +198,9 @@ class Warning_(BaseModel):
         "exploratory",
         "kb_drift",
         "sensor_suspect",
+        # The system falsifying its own output rather than the user's premise:
+        # a ranking whose spread is indistinguishable from chance.
+        "ranking_is_chance",
     ]
     severity: Severity = Severity.WARNING
     message: str

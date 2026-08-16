@@ -18,6 +18,10 @@ dependencies = [
 [project.optional-dependencies]
 # Offline rule discovery only — never on the inference path.
 discovery = ["scikit-learn>=1.4"]
+# Protocol adapters. Optional because a CSV replay needs neither, and a plant
+# that speaks only one of them should not have to install the other.
+mqtt = ["paho-mqtt>=2.0"]
+opcua = ["asyncua>=1.1"]
 # Optional LLM providers. The system is fully functional without any of these.
 llm = ["anthropic>=0.40"]
 dev = ["pytest>=8.0", "pytest-asyncio>=0.23"]

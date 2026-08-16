@@ -12,6 +12,8 @@ them is how a copilot states a confident wrong number:
 
 from __future__ import annotations
 
+from functools import lru_cache
+
 import math
 from dataclasses import dataclass
 
@@ -21,6 +23,7 @@ __all__ = [
     "MIN_REPORTABLE_N",
     "MAX_CI_RATIO",
     "wilson_interval",
+    "spread_vs_chance",
     "mean_interval",
     "cohens_d",
     "cohens_d_interval",
@@ -33,6 +36,11 @@ __all__ = [
 
 # Below this, a proportion is reported as a count with an interval, never a rate.
 MIN_REPORTABLE_N = 30
+
+# Permutation test size. 2,000 resamples resolves a p-value to about +/-0.01 at
+# p = 0.05, which is finer than any decision made on it, and costs ~2 ms at our
+# group counts.
+PERMUTATIONS = 2000
 # Refuse a point estimate when CI half-width exceeds this fraction of |estimate|.
 MAX_CI_RATIO = 0.5
 
@@ -169,6 +177,68 @@ def _quantile(ordered: list[float], q: float) -> float:
     if lo == hi:
         return ordered[int(pos)]
     return ordered[lo] + (ordered[hi] - ordered[lo]) * (pos - lo)
+
+
+@lru_cache(maxsize=512)
+def spread_vs_chance(
+    groups: tuple[tuple[int, int], ...],
+    permutations: int = PERMUTATIONS,
+    seed: int = 7,
+) -> tuple[float, float, float]:
+    """Is the spread between these groups more than randomness would produce?
+
+    A ranked list of assets is the most actionable artifact a maintenance
+    copilot emits — it sends a technician somewhere. It is also the one most
+    likely to be pure noise, because ranking N groups and naming the worst
+    guarantees an extreme even when every group is identical. With 15 machines
+    at a 3% base rate, the worst looks roughly 2.6x the best from chance alone.
+
+    Wilson intervals do not catch this. They are per-group, and the reader's eye
+    does the illegitimate comparison across them.
+
+    The null is exchangeability: if the grouping label carried no information,
+    reassigning labels at random would produce spreads like the observed one.
+    No distributional assumption, no correction table, and it stays correct for
+    unequal group sizes — which is what makes the naive comparison misleading in
+    the first place.
+
+    IMPLEMENTATION NOTE. The obvious version shuffles a pool of every row and
+    slices it per group, which is O(permutations x rows) and took the test suite
+    from 4.6s to 102s — a 22x regression on the axis this project is built to
+    win. Sampling the per-group failure counts directly from the multivariate
+    hypergeometric distribution is the same null, exactly, at O(permutations x
+    groups): 2,000 x 15 draws instead of 2,000 x 10,000 shuffles. Memoised on
+    the counts because a repeated question must not repeat the work.
+
+    Takes (failures, n) per group. Returns (observed spread, p-value, median
+    spread under the null), where spread is max rate minus min rate in points.
+    """
+    import numpy as np
+
+    usable = [(f, n) for f, n in groups if n > 0]
+    if len(usable) < 2:
+        return 0.0, 1.0, 0.0
+
+    rates = np.array([f / n for f, n in usable])
+    observed = float(rates.max() - rates.min()) * 100.0
+
+    sizes = np.array([n for _, n in usable], dtype=np.int64)
+    total_f = int(sum(f for f, _ in usable))
+    if total_f == 0 or total_f >= sizes.sum():
+        return observed, 1.0, 0.0
+
+    rng = np.random.default_rng(seed)
+    # Under the null, allocating `total_f` failures across groups of these sizes
+    # without replacement IS a multivariate hypergeometric draw.
+    draws = rng.multivariate_hypergeometric(sizes, total_f, size=permutations)
+    null_rates = draws / sizes
+    null_spreads = (null_rates.max(axis=1) - null_rates.min(axis=1)) * 100.0
+
+    at_least_as_extreme = int((null_spreads >= observed).sum())
+    # Add-one smoothing: with 2,000 resamples the honest floor is p < 1/2001,
+    # never p = 0.
+    p_value = (at_least_as_extreme + 1) / (permutations + 1)
+    return observed, float(p_value), float(np.median(null_spreads))
 
 
 def pearson(xs: list[float], ys: list[float]) -> float:

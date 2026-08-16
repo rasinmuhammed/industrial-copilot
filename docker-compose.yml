@@ -1,0 +1,35 @@
+# Single-node deployment. `docker compose up` and the copilot is on :8000.
+#
+# No broker, no database, no model server. The engine answers from the grammar
+# tier with every API key unset, so this is the whole runtime — which is the
+# point: an air-gapped site can run it, and no question leaves the box.
+
+services:
+  copilot:
+    build: .
+    image: industrial-copilot
+    ports:
+      - "8000:8000"
+    volumes:
+      # Process history, read-only. The container never writes to plant data.
+      - ./data:/app/data:ro
+      # The process definition. Mounting it means onboarding a different
+      # process is a file swap and a restart, not a rebuild.
+      - ./copilot/knowledge:/app/copilot/knowledge:ro
+    environment:
+      COPILOT_DB: /tmp/copilot.duckdb
+      # Optional. Absent, the LLM planner tier is simply off and the engine
+      # declines the long tail instead of guessing at it.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "from copilot.process_model import load_process_model; assert load_process_model().deterministic_modes"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3

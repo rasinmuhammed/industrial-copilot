@@ -62,6 +62,12 @@ eval:  ## Run the golden eval suite (hard gates fail the build)
 eval-json:  ## Machine-readable eval report
 	$(PY) evals/run_evals.py --json
 
+docker:  ## Build the deployment image
+	docker build -t industrial-copilot .
+
+serve:  ## Run the copilot in a container on :8000
+	docker compose up --build
+
 onboard:  ## Discover a process definition from a dataset, and audit it
 	$(PY) scripts/onboard.py --csv data/ai4i2020.csv --label "Machine failure" \
 		--audit --out artifacts/discovered.yaml
