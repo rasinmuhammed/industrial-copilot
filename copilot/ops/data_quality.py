@@ -32,6 +32,27 @@ _INVARIANTS = (
 )
 
 
+#: Which channels each invariant vouches for. An answer whose margins depend on
+#: a channel with a violated invariant is computed on data we already know is
+#: physically impossible, and it must say so.
+INVARIANT_CHANNELS: dict[str, tuple[str, ...]] = {
+    "I1": ("air_temp_k", "process_temp_k", "temp_delta_k"),
+}
+
+
+def check_invariants(con) -> dict[str, int]:
+    """Run every invariant once and return the violation counts.
+
+    Cheap enough to do at engine build (three aggregate scans) and far too
+    expensive to repeat per question, which is why the result is cached and
+    consulted rather than recomputed.
+    """
+    out: dict[str, int] = {}
+    for code, _desc, sql, _expected in _INVARIANTS:
+        out[code] = int(con.execute(sql.format(t=TABLE)).fetchone()[0])
+    return out
+
+
 @register(OpName.DATA_QUALITY)
 def data_quality(plan: AnalysisPlan, ctx: ExecutionContext) -> EvidenceBundle:
     bundle = new_bundle(plan, ctx)

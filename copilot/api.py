@@ -182,12 +182,25 @@ def _sse(payload: dict[str, Any], event: str = "message") -> str:
     return f"event: {event}\ndata: {json.dumps(payload)}\n\n"
 
 
+# A stream must terminate. /stream/alerts defaulted to limit=None, which at the
+# default takt multiplier runs 10,000 cycles at 0.2 s each — 33 minutes per
+# connection, with no ceiling on `limit` and no ceiling on concurrent
+# connections. Each holds a StreamScorer with per-machine observer state, so a
+# handful of idle browser tabs is a resource leak and a deliberate handful is a
+# denial of service.
+#
+# Bounds belong on the server. A client asking for more gets the ceiling, not an
+# error, because truncating a demo stream is harmless and refusing it is not.
+MAX_STREAM_TICKS = 5_000
+DEFAULT_STREAM_TICKS = 2_000
+
+
 async def _tick_stream(
     *, speed: float, limit: int | None, machine: str | None, alerts_only: bool
 ) -> AsyncIterator[str]:
     scorer = StreamScorer()
-    loop = asyncio.get_running_loop()
-    ticks = replay(limit=limit, speed=0.0, machine=machine, scorer=scorer)
+    bounded = min(limit or DEFAULT_STREAM_TICKS, MAX_STREAM_TICKS)
+    ticks = replay(limit=bounded, speed=0.0, machine=machine, scorer=scorer)
     delay = (120.0 / speed) if speed > 0 else 0.0
 
     for tick in ticks:
@@ -215,7 +228,10 @@ async def _tick_stream(
 @app.get("/stream/alerts")
 async def stream_alerts(
     speed: float = Query(600.0, ge=0.0, description="takt multiplier; 0 = as fast as possible"),
-    limit: int | None = Query(None, ge=1),
+    limit: int | None = Query(
+        DEFAULT_STREAM_TICKS, ge=1, le=MAX_STREAM_TICKS,
+        description="cycles to replay; server-capped",
+    ),
     machine: str | None = None,
 ) -> StreamingResponse:
     return StreamingResponse(
@@ -227,7 +243,7 @@ async def stream_alerts(
 @app.get("/stream/margins")
 async def stream_margins(
     speed: float = Query(600.0, ge=0.0),
-    limit: int | None = Query(500, ge=1),
+    limit: int | None = Query(500, ge=1, le=MAX_STREAM_TICKS),
     machine: str | None = None,
 ) -> StreamingResponse:
     return StreamingResponse(

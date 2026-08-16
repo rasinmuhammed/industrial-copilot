@@ -99,6 +99,20 @@ TARGET_ARL0 = 2000.0         # cycles between CUSUM false alarms, per channel
 CUSUM_SHIFT_SIGMA = 1.0      # the drift size we want detected quickly, in sigma
 STUCK_WINDOW = 24            # innovations in the quietness test
 VAR_WINDOW = 64              # samples retained for dispersion
+# A channel must not only be present, it must be present ENOUGH.
+#
+# Staleness was tracked as consecutive missing samples, escalating after three.
+# An intermittently failing sensor never reaches three: dropping one reading in
+# five resets the counter on every good sample, so a channel losing 20% of its
+# data was reported healthy. Loose connectors, EMI and flaky links fail exactly
+# this way, and they are far more common in a plant than a clean hard failure.
+#
+# Stated as an availability budget rather than a tuned constant: a channel
+# delivering below this fraction of its expected samples is degrading, and well
+# below it is unusable.
+AVAILABILITY_FLOOR = 0.98
+AVAILABILITY_FAILED = 0.80
+
 WARMUP = 60                  # samples to identify the noise model
 TOOL_CHANGE_RESET_MIN = 1.0  # wear at or below this after a drop = tool change
 # P(k consecutive healthy readings all beyond the gate) = INNOVATION_ALPHA**k.
@@ -408,6 +422,8 @@ class _Channel:
     last_value: float | None = None
     identical_run: int = 0
     gated_run: int = 0
+    #: Rolling record of delivery: True for a usable sample, False for a gap.
+    delivery: deque[bool] = field(default_factory=lambda: deque(maxlen=VAR_WINDOW))
     learning: list[float] = field(default_factory=list)
     calibrating: list[float] = field(default_factory=list)
     calibrated: bool = False
@@ -477,6 +493,7 @@ class _Channel:
         # ── Missing measurement: predict only. Covariance grows, so staleness
         # widens the margin automatically instead of needing a separate flag.
         if z is None or not math.isfinite(z):
+            self.delivery.append(False)
             self.age += 1
             if self.initialised:
                 self.p += self.q
@@ -492,6 +509,8 @@ class _Channel:
                 age_cycles=self.age,
                 reason=f"no reading for {self.age} cycle(s)",
             )
+
+        self.delivery.append(True)
 
         # ── Phase 1: learn the channel before judging it.
         #
@@ -581,6 +600,17 @@ class _Channel:
                 f"to {stuck_score:.3g}, below the chi-square floor "
                 f"{STUCK_CHI2:.3g} at a {FALSE_STUCK_RATE:g} false-positive rate"
             )
+        elif (availability := self._availability()) is not None and (
+            availability < AVAILABILITY_FLOOR
+        ):
+            failed = availability < AVAILABILITY_FAILED
+            status = NE107.FAILURE if failed else NE107.MAINTENANCE_REQUIRED
+            reason = (
+                f"intermittent: {availability:.0%} of the last {len(self.delivery)} "
+                f"samples arrived, against a {AVAILABILITY_FLOOR:.0%} floor. No "
+                f"single gap is long enough to look like a dropout, which is how "
+                f"a failing connector hides"
+            )
         elif abs(unit) > INNOVATION_GATE:
             status = NE107.OUT_OF_SPEC
             reason = f"innovation {unit:+.1f} sigma beyond the {INNOVATION_GATE:.1f} gate"
@@ -613,6 +643,13 @@ class _Channel:
         self.x += gain * innovation
         self.p = (1 - gain) * p_pred
         self.age = 0
+
+    def _availability(self) -> float | None:
+        """Fraction of recent samples that actually arrived, or None if the
+        window is too short to say anything."""
+        if len(self.delivery) < VAR_WINDOW:
+            return None
+        return sum(self.delivery) / len(self.delivery)
 
     def _provisional(self, z: float, reason: str) -> ChannelHealth:
         return ChannelHealth(

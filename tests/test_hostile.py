@@ -325,3 +325,90 @@ class TestBoundaryArithmetic:
             point = OperatingPoint(300.0, 310.0, rpm, torque, 100.0, "L")
             assert math.isfinite(point.power_w)
 
+
+class TestGuardsThatMustActuallyFire:
+    """An unexercised guard is not a guard.
+
+    The invariant warning was added, 443 tests passed, and it was broken — a
+    missing import in a branch that never runs on a clean archive. The whole
+    suite was green because the code path was unreachable with real data.
+
+    That is the failure this project keeps rediscovering, so every guard whose
+    trigger condition is absent from the dataset gets a test that forces the
+    condition.
+    """
+
+    def test_a_violated_invariant_reaches_the_answers_that_depend_on_it(self):
+        """The invariants are checked when somebody asks about data quality.
+        They must also reach a question whose margins depend on those channels,
+        because otherwise a query over a corrupt archive returns confident
+        numbers with no hint that the physics is impossible.
+        """
+        engine = Engine.build()
+        engine._invariants = {"I1": 137}          # simulate a corrupt archive
+        for question in ("What are the typical operating conditions?",
+                         "What is the overall failure rate?"):
+            answer = engine.ask(question, SessionState())
+            flagged = [w for w in answer.bundle.warnings if w.code == "data_quality"]
+            assert flagged, question
+            assert "137" in flagged[0].message
+
+    def test_a_clean_archive_raises_nothing(self):
+        """A guard that always fires is noise, not protection."""
+        engine = Engine.build()
+        assert engine._invariants == {"I1": 0}
+        answer = engine.ask("What is the average torque?", SessionState())
+        assert not [w for w in answer.bundle.warnings if w.code == "data_quality"]
+
+    def test_an_intermittent_channel_is_caught(self):
+        """Staleness counted CONSECUTIVE gaps and escalated after three, so a
+        sensor dropping one reading in five reset the counter on every good
+        sample and was reported healthy. Loose connectors fail exactly this way.
+        """
+        import duckdb
+
+        import copilot.observer as ob
+
+        con = duckdb.connect()
+        con.execute("CREATE VIEW t AS SELECT * FROM read_csv_auto('data/ai4i2020.csv')")
+        rows = con.execute(
+            'SELECT "Air temperature [K]", "Process temperature [K]", '
+            '"Rotational speed [rpm]", "Torque [Nm]", "Tool wear [min]" '
+            "FROM t ORDER BY UDI LIMIT 400"
+        ).fetchall()
+        ready = ob.WARMUP + ob.CALIBRATION
+        observer = ob.FleetObserver()
+        caught = None
+        for i, r in enumerate(rows):
+            reading = {
+                "machine_id": "M1", "air_temp_k": r[0], "process_temp_k": r[1],
+                "rotational_speed_rpm": r[2], "torque_nm": r[3], "tool_wear_min": r[4],
+            }
+            if i >= ready and (i - ready) % 5 == 0:
+                reading["torque_nm"] = float("nan")     # 20% loss, never 3 in a row
+            report = observer.observe(reading)
+            status = report.channels["torque_nm"].status
+            if i >= ready and caught is None and status in (
+                ob.NE107.FAILURE, ob.NE107.MAINTENANCE_REQUIRED
+            ):
+                caught = i - ready
+        assert caught is not None and caught < 40
+
+    def test_a_stream_terminates(self):
+        """/stream/alerts defaulted to limit=None: 10,000 cycles at the default
+        takt is 33 minutes per connection, with no ceiling on either the limit
+        or the number of connections."""
+        import itertools
+
+        from fastapi.testclient import TestClient
+
+        from copilot.api import MAX_STREAM_TICKS, app
+
+        client = TestClient(app)
+        with client.stream("GET", "/stream/alerts", params={"speed": 0}) as response:
+            lines = sum(1 for _ in itertools.islice(response.iter_lines(), 50_000))
+        assert 0 < lines < 50_000
+        over = client.get("/stream/alerts",
+                          params={"speed": 0, "limit": MAX_STREAM_TICKS + 1})
+        assert over.status_code == 422
+

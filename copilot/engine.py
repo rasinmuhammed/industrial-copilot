@@ -20,7 +20,7 @@ import time
 from dataclasses import dataclass, field
 
 from copilot.config import settings
-from copilot.evidence import EvidenceBundle
+from copilot.evidence import EvidenceBundle, Severity
 from copilot.ingest import connect
 from copilot.ir import AnalysisPlan
 from copilot.narrate import format_answer, template_narrate
@@ -28,6 +28,7 @@ from copilot.ops import ExecutionContext, data_fingerprint, execute, kb_version
 from copilot.planner.router import Router, RoutingError
 from copilot.session import SessionState
 from copilot.planner.unknown import detect_unknown_quantity
+from copilot.ops.data_quality import INVARIANT_CHANNELS, check_invariants
 from copilot.verify import VerificationResult, verify
 
 __all__ = ["Answer", "Engine"]
@@ -63,6 +64,9 @@ class Engine:
     router: Router
     ctx: ExecutionContext
     show_evidence: bool = False
+    #: Invariant violation counts, computed once at build. Empty means the
+    #: archive satisfies every declared physical relation.
+    _invariants: dict[str, int] = field(default_factory=dict)
 
     @classmethod
     def build(cls, *, read_only: bool = True, show_evidence: bool = False) -> Engine:
@@ -73,11 +77,46 @@ class Engine:
                 con=con, kb_version=kb_version(), data_version=data_fingerprint(con)
             ),
             show_evidence=show_evidence,
+            _invariants=check_invariants(con),
         )
 
     @property
     def provider_name(self) -> str:
         return self.router.provider_name
+
+    def _flag_violated_invariants(self, plan, bundle) -> None:
+        """Carry a known data-integrity violation into the answers it affects.
+
+        The invariants — process temperature above air, the thermal coupling,
+        the rpm/torque correlation — were checked only when somebody asked "can
+        I trust this data". A question whose margins depend on those channels
+        was answered without consulting them, so a query over a corrupt archive
+        returned confident numbers with no hint that the physics is impossible.
+
+        The streaming observer already catches an inverted thermocouple at 20
+        sigma per tick. This closes the same gap on the historical path, at the
+        cost of one cached lookup rather than a re-scan.
+        """
+        if not self._invariants:
+            return
+        touched = {f.field for f in plan.filters}
+        touched |= set(plan.metrics or ())
+        touched |= {plan.bin.field} if plan.bin else set()
+        for code, violations in self._invariants.items():
+            if not violations:
+                continue
+            channels = INVARIANT_CHANNELS.get(code, ())
+            # A physics-bearing op depends on every channel whether or not the
+            # question named one, so an empty `touched` still counts.
+            if touched and not (touched & set(channels)):
+                continue
+            bundle.warn(
+                "data_quality",
+                f"Invariant {code} is violated on {violations:,} row(s): a "
+                f"physical relation that must always hold does not. Figures "
+                f"below are computed over data that includes those rows.",
+                severity=Severity.CRITICAL,
+            )
 
     def ask(self, question: str, state: SessionState | None = None) -> Answer:
         started = time.perf_counter()
@@ -123,6 +162,7 @@ class Engine:
         exec_started = time.perf_counter()
         self.ctx.tier = routed.tier
         bundle = execute(routed.plan, self.ctx)
+        self._flag_violated_invariants(routed.plan, bundle)
         exec_ms = (time.perf_counter() - exec_started) * 1000.0
 
         # --- narrate + verify -------------------------------------------------
