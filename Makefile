@@ -76,6 +76,9 @@ onboard:  ## Discover a process definition from a dataset, and audit it
 	$(PY) scripts/onboard.py --csv data/ai4i2020.csv --label "Machine failure" \
 		--audit --out artifacts/discovered.yaml
 
+metamorphic:  ## Relations that must hold, checked on generated inputs
+	$(PY) -m pytest tests/test_metamorphic.py -q
+
 adversarial:  ## Run only the adversarial suite
 	$(PY) -m pytest tests/test_adversarial.py -q
 
