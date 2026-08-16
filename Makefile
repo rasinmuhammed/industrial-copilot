@@ -20,8 +20,9 @@ install: venv  ## Install dependencies
 build:  ## CSV -> DuckDB with physics columns and margins
 	$(PY) -m copilot.ingest
 
-verify:  ## Reproduce every figure in docs/01-DATASET.md  (CI gate)
+verify:  ## Reproduce every documented figure, incl. the README example  (CI gate)
 	$(PY) scripts/verify_dataset.py
+	$(PY) scripts/verify_readme.py
 
 discover:  ## Re-derive the documented thresholds from data alone
 	$(PY) scripts/discover_rules.py
