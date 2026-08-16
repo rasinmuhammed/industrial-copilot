@@ -236,7 +236,7 @@ def _time_axis(plan: AnalysisPlan, ctx: ExecutionContext, where: str, params: li
         f"sum(machine_failure)::BIGINT AS failures{metric_selects} "
         f"FROM {TABLE} WHERE {where} GROUP BY bucket ORDER BY bucket"
     )
-    rows = ctx.con.execute(sql, params).fetchall()
+    rows = ctx.cursor.execute(sql, params).fetchall()
     buckets = [
         {
             "label": str(r[0]),
@@ -260,12 +260,12 @@ def _metric_axis(plan: AnalysisPlan, ctx: ExecutionContext, where: str, params: 
         k = int(plan.bin.bins)  # type: ignore[arg-type]
         if plan.bin.method == "quantile":
             qs = ", ".join(f"quantile_cont({col}, {i / k})" for i in range(1, k))
-            row = ctx.con.execute(
+            row = ctx.cursor.execute(
                 f"SELECT min({col}), {qs}, max({col}) FROM {TABLE} WHERE {where}",  # noqa: S608
                 params,
             ).fetchone()
         else:
-            lo, hi = ctx.con.execute(
+            lo, hi = ctx.cursor.execute(
                 f"SELECT min({col}), max({col}) FROM {TABLE} WHERE {where}", params  # noqa: S608
             ).fetchone()
             step = (float(hi) - float(lo)) / k
@@ -296,7 +296,7 @@ def _metric_axis(plan: AnalysisPlan, ctx: ExecutionContext, where: str, params: 
         f"sum(machine_failure)::BIGINT AS failures, min({col}) AS lo{metric_selects} "
         f"FROM {TABLE} WHERE {where} GROUP BY bucket ORDER BY lo"
     )
-    rows = ctx.con.execute(sql, params).fetchall()
+    rows = ctx.cursor.execute(sql, params).fetchall()
     buckets = [
         {
             "label": str(r[0]),

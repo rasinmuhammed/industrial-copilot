@@ -151,6 +151,14 @@ dimensions:
   udi:
     column: udi
     label: cycle
+    # An identifier is ADDRESSABLE, not groupable. "why did cycle 9016 fail" is
+    # a filter; "failure rate by cycle" is one row per group and 10,000 groups.
+    # Validation previously skipped any dimension without a declared value list,
+    # with a comment claiming the executor capped it. The executor did not: a
+    # plan grouping by udi emitted 40,006 slots. A comment asserting a guarantee
+    # that does not exist is the same defect as a constant described as measured
+    # when it was chosen.
+    groupable: false
     description: >
       Production cycle identifier (the published UDI index). Addressable so an
       engineer can ask about one specific cycle: "why did cycle 9016 fail?".

@@ -35,7 +35,7 @@ _INVARIANTS = (
 @register(OpName.DATA_QUALITY)
 def data_quality(plan: AnalysisPlan, ctx: ExecutionContext) -> EvidenceBundle:
     bundle = new_bundle(plan, ctx)
-    q = lambda sql: ctx.con.execute(sql.format(t=TABLE)).fetchone()  # noqa: E731
+    q = lambda sql: ctx.cursor.execute(sql.format(t=TABLE)).fetchone()  # noqa: E731
 
     total, failures = q("SELECT count(*), sum(machine_failure) FROM {t}")
     bundle.put("dataset.rows", int(total), unit="count", sig_figs=8)

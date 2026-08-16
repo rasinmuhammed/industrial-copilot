@@ -80,7 +80,7 @@ def root_cause(plan: AnalysisPlan, ctx: ExecutionContext) -> EvidenceBundle:
     bundle = new_bundle(plan, ctx)
     where, params = cohort_where(plan, None)
 
-    total = ctx.con.execute(
+    total = ctx.cursor.execute(
         f"SELECT count(*) FROM {TABLE} WHERE {where}", params  # noqa: S608
     ).fetchone()[0]
 
@@ -106,7 +106,7 @@ def root_cause(plan: AnalysisPlan, ctx: ExecutionContext) -> EvidenceBundle:
 
 
 def _single_row(bundle: EvidenceBundle, ctx: ExecutionContext, where: str, params: list) -> None:
-    row = ctx.con.execute(
+    row = ctx.cursor.execute(
         f"SELECT {_ROW_COLUMNS} FROM {TABLE} WHERE {where}", params  # noqa: S608
     ).df().iloc[0].to_dict() if _has_pandas() else _fetch_dict(ctx, where, params)
 
@@ -272,7 +272,7 @@ def _explain_absence(bundle: EvidenceBundle, row: dict[str, Any]) -> None:
 def _cohort(
     bundle: EvidenceBundle, ctx: ExecutionContext, where: str, params: list, total: int
 ) -> None:
-    row = ctx.con.execute(
+    row = ctx.cursor.execute(
         f"""SELECT
               sum(machine_failure)::BIGINT                                  AS failures,
               sum(CASE WHEN {_BOUNDARIES[0]['fired_sql']} THEN 1 ELSE 0 END)::BIGINT AS hdf,
@@ -393,7 +393,7 @@ def _has_pandas() -> bool:
 
 
 def _fetch_dict(ctx: ExecutionContext, where: str, params: list) -> dict[str, Any]:
-    cur = ctx.con.execute(
+    cur = ctx.cursor.execute(
         f"SELECT {_ROW_COLUMNS} FROM {TABLE} WHERE {where}", params  # noqa: S608
     )
     names = [d[0] for d in cur.description]

@@ -57,7 +57,7 @@ def sql_explore(plan: AnalysisPlan, ctx: ExecutionContext) -> EvidenceBundle:
 
     guarded = f"SELECT * FROM ({sql}) AS _explore LIMIT {MAX_ROWS}"
     try:
-        cur = ctx.con.execute(guarded)
+        cur = ctx.cursor.execute(guarded)
         names = [d[0] for d in cur.description]
         rows = cur.fetchall()
     except Exception as exc:  # noqa: BLE001 - surface the engine's own message

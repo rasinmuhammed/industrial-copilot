@@ -70,7 +70,7 @@ def drivers(plan: AnalysisPlan, ctx: ExecutionContext) -> EvidenceBundle:
         for m in metrics:
             col = column_for(m)
             selects += [f"avg({col})", f"stddev_samp({col})"]
-        row = ctx.con.execute(
+        row = ctx.cursor.execute(
             f"SELECT count(*), {', '.join(selects)} FROM {TABLE} WHERE {w}", p  # noqa: S608
         ).fetchone()
         stats[name] = {"n": int(row[0]), "values": row[1:]}
@@ -164,7 +164,7 @@ def _flag_confounding(
         return
     pairs = [(top[i], top[j]) for i in range(len(top)) for j in range(i + 1, len(top))]
     selects = ", ".join(f"corr({column_for(x)}, {column_for(y)})" for x, y in pairs)
-    row = ctx.con.execute(
+    row = ctx.cursor.execute(
         f"SELECT {selects} FROM {TABLE} WHERE {where}", params  # noqa: S608
     ).fetchone()
 

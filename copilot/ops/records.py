@@ -67,7 +67,7 @@ def records(plan: AnalysisPlan, ctx: ExecutionContext) -> EvidenceBundle:
     columns = list(_BASE_COLUMNS) + list(_MODE_COLUMNS) + extra
     limit = min(plan.limit, ctx.max_rows)
 
-    total = ctx.con.execute(
+    total = ctx.cursor.execute(
         f"SELECT count(*) FROM {TABLE} WHERE {where}", params  # noqa: S608
     ).fetchone()[0]
 
@@ -84,7 +84,7 @@ def records(plan: AnalysisPlan, ctx: ExecutionContext) -> EvidenceBundle:
         f"SELECT {', '.join(columns)} FROM {TABLE} WHERE {where} "  # noqa: S608
         f"ORDER BY {_ORDER_BY[order_key]} LIMIT {limit}"
     )
-    cur = ctx.con.execute(sql, params)
+    cur = ctx.cursor.execute(sql, params)
     names = [d[0] for d in cur.description]
     rows = [dict(zip(names, r)) for r in cur.fetchall()]
     bundle.rows = rows

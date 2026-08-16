@@ -292,7 +292,7 @@ def _resolve_point(
         )
 
     where, filter_params = cohort_where(plan, None)
-    row = ctx.con.execute(
+    row = ctx.cursor.execute(
         "SELECT avg(air_temperature_k), avg(process_temperature_k), "  # noqa: S608
         "avg(rotational_speed_rpm), avg(torque_nm), avg(tool_wear_min), "
         f"any_value(product_type), count(*) FROM {TABLE} WHERE {where}",

@@ -53,7 +53,7 @@ def describe(plan: AnalysisPlan, ctx: ExecutionContext) -> EvidenceBundle:
         where, params = cohort_where(plan, cohort)
         sql = f"SELECT {', '.join(selects)} FROM {TABLE} WHERE {where}"  # noqa: S608
         sql_shown = sql_shown or sql
-        row = ctx.con.execute(sql, params).fetchone()
+        row = ctx.cursor.execute(sql, params).fetchone()
         if row is None:  # pragma: no cover - aggregate always returns a row
             continue
         values = dict(zip([f"{m}__{s}" for m in plan.metrics for s, _ in _AGGREGATES], row))
@@ -112,7 +112,7 @@ def describe(plan: AnalysisPlan, ctx: ExecutionContext) -> EvidenceBundle:
 
 def _stamp_row_count(bundle: EvidenceBundle, plan: AnalysisPlan, ctx: ExecutionContext) -> None:
     where, params = cohort_where(plan, None)
-    total = ctx.con.execute(
+    total = ctx.cursor.execute(
         f"SELECT count(*) FROM {TABLE} WHERE {where}", params  # noqa: S608
     ).fetchone()[0]
     bundle.provenance = bundle.provenance.model_copy(update={"row_count": int(total)})

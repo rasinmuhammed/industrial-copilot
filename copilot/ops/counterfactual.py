@@ -58,7 +58,7 @@ def counterfactual(plan: AnalysisPlan, ctx: ExecutionContext) -> EvidenceBundle:
         return bundle
 
     where, params = cohort_where(plan, None)
-    cur = ctx.con.execute(
+    cur = ctx.cursor.execute(
         f"SELECT {_FETCH} FROM {TABLE} WHERE {where}", params  # noqa: S608
     )
     rows = cur.fetchall()

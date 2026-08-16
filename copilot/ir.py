@@ -367,9 +367,20 @@ def _validate_domain(plan: AnalysisPlan) -> None:
 def _validate_cardinality(plan: AnalysisPlan) -> None:
     dims = dimension_index()
     for name in plan.group_by:
-        values = dims.get(name, {}).get("values")
+        spec = dims.get(name, {})
+        if spec.get("groupable") is False:
+            raise PlanError(
+                ValidationStage.CARDINALITY,
+                f"{name!r} identifies a single record and cannot be grouped by",
+                hint=f"Filter on {name} to address one record, or group by a "
+                     f"dimension with a bounded value set.",
+            )
+        values = spec.get("values")
         if values is None:
-            continue  # open-valued (machine_id); the executor caps it
+            # Open-valued (machine_id). Ask the data rather than assume: an
+            # earlier version skipped the check here and claimed the executor
+            # capped it, which it did not.
+            continue
         if len(values) > MAX_GROUPS:
             raise PlanError(
                 ValidationStage.CARDINALITY,

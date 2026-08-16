@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import json
 import math
+import zlib
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -112,6 +113,23 @@ class HashingEmbedder:
     Character n-grams give robustness to inflection and typos ("speeds" vs
     "speed"); word unigrams give topical signal. Hashing avoids a vocabulary
     that would need to be versioned and shipped alongside the store.
+
+    THE HASH MUST BE STABLE ACROSS PROCESSES. This used Python's builtin
+    hash(), which is randomised per interpreter by PYTHONHASHSEED. Two
+    consequences, both silent:
+
+      * the same question embedded in two processes produced different vectors,
+        so exemplar retrieval was nondeterministic. Measured: "impact of
+        dropping torque 10 Nm" was answered under seeds 0-2 and refused under
+        seed 3, which moved end-to-end coverage between 96.8% and 98.4% run to
+        run. A benchmark figure that is not reproducible is not a figure.
+      * a PERSISTED store would have been quietly corrupt. Vectors written by
+        one process would not match vectors computed by the next, so every
+        saved exemplar becomes unreachable after a restart — with no error,
+        just a system that mysteriously stops learning.
+
+    crc32 is deterministic, C-speed, and adequate for a hashing trick where
+    collision quality matters far less than reproducibility.
     """
 
     dim: int = DIM
@@ -121,10 +139,10 @@ class HashingEmbedder:
         norm = normalise(text) or text.lower().strip()
 
         for word in _WORD.findall(norm):
-            v[hash(f"w:{word}") % self.dim] += 1.0
+            v[zlib.crc32(f"w:{word}".encode()) % self.dim] += 1.0
         padded = f"  {norm}  "
         for i in range(len(padded) - 2):
-            v[hash(f"c:{padded[i:i + 3]}") % self.dim] += 0.5
+            v[zlib.crc32(f"c:{padded[i:i + 3]}".encode()) % self.dim] += 0.5
 
         length = math.sqrt(float(v @ v))
         return v / length if length > 0 else v

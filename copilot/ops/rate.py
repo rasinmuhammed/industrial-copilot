@@ -14,7 +14,7 @@ from __future__ import annotations
 from typing import Any
 
 from copilot.evidence import EvidenceBundle, Quality, Severity
-from copilot.ir import AnalysisPlan, OpName
+from copilot.ir import AnalysisPlan, OpName, PlanError, ValidationStage
 from copilot.ops.registry import (
     TABLE,
     ExecutionContext,
@@ -27,6 +27,10 @@ from copilot.ops.registry import (
 from copilot.stats import MIN_REPORTABLE_N, spread_vs_chance, wilson_interval
 
 FAILURE_COLUMN = "machine_failure"
+
+# Groups a human can actually read, and above which the extremes of a ranking
+# are chance rather than signal (see stats.spread_vs_chance).
+MAX_REPORTABLE_GROUPS = 200
 _SLUG_TRANSLATION = str.maketrans({" ": "_", "-": "_", ".": "_", "[": "", "]": "", ")": "", "(": ""})
 
 
@@ -113,7 +117,7 @@ def _overall(ctx: ExecutionContext, where: str, params: list[Any]):
         f"SELECT sum({FAILURE_COLUMN})::BIGINT, count(*)::BIGINT "  # noqa: S608
         f"FROM {TABLE} WHERE {where}"
     )
-    failures, n = ctx.con.execute(sql, params).fetchone()
+    failures, n = ctx.cursor.execute(sql, params).fetchone()
     return [("all", int(failures or 0), int(n or 0))], sql
 
 
@@ -124,7 +128,28 @@ def _dimension_groups(plan: AnalysisPlan, ctx: ExecutionContext, where: str, par
         f"SELECT {key_expr} AS grp, sum({FAILURE_COLUMN})::BIGINT, count(*)::BIGINT "  # noqa: S608
         f"FROM {TABLE} WHERE {where} GROUP BY grp ORDER BY grp"
     )
-    rows = ctx.con.execute(sql, params).fetchall()
+    rows = ctx.cursor.execute(sql, params).fetchall()
+
+    # A real cap on open-valued dimensions.
+    #
+    # Validation skips dimensions with no declared value set — machine_id today,
+    # any asset tag in a real fleet — on the grounds that "the executor caps
+    # it". The executor did not. Grouping by a 10,000-machine site would emit
+    # four slots per machine into an evidence bundle held entirely in memory,
+    # and every one of them would be rendered.
+    #
+    # The honest response is not to truncate silently, which would report a
+    # ranking over an arbitrary subset as though it were the fleet. It is to
+    # refuse and say what to do instead.
+    if len(rows) > MAX_REPORTABLE_GROUPS:
+        raise PlanError(
+            ValidationStage.CARDINALITY,
+            f"grouping by {', '.join(plan.group_by)} produced {len(rows):,} "
+            f"groups against a ceiling of {MAX_REPORTABLE_GROUPS}",
+            hint="Filter to a site or line first, or bin a continuous metric. "
+                 "A ranking over thousands of groups is not readable and its "
+                 "extremes are chance.",
+        )
     return [(r[0], int(r[1] or 0), int(r[2])) for r in rows], sql
 
 
@@ -141,13 +166,13 @@ def _binned_groups(plan: AnalysisPlan, ctx: ExecutionContext, where: str, params
         if plan.bin.method == "quantile":
             qs = [i / k for i in range(1, k)]
             inner = ", ".join(f"quantile_cont({col}, {q})" for q in qs)
-            cut_row = ctx.con.execute(
+            cut_row = ctx.cursor.execute(
                 f"SELECT min({col}), {inner}, max({col}) FROM {TABLE} WHERE {where}",  # noqa: S608
                 params,
             ).fetchone()
             edges = [float(v) for v in cut_row]
         else:  # equal width
-            lo, hi = ctx.con.execute(
+            lo, hi = ctx.cursor.execute(
                 f"SELECT min({col}), max({col}) FROM {TABLE} WHERE {where}", params  # noqa: S608
             ).fetchone()
             step = (float(hi) - float(lo)) / k
@@ -173,7 +198,28 @@ def _binned_groups(plan: AnalysisPlan, ctx: ExecutionContext, where: str, params
         f"SELECT {bucket} AS grp, sum({FAILURE_COLUMN})::BIGINT, count(*)::BIGINT, "  # noqa: S608
         f"min({col}) AS lo FROM {TABLE} WHERE {where} GROUP BY grp ORDER BY lo"
     )
-    rows = ctx.con.execute(sql, params).fetchall()
+    rows = ctx.cursor.execute(sql, params).fetchall()
+
+    # A real cap on open-valued dimensions.
+    #
+    # Validation skips dimensions with no declared value set — machine_id today,
+    # any asset tag in a real fleet — on the grounds that "the executor caps
+    # it". The executor did not. Grouping by a 10,000-machine site would emit
+    # four slots per machine into an evidence bundle held entirely in memory,
+    # and every one of them would be rendered.
+    #
+    # The honest response is not to truncate silently, which would report a
+    # ranking over an arbitrary subset as though it were the fleet. It is to
+    # refuse and say what to do instead.
+    if len(rows) > MAX_REPORTABLE_GROUPS:
+        raise PlanError(
+            ValidationStage.CARDINALITY,
+            f"grouping by {', '.join(plan.group_by)} produced {len(rows):,} "
+            f"groups against a ceiling of {MAX_REPORTABLE_GROUPS}",
+            hint="Filter to a site or line first, or bin a continuous metric. "
+                 "A ranking over thousands of groups is not readable and its "
+                 "extremes are chance.",
+        )
     return [(r[0], int(r[1] or 0), int(r[2])) for r in rows], sql
 
 

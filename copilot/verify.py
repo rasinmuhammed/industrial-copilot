@@ -150,6 +150,36 @@ def verify(
     return VerificationResult(ok=True, text=rendered, slots_used=used)
 
 
+# Numbers written as words. The verifier scanned for DIGITS, so a narration
+# saying "three point three nine percent" passed a gate whose entire purpose is
+# to make unsourced figures unreachable.
+#
+# The template narrator never does this, but the model narrator is exactly the
+# component the gate exists to contain, and language models spell numbers out
+# routinely — "about three quarters", "roughly forty". Found by adversarial
+# probing, not by review, because every test fed the verifier digits.
+_NUMBER_WORDS = frozenset({
+    "zero", "one", "two", "three", "four", "five", "six", "seven", "eight",
+    "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen",
+    "sixteen", "seventeen", "eighteen", "nineteen", "twenty", "thirty",
+    "forty", "fifty", "sixty", "seventy", "eighty", "ninety", "hundred",
+    "thousand", "million", "billion", "half", "third", "quarter", "dozen",
+})
+# A single number word is ordinary English ("one of the modes", "a quarter of
+# the fleet" is a rate we would rather see as a slot, but "the first one" is
+# not a figure). Two or more adjacent IS a spelled-out quantity.
+_WORD_RUN = re.compile(
+    r"\b(?:" + "|".join(sorted(_NUMBER_WORDS)) + r")s?"
+    r"(?:[\s-]+(?:point|and|of\s+a|(?:" + "|".join(sorted(_NUMBER_WORDS)) + r")s?))+\b",
+    re.IGNORECASE,
+)
+
+
+def _find_spelled_numbers(text: str) -> list[str]:
+    """Multi-word numeric expressions, which digits-only scanning misses."""
+    return [m.group(0) for m in _WORD_RUN.finditer(text)]
+
+
 def _find_numerals(text: str, question: str) -> list[str]:
     """Numerals that are not accounted for by the question or a safe token."""
     cleaned = _SAFE_TOKENS.sub(" ", text)
@@ -162,6 +192,10 @@ def _find_numerals(text: str, question: str) -> list[str]:
         if token.replace(",", "") in from_question:
             continue
         found.append(token)
+    found.extend(
+        w for w in _find_spelled_numbers(cleaned)
+        if w.lower() not in question.lower()
+    )
     return found
 
 

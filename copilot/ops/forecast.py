@@ -219,7 +219,7 @@ def _resolve(
     params = plan.params or {}
     where, filter_params = cohort_where(plan, None)
 
-    sigma_row = ctx.con.execute(
+    sigma_row = ctx.cursor.execute(
         f"SELECT stddev_samp(torque_nm) FROM {TABLE} WHERE {where}", filter_params  # noqa: S608
     ).fetchone()
     sigma = float(sigma_row[0]) if sigma_row and sigma_row[0] else 10.0
@@ -241,7 +241,7 @@ def _resolve(
             sigma,
         )
 
-    row = ctx.con.execute(
+    row = ctx.cursor.execute(
         "SELECT avg(air_temperature_k), avg(process_temperature_k), "  # noqa: S608
         "avg(rotational_speed_rpm), avg(torque_nm), avg(tool_wear_min), "
         f"any_value(product_type), count(*) FROM {TABLE} WHERE {where}",

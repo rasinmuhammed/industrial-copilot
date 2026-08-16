@@ -12,6 +12,7 @@ time, which is what makes "the model invented an operation" impossible.
 
 from __future__ import annotations
 
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -40,7 +41,24 @@ TABLE = "observations"
 
 @dataclass(slots=True)
 class ExecutionContext:
-    """Everything an op needs that is not the plan itself."""
+    """Everything an op needs that is not the plan itself.
+
+    THREAD SAFETY. `con` is the process-wide connection and must never be used
+    directly by an op — use `cursor`, which hands back a thread-local view of
+    the same database.
+
+    A DuckDB connection serialises internally but its result cursor does not:
+    two threads calling execute() then fetchone() on ONE connection race, and
+    the loser gets None where a row should be. Under 24 concurrent requests,
+    six failed with "cannot unpack non-iterable NoneType". That is the visible
+    form; the invisible form is one request reading a result computed for
+    another, which is worse than an exception because it produces a confident
+    answer to somebody else's question.
+
+    Found only by a concurrency test. Every other suite calls ask() serially,
+    so the entire API surface was untested under the exact condition it exists
+    to serve.
+    """
 
     con: duckdb.DuckDBPyConnection
     kb_version: str = "1.0.0"
@@ -48,6 +66,20 @@ class ExecutionContext:
     tier: str = "grammar"
     max_rows: int = 50
     started: float = field(default_factory=time.perf_counter)
+    _local: threading.local = field(default_factory=threading.local, repr=False)
+
+    @property
+    def cursor(self) -> duckdb.DuckDBPyConnection:
+        """A connection private to the calling thread, over the same database.
+
+        `con.cursor()` is DuckDB's documented mechanism for this: it shares the
+        catalog and buffer pool, so there is no data copy and no second file
+        handle, but each thread gets its own result set.
+        """
+        existing = getattr(self._local, "con", None)
+        if existing is None:
+            existing = self._local.con = self.con.cursor()
+        return existing
 
     def elapsed_ms(self) -> float:
         return (time.perf_counter() - self.started) * 1000.0

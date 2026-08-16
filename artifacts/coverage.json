@@ -1,16 +1,16 @@
 {
   "questions": 74,
-  "coverage": 0.9683,
+  "coverage": 0.9841,
   "soundness": 1.0,
-  "refusal_precision": 0.8462,
+  "refusal_precision": 0.9167,
   "silent_failures": 0,
-  "missed": 2,
-  "latency_ms_p50": 3.75,
-  "latency_ms_p95": 30.41,
+  "missed": 1,
+  "latency_ms_p50": 3.09,
+  "latency_ms_p95": 66.74,
   "degraded": 0,
   "tiers": {
     "grammar": 59,
-    "refused": 13,
-    "exemplar": 2
+    "refused": 12,
+    "exemplar": 3
   }
 }
