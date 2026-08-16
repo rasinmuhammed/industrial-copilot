@@ -1,0 +1,139 @@
+{
+  "model": "margin-planner",
+  "held_out": 120,
+  "dsl_exact_match": 0.1417,
+  "plan_validity": 0.8917,
+  "op_accuracy": 0.6917,
+  "latency_ms_p50": 719.5,
+  "latency_ms_p95": 1140.3,
+  "latency_ms_max": 1446.0,
+  "decode_tok_per_s": 44.6,
+  "decoding": "greedy (temperature 0, top_k 1)",
+  "misses": [
+    {
+      "question": "could you impact of reducing rpm by 8 rpm.",
+      "want": "counterfactual|-|-|-|-|rotational_speed_rpm-8",
+      "got": "counterfactual|-|-|-|rotational_speed_rpm-8|-"
+    },
+    {
+      "question": "could you trend of failures against torque.",
+      "want": "trend|-|-|-|torque_nm:q5|-",
+      "got": "trend|-|-|torque_nm:q5;torque_nm:w6|-|-"
+    },
+    {
+      "question": "I need to know what caused cycle 7657 to fail",
+      "want": "root_cause|-|-|-|-|udi=7657",
+      "got": "root_cause|-|-|-|cycle=7657|-"
+    },
+    {
+      "question": "What if we increase torque by 5 Nm please",
+      "want": "counterfactual|-|-|-|-|torque_nm+5",
+      "got": ""
+    },
+    {
+      "question": "could you is wattage driving more breakdowns for me?",
+      "want": "rate|-|-|-|power_w:q5|-",
+      "got": "rate|-|power_w|-|-|-|order=product_type"
+    },
+    {
+      "question": "could you which modes are firing for me?",
+      "want": "root_cause|-|-|-|-|-",
+      "got": "drivers|-|-|-|mode:product_type=failed;mode:product_type=normal|-"
+    },
+    {
+      "question": "I need to know how often do machines fail.",
+      "want": "rate|-|-|-|-|-",
+      "got": "rate|-|-|-|failure:q5|-"
+    },
+    {
+      "question": "show me is spindle speed driving more breakdowns.",
+      "want": "rate|-|-|-|rotational_speed_rpm:q5|-",
+      "got": "rate|-|power_w,rotational_speed_rpm|-|-|order=rotational_speed_rpm"
+    },
+    {
+      "question": "could you how do failures differ from normal runs?",
+      "want": "compare|failed:failure=1;healthy:failure=0|torque_nm,rotational_speed_rpm,temp_delta_k|-|-|cohens_d",
+      "got": "compare|failed:failure=1;normal:failure=0|power_w,torque_nm,tool_wear_min|-|-|order=product_type"
+    },
+    {
+      "question": "show me set failed against healthy conditions?",
+      "want": "compare|failed:failure=1;healthy:failure=0|rotational_speed_rpm,tool_wear_min,power_w|-|-|cohens_d",
+      "got": "compare|failed:torque_nm=115;tool_wear_min=111|-|-|-|failed,healthy"
+    },
+    {
+      "question": "please what is the overall failure rate?",
+      "want": "rate|-|-|-|-|-",
+      "got": "describe|-|failure:rate|-|-|-"
+    },
+    {
+      "question": "show me what is the breakdown rate please",
+      "want": "rate|-|-|-|-|-",
+      "got": "describe|-|rotational_speed_rpm|-|-|-"
+    },
+    {
+      "question": "Show me trend of failures against tool wear?",
+      "want": "trend|-|-|-|tool_wear_min:q5|-",
+      "got": "trend|-|-|-|tool_wear_min:q5,air_temp_k:q5|-"
+    },
+    {
+      "question": "show me what is the average strain.",
+      "want": "describe|-|overstrain_min_nm|-|-|-",
+      "got": "describe|-|strain_nm|-|-|-"
+    },
+    {
+      "question": "I need to know how do failures differ from normal runs?",
+      "want": "compare|failed:failure=1;healthy:failure=0|power_w,torque_nm|-|-|cohens_d",
+      "got": "compare|failed:failure=1;normal:failure=0|power_w,torque_nm,tool_wear_min|-|-|order=product_type"
+    },
+    {
+      "question": "Can you what if we reduce rpm by 3 rpm.",
+      "want": "counterfactual|-|-|-|-|rotational_speed_rpm-3",
+      "got": "counterfactual|-|-|-|rotational_speed_rpm-3|-"
+    },
+    {
+      "question": "Could you suppose we reduce torque setting 5 Nm?",
+      "want": "counterfactual|-|-|-|-|torque_nm-5",
+      "got": "counterfactual|-|-|-|torque_nm-5|-"
+    },
+    {
+      "question": "i need to know describe conditions on low quality product",
+      "want": "describe|-|torque_nm,rotational_speed_rpm,tool_wear_min|-|-|product_type=L",
+      "got": "describe|-|torque_nm,tool_wear_min,air_temp_k,process_temp_k|-|-|udi=9016"
+    },
+    {
+      "question": "can you are the thresholds still accurate.",
+      "want": "data_quality|-|-|-|-|-",
+      "got": "data_quality|-|-|-|-|effect size"
+    },
+    {
+      "question": "What caused cycle 8339 to fail.",
+      "want": "root_cause|-|-|-|-|udi=8339",
+      "got": "root_cause|-|-|-|cycle:8339|-"
+    },
+    {
+      "question": "show me why are we seeing more failures at high torque setting?",
+      "want": "rate|-|-|-|torque_nm:q5|-",
+      "got": "rate|-|-|-|torque_nm:w6|-"
+    },
+    {
+      "question": "Tell me is spindle speed driving more breakdowns for me?",
+      "want": "rate|-|-|-|rotational_speed_rpm:q5|-",
+      "got": "rate|-|power_w|-|rotational_speed_rpm:q5|-"
+    },
+    {
+      "question": "Show me what should i set torque to with 106 min of wear please",
+      "want": "envelope|-|-|-|-|tool_wear_min=106,torque_nm=49",
+      "got": "envelope|-|-|-|torque_nm:q5;tool_wear_min:q5;torque_nm-10;tool_wear_min+10|-"
+    },
+    {
+      "question": "tell me are the thresholds still accurate",
+      "want": "data_quality|-|-|-|-|-",
+      "got": "data_quality|-|-|-|-|effect_size=overstrain_min_nm, effect_size=torque_nm"
+    },
+    {
+      "question": "what are operating conditions for H variants?",
+      "want": "describe|-|torque_nm,rotational_speed_rpm,tool_wear_min|-|-|product_type=H",
+      "got": "describe|product_type=H;product_type=H|torque_nm,rotational_speed_rpm,tool_wear_min|-|-|order=torque_nm,rotational_speed_rpm"
+    }
+  ]
+}

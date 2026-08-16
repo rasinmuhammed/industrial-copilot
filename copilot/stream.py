@@ -40,6 +40,7 @@ from enum import StrEnum
 from typing import Any
 
 from copilot.ingest import connect
+from copilot.observer import FleetObserver, TrustReport
 from copilot.physics import (
     OSF_THRESHOLD,
     TWF_WINDOW,
@@ -59,6 +60,7 @@ __all__ = ["AlertKind", "Alert", "Tick", "StreamScorer", "replay"]
 # Consecutive robust-track violations before an alert fires. Debouncing is not
 # optional at fleet scale: a margin crossing on every sample would bury an
 # operator within minutes.
+TRUST_RECOVERY = 30   # consecutive clean cycles before a sensor alert re-arms
 PERSISTENCE = 3
 
 # Forecast horizon for a "predicted crossing" alert, in cycles.
@@ -124,7 +126,7 @@ class Tick:
     udi: int
     machine_id: str
     product_type: str
-    point: OperatingPoint
+    point: OperatingPoint | None
     worst_margin: float
     verdict: Verdict
     fired: list[str]
@@ -148,6 +150,25 @@ class Tick:
         }
 
 
+_ROW_KEY = {
+    "air_temp_k": "air_temperature_k",
+    "process_temp_k": "process_temperature_k",
+    "rotational_speed_rpm": "rotational_speed_rpm",
+    "torque_nm": "torque_nm",
+    "tool_wear_min": "tool_wear_min",
+}
+
+
+def _as_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return None
+    return out if math.isfinite(out) else None
+
+
 @dataclass(slots=True)
 class _MachineState:
     """Per-machine memory for the robust track and debouncing."""
@@ -155,6 +176,8 @@ class _MachineState:
     torque: deque[float] = field(default_factory=lambda: deque(maxlen=ROBUST_WINDOW))
     margins: deque[float] = field(default_factory=lambda: deque(maxlen=ROBUST_WINDOW))
     consecutive: dict[str, int] = field(default_factory=dict)
+    trust_alerted: bool = False
+    trust_clear_run: int = 0
     alerted: set[str] = field(default_factory=set)
 
     def robust_torque(self, value: float) -> float:
@@ -175,6 +198,10 @@ class StreamScorer:
     """Online scorer. Stateless arithmetic plus a small per-machine ring buffer."""
 
     uncertainty: Uncertainty = DEFAULT_UNCERTAINTY
+    #: Interrogate the inputs before computing on them. When None, the scorer
+    #: falls back to the static `uncertainty` above — which is what this class
+    #: did for its whole life, and why a frozen sensor read as SAFE forever.
+    observer: FleetObserver | None = field(default_factory=FleetObserver)
     persistence: int = PERSISTENCE
     horizon: float = FORECAST_HORIZON
     approach_fraction: float = 0.10
@@ -188,12 +215,43 @@ class StreamScorer:
         machine = str(row.get("machine_id", "unknown"))
         state = self._machines.setdefault(machine, _MachineState())
 
+        # ── Interrogate before computing.
+        #
+        # This used to be six bare float() calls. Everything below it — signed
+        # margins, interval arithmetic, three-state verdicts, the fail-closed
+        # renderer — is rigorous arithmetic, and all of it was being performed
+        # on unexamined numbers. The more careful the downstream, the more
+        # confidently the system asserted a conclusion drawn from a dead sensor.
+        trust = None
+        uncertainty = self.uncertainty
+        if self.observer is not None:
+            trust = self.observer.observe({
+                "machine_id": machine,
+                "air_temp_k": row.get("air_temperature_k"),
+                "process_temp_k": row.get("process_temperature_k"),
+                "rotational_speed_rpm": row.get("rotational_speed_rpm"),
+                "torque_nm": row.get("torque_nm"),
+                "tool_wear_min": row.get("tool_wear_min"),
+            })
+            # Doubt propagates as covariance: a stale or suspect channel has a
+            # large posterior sd, which widens the margin interval, which makes
+            # it straddle zero, which yields ABSTAIN. No special-casing.
+            uncertainty = trust.uncertainty
+
+        values = {
+            name: (trust.channels[name].estimate if trust is not None
+                   else _as_float(row.get(_ROW_KEY[name])))
+            for name in _ROW_KEY
+        }
+        if any(v is None for v in values.values()):
+            return self._blind_tick(row, machine, trust, started)
+
         point = OperatingPoint(
-            air_temp_k=float(row["air_temperature_k"]),
-            process_temp_k=float(row["process_temperature_k"]),
-            rotational_speed_rpm=float(row["rotational_speed_rpm"]),
-            torque_nm=float(row["torque_nm"]),
-            tool_wear_min=float(row["tool_wear_min"]),
+            air_temp_k=values["air_temp_k"],
+            process_temp_k=values["process_temp_k"],
+            rotational_speed_rpm=values["rotational_speed_rpm"],
+            torque_nm=values["torque_nm"],
+            tool_wear_min=values["tool_wear_min"],
             product_type=row["product_type"],
         )
 
@@ -212,7 +270,7 @@ class StreamScorer:
             point.product_type,
         )
         robust_margins = evaluate(robust_point)
-        if self.uncertainty.any:
+        if uncertainty.any:
             interval = evaluate_interval(
                 air_temp_k=point.air_temp_k,
                 process_temp_k=point.process_temp_k,
@@ -220,7 +278,7 @@ class StreamScorer:
                 torque_nm=robust_torque,
                 tool_wear_min=point.tool_wear_min,
                 product_type=point.product_type,
-                uncertainty=self.uncertainty,
+                uncertainty=uncertainty,
             )
             verdict = interval.verdict()
             firing, abstaining = interval.firing_rules(), interval.abstaining_rules()
@@ -239,6 +297,42 @@ class StreamScorer:
         )
         slope = state.slope(worst)
 
+        if trust is not None and not trust.trusted and not trust.calibrating:
+            # The instrument layer says these numbers are not usable. Report the
+            # sensor, name the channel, and decline to judge the machine — the
+            # distinction that separates a dispatch to the technician from a
+            # dispatch to the asset, and the origin of alarm fatigue when a
+            # system conflates them.
+            self.ticks += 1
+            state.trust_clear_run = 0
+            # Edge-triggered. A sensor stays broken for thousands of cycles;
+            # paging on every one of them is how monitoring systems train
+            # operators to ignore them.
+            alerts = []
+            if not state.trust_alerted:
+                state.trust_alerted = True
+                alerts.append(Alert(
+                    kind=AlertKind.SENSOR_SUSPECT, machine_id=machine,
+                    mode=trust.fault_kind.value, udi=int(row["udi"]),
+                    margin=worst, unit="", message=trust.explanation,
+                    fix="Verify the named channel before acting on this machine.",
+                ))
+            else:
+                self.alerts_suppressed += 1
+            self.alerts_raised += len(alerts)
+            return Tick(
+                udi=int(row["udi"]), machine_id=machine,
+                product_type=point.product_type, point=point, worst_margin=worst,
+                verdict=Verdict.ABSTAIN, fired=[], alerts=alerts,
+                elapsed_us=(time.perf_counter() - started) * 1e6,
+            )
+
+        # Hysteresis. Without it an intermittent channel re-arms the latch on
+        # every good cycle and pages on every bad one — 517 alerts where there
+        # was one fault.
+        state.trust_clear_run += 1
+        if state.trust_clear_run >= TRUST_RECOVERY:
+            state.trust_alerted = False
         alerts = self._alerts(
             row, point, robust_point, robust_margins, firing, abstaining, verdict, slope, state
         )
@@ -255,6 +349,31 @@ class StreamScorer:
             fired=fired,
             alerts=alerts,
             elapsed_us=(time.perf_counter() - started) * 1e6,
+        )
+
+    def _blind_tick(self, row, machine, trust, started) -> Tick:
+        """No usable value for at least one channel, so no margin exists.
+
+        The old code raised KeyError or produced float('nan') margins here and
+        carried on. Returning an explicit abstention is the only honest option:
+        a margin needs a number, and there is not one.
+        """
+        self.ticks += 1
+        message = (trust.explanation if trust is not None
+                   else "a required channel is missing from this reading")
+        alert = Alert(
+            kind=AlertKind.SENSOR_SUSPECT, machine_id=machine,
+            mode=(trust.fault_kind.value if trust else "instrument"),
+            udi=int(row.get("udi", 0)), margin=float("nan"), unit="",
+            message=message,
+            fix="No margin can be computed for this cycle. Restore the channel.",
+        )
+        self.alerts_raised += 1
+        return Tick(
+            udi=int(row.get("udi", 0)), machine_id=machine,
+            product_type=str(row.get("product_type", "?")), point=None,
+            worst_margin=float("nan"), verdict=Verdict.ABSTAIN, fired=[],
+            alerts=[alert], elapsed_us=(time.perf_counter() - started) * 1e6,
         )
 
     # -- alerting -----------------------------------------------------------
