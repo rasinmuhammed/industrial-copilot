@@ -15,6 +15,7 @@ will silently produce the wrong answer.
 from __future__ import annotations
 
 import math
+import sys
 from dataclasses import dataclass, replace
 from typing import Final, Literal
 
@@ -126,6 +127,43 @@ class OperatingPoint:
         if "rotational_speed_rpm" in updates:
             updates["rotational_speed_rpm"] = max(1.0, updates["rotational_speed_rpm"])
         return replace(self, **updates)
+
+
+def boundary_tolerance(*operands: float) -> float:
+    """How close to zero a margin must be before its sign is meaningless.
+
+    A margin is a difference of measured quantities and a threshold, all held
+    in IEEE754. Subtracting two temperatures near 300 K carries a rounding error
+    of order eps * 300 ~ 7e-14, which is enough to flip a comparison when the
+    true difference lands exactly on the limit.
+
+    That is not hypothetical here. 128 rows in this dataset have a thermal delta
+    of exactly 8.6 K, and float subtraction places 43 of them below the limit
+    and 85 at or above it, purely according to which decimal pair was
+    subtracted:
+
+        306.9 - 298.3 = 8.599999999999966   -> fires
+        308.6 - 300.0 = 8.600000000000023   -> does not fire
+
+    Both are 8.6 K. The rule is deciding on representation error, not physics.
+
+    The published labels were generated in floating point as well, so our rule
+    audit reports 115/115 exact — we reproduce UCI's artifact rather than
+    disagreeing with it. That makes the "exact" claim narrower than it sounds:
+    exact against a float-computed ground truth, not against the real number.
+    Worth stating, because on a plant with different precision or unit scaling
+    those 128 rows would land differently.
+
+    Returns a few ULPs of the largest operand, so the tolerance scales with
+    magnitude instead of being a constant somebody chose.
+    """
+    scale = max((abs(v) for v in operands), default=1.0) or 1.0
+    return 8.0 * sys.float_info.epsilon * scale
+
+
+def is_degenerate(margin: float, *operands: float) -> bool:
+    """True when the margin's SIGN is not determined by the arithmetic."""
+    return abs(margin) <= boundary_tolerance(*operands)
 
 
 @dataclass(frozen=True, slots=True)

@@ -216,3 +216,112 @@ class TestAgreementWithItself:
         engine.ask("What's the failure rate for L variants?", scoped)
         fresh = engine.ask("What's the overall failure rate?", SessionState())
         assert fresh.bundle.provenance.row_count == 10_000
+
+
+class TestTheHttpSurface:
+    """The engine was tested; the API in front of it was not."""
+
+    @pytest.fixture
+    def client(self):
+        from fastapi.testclient import TestClient
+
+        import copilot.api as api
+
+        api._sessions.clear()
+        return TestClient(api.app)
+
+    def test_two_callers_without_a_session_id_do_not_share_one(self, client):
+        """session_id defaulted to the literal "default", so every caller who
+        omitted it shared a conversation. Engineer A scoped to L variants;
+        Engineer B then asked for the OVERALL rate and received A's scope — a
+        confident, correctly computed answer to a question nobody asked.
+
+        Follow-up context is acceptance criterion 4, and it was the mechanism
+        that leaked.
+        """
+        a = client.post("/ask", json={
+            "question": "What's the failure rate for L variants?"}).json()
+        b = client.post("/ask", json={
+            "question": "What's the overall failure rate?"}).json()
+        assert a["scope"] != b["scope"]
+        assert "all" in b["scope"].lower()
+
+    def test_an_explicit_session_still_carries_context(self, client):
+        """Isolation must not cost the follow-up capability it protects."""
+        client.post("/ask", json={
+            "question": "What's the failure rate for L variants?",
+            "session_id": "eng-7"})
+        follow = client.post("/ask", json={
+            "question": "What about H?", "session_id": "eng-7"}).json()
+        assert "H" in follow["scope"]
+
+    def test_the_session_store_is_bounded(self, client):
+        """Nothing was ever evicted: 5,000 ids retained 5,001 states forever."""
+        import copilot.api as api
+
+        for i in range(api._MAX_SESSIONS + 200):
+            client.post("/ask", json={"question": "rate?", "session_id": f"u{i}"})
+        assert len(api._sessions) <= api._MAX_SESSIONS
+
+    @pytest.mark.parametrize("payload", [
+        {}, {"question": None}, {"question": 12345},
+        {"question": "a" * 200_000}, {"question": {"$ne": 1}},
+        {"question": "rate?", "session_id": "../../etc/passwd"},
+    ])
+    def test_malformed_payloads_never_leak_internals(self, client, payload):
+        response = client.post("/ask", json=payload)
+        assert response.status_code in (200, 422)
+        for marker in ("Traceback", "site-packages", 'File "'):
+            assert marker not in response.text
+
+
+class TestBoundaryArithmetic:
+    """"Exact" is a strong word. Test what it actually covers."""
+
+    def test_a_margin_within_representation_error_is_degenerate(self):
+        """128 rows here have a thermal delta of exactly 8.6 K, and float
+        subtraction puts 43 below the limit and 85 at or above it, decided by
+        which decimal pair was subtracted:
+
+            306.9 - 298.3 = 8.599999999999966  -> fires
+            308.6 - 300.0 = 8.600000000000023  -> does not fire
+
+        Both are 8.6 K. The rule was deciding on representation error.
+        """
+        from copilot.physics import is_degenerate
+
+        for process, air in [(306.9, 298.3), (308.6, 300.0), (309.4, 300.8)]:
+            margin = (process - air) - 8.6
+            assert is_degenerate(margin, process, air, 8.6)
+
+    def test_a_real_verdict_is_not_called_degenerate(self):
+        """A tolerance that swallows genuine margins is worse than none."""
+        from copilot.physics import is_degenerate
+
+        assert not is_degenerate(2.5, 310.0, 300.0, 8.6)
+        assert not is_degenerate(-1.2, 310.0, 300.0, 8.6)
+
+    def test_the_tolerance_scales_with_magnitude(self):
+        """Overstrain lives near 11,000 and temperature near 8.6. One constant
+        cannot serve both, so the tolerance is derived in ULPs."""
+        from copilot.physics import boundary_tolerance
+
+        assert boundary_tolerance(11_000.0) > boundary_tolerance(8.6)
+
+    def test_min_composition_is_exactly_associative(self):
+        """The fleet rollup claim: min(min(a), min(b)) == min(a + b)."""
+        import random
+
+        random.seed(1)
+        values = [random.uniform(-100, 100) for _ in range(10_000)]
+        assert min(min(values[:5000]), min(values[5000:])) == min(values)
+
+    def test_power_stays_finite_at_the_extremes(self):
+        import math
+
+        from copilot.physics import OperatingPoint
+
+        for torque, rpm in [(0.0, 1500.0), (76.6, 2886.0), (1e-12, 1.0)]:
+            point = OperatingPoint(300.0, 310.0, rpm, torque, 100.0, "L")
+            assert math.isfinite(point.power_w)
+

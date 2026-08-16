@@ -65,12 +65,25 @@ class TestSingleSourceOfTruth:
         3500, 9000 and the overstrain limits. Nothing detected divergence, in
         the one module where divergence would corrupt every answer downstream.
         """
-        source = Path("copilot/physics.py").read_text()
-        for literal in ("8.6", "1380", "3500", "9000", "11000", "12000", "13000"):
-            assert literal not in source, (
-                f"{literal} is hard-coded in physics.py again; it belongs in "
-                f"failure_modes.yaml, which is the process definition"
-            )
+        # Scan EXECUTABLE code only. Docstrings legitimately quote thresholds
+        # when explaining behaviour — boundary_tolerance() discusses the 8.6 K
+        # limit at length — and an earlier version of this test failed on that
+        # prose, which would have pressured the next author to write a worse
+        # comment rather than a better module.
+        import ast
+
+        tree = ast.parse(Path("copilot/physics.py").read_text())
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant):
+                continue                                    # a docstring
+            if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+                assert node.value not in (
+                    8.6, 1380, 1380.0, 3500, 3500.0, 9000, 9000.0,
+                    11000, 11000.0, 12000, 12000.0, 13000, 13000.0,
+                ), (
+                    f"{node.value} is hard-coded in physics.py again; it belongs "
+                    f"in failure_modes.yaml, which is the process definition"
+                )
 
 
 class TestGenericEvaluatorAgreesWithTheFastPath:

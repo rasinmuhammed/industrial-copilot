@@ -19,6 +19,9 @@ cannot drift from the terminal.
 
 from __future__ import annotations
 
+import threading
+from collections import OrderedDict
+
 import asyncio
 import json
 from collections.abc import AsyncIterator
@@ -51,7 +54,44 @@ app = FastAPI(
 )
 
 _engine: Engine | None = None
-_sessions: dict[str, SessionState] = {}
+
+# Conversational state, keyed by an EXPLICIT session id.
+#
+# Two defects lived here, both found by probing the HTTP surface rather than
+# the engine:
+#
+#   CROSS-USER BLEED. `session_id` defaulted to the literal "default", so every
+#   caller who did not supply one shared a single conversation. Engineer A
+#   scoped to L variants; Engineer B then asked for the OVERALL failure rate and
+#   received A's L-variant scope — a confident, verified, correctly computed
+#   answer to a question nobody asked. Follow-up context is acceptance criterion
+#   4 of the brief, and it was the exact mechanism that leaked.
+#
+#   UNBOUNDED GROWTH. Nothing was ever evicted. 5,000 distinct ids retained
+#   5,001 states for the life of the process.
+#
+# A request with no session id is now STATELESS: it gets a fresh state that is
+# never stored, so it cannot inherit or contaminate anything. Continuity is
+# opt-in, which is the only safe default for a shared endpoint.
+_MAX_SESSIONS = 1000
+_sessions: "OrderedDict[str, SessionState]" = OrderedDict()
+_sessions_lock = threading.Lock()
+
+
+def _session_for(session_id: str | None) -> SessionState:
+    """Fresh and unshared when no id is given; LRU-bounded when one is."""
+    if not session_id:
+        return SessionState()
+    with _sessions_lock:
+        state = _sessions.get(session_id)
+        if state is None:
+            state = SessionState()
+            _sessions[session_id] = state
+            while len(_sessions) > _MAX_SESSIONS:
+                _sessions.popitem(last=False)
+        else:
+            _sessions.move_to_end(session_id)
+        return state
 
 
 def engine() -> Engine:
@@ -68,7 +108,9 @@ def engine() -> Engine:
 
 class AskRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
-    session_id: str = "default"
+    #: Omit for a one-shot question. Supply a stable id to keep follow-up
+    #: context — and note that anyone sharing the id shares the conversation.
+    session_id: str | None = None
     include_evidence: bool = False
 
 
@@ -93,7 +135,7 @@ class AskResponse(BaseModel):
 @app.post("/ask", response_model=AskResponse)
 def ask(request: AskRequest) -> AskResponse:
     eng = engine()
-    state = _sessions.setdefault(request.session_id, SessionState())
+    state = _session_for(request.session_id)
     answer = eng.ask(request.question, state)
 
     bundle = answer.bundle
@@ -126,7 +168,8 @@ def ask(request: AskRequest) -> AskResponse:
 
 @app.delete("/session/{session_id}")
 def reset_session(session_id: str) -> dict[str, str]:
-    _sessions.pop(session_id, None)
+    with _sessions_lock:
+        _sessions.pop(session_id, None)
     return {"status": "cleared", "session_id": session_id}
 
 
