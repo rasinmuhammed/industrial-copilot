@@ -315,6 +315,33 @@ def _cohort(
     bundle.put("RNF.count", rnf, unit="count", sig_figs=8)
 
     bundle.put("explained.deterministic", explained, unit="count", sig_figs=8)
+
+    # ── Which KIND of claim each remaining failure permits.
+    #
+    # The unexplained remainder is not one thing. TWF has no crisp boundary, so
+    # the honest object is an interval with a coverage guarantee. RNF has no
+    # predicate over any measured parameter, so it is not merely hard to predict
+    # — it is impossible, and offering a number would be fabricating one.
+    #
+    # Reporting a single "explained" figure invited the reader to treat the
+    # remainder as a shortfall to be closed. It is not. It is the process
+    # telling us which of its failures are rule-shaped.
+    bundle.put("regime.exact", explained, unit="count", sig_figs=8)
+    bundle.put("regime.statistical", twf, unit="count", sig_figs=8)
+    bundle.put("regime.irreducible", rnf, unit="count", sig_figs=8)
+    if failures:
+        bundle.put("regime.exact_share", explained / failures * 100.0,
+                   unit="%", sig_figs=3)
+        bundle.put("regime.irreducible_share", rnf / failures * 100.0,
+                   unit="%", sig_figs=3)
+    if rnf:
+        bundle.warn(
+            "exploratory",
+            "Random failures carry no predicate over any measured parameter. "
+            "They are not weakly predicted here, they are unpredictable by the "
+            "process definition, and no operating change addresses them.",
+            affects=["regime.irreducible"],
+        )
     bundle.put(
         "explained.share_of_failures",
         (explained / failures * 100.0) if failures else None,
