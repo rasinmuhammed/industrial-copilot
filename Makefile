@@ -65,7 +65,7 @@ eval-json:  ## Machine-readable eval report
 docker:  ## Build the deployment image
 	docker build -t industrial-copilot .
 
-serve:  ## Run the copilot in a container on :8000
+serve-docker:  ## Run the copilot in a container on :8000
 	docker compose up --build
 
 coverage:  ## Risk-coverage: how much do we answer, and how sound is it
