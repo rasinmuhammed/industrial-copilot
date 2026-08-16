@@ -18,6 +18,8 @@ import math
 from dataclasses import dataclass, replace
 from typing import Final, Literal
 
+from copilot.process_model import load_process_model
+
 __all__ = [
     "RAD_PER_RPM",
     "OSF_THRESHOLD",
@@ -33,32 +35,37 @@ __all__ = [
     "evaluate",
 ]
 
-RAD_PER_RPM: Final = 2 * math.pi / 60
+RAD_PER_RPM: Final = 2 * math.pi / 60  # a unit conversion, not a process fact
 
-HDF_TEMP_LIMIT: Final = 8.6      # K
-HDF_SPEED_LIMIT: Final = 1380.0  # rpm
-PWF_LOW: Final = 3500.0          # W
-PWF_HIGH: Final = 9000.0         # W
-TWF_WINDOW: Final = (200.0, 240.0)  # min
+# ── Every constant below is READ from the knowledge base, not declared here.
+#
+# These used to be literals in this file *and* in failure_modes.yaml: two
+# sources of truth for the same number, with nothing to catch them diverging.
+# For a system whose entire thesis is "one verified source of truth", having
+# that duplication in the most load-bearing module was the sharpest possible
+# instance of the failure it exists to prevent.
+#
+# It also reduced the 1,000-factory story to a claim. With compiled constants,
+# onboarding factory #2 means editing Python and redeploying. Reading them makes
+# a new process a new FILE, which is what turns the scale argument into
+# something demonstrable — see tests/test_process_model.py, which runs the whole
+# stack against a second, different process definition with no code change.
+#
+# The names are kept as an AI4I-shaped *view* over the general structure, so
+# existing call sites and their tests continue to mean exactly what they meant.
+_MODEL: Final = load_process_model()
 
-OSF_THRESHOLD: Final[dict[str, float]] = {"L": 11000.0, "M": 12000.0, "H": 13000.0}
+HDF_TEMP_LIMIT: Final = _MODEL.limit("HDF", "temp_delta_k")
+HDF_SPEED_LIMIT: Final = _MODEL.limit("HDF", "rotational_speed_rpm")
+PWF_LOW: Final = _MODEL.limit("PWF", "power_w", "<")
+PWF_HIGH: Final = _MODEL.limit("PWF", "power_w", ">")
+TWF_WINDOW: Final = _MODEL.limit("TWF", "tool_wear_min")
 
-# Documented accrual: "H/M/L add 5/3/2 minutes of tool wear" per process.
-# Verified in the data: deltas are exactly 2/3/5 min in L/M/H proportions.
-WEAR_RATE_PER_CYCLE: Final[dict[str, float]] = {"L": 2.0, "M": 3.0, "H": 5.0}
+OSF_THRESHOLD: Final[dict[str, float]] = _MODEL.limits_by_type("OSF", "overstrain_min_nm")
 
-# The variables an engineer can actually move. Derived quantities are NOT
-# directly settable: "reduce power by 500 W" is ambiguous until you say whether
-# that comes from torque or speed.
-BASE_VARIABLES: Final = frozenset(
-    {
-        "air_temp_k",
-        "process_temp_k",
-        "rotational_speed_rpm",
-        "torque_nm",
-        "tool_wear_min",
-    }
-)
+WEAR_RATE_PER_CYCLE: Final[dict[str, float]] = _MODEL.wear_rate_per_cycle
+
+BASE_VARIABLES: Final = _MODEL.base_variables
 
 
 @dataclass(frozen=True, slots=True)

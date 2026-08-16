@@ -11,6 +11,27 @@
 
 version: 1
 
+# Process-level constants. Previously these lived as literals in physics.py
+# *as well as* here, which meant two sources of truth for the same number and
+# no mechanism to notice them diverging — the exact failure mode this system
+# exists to prevent, sitting in its most load-bearing file.
+#
+# This file is now authoritative. physics.py reads it. A different process is a
+# different file, not a different build.
+process:
+  # Documented accrual: "H/M/L add 5/3/2 minutes of tool wear" per process.
+  # Verified in the data: deltas are exactly 2/3/5 min in L/M/H proportions.
+  wear_rate_per_cycle: {L: 2.0, M: 3.0, H: 5.0}
+  # The variables an engineer can actually move. Derived quantities are not
+  # directly settable: "reduce power by 500 W" is ambiguous until you say
+  # whether that comes from torque or speed.
+  base_variables:
+    - air_temp_k
+    - process_temp_k
+    - rotational_speed_rpm
+    - torque_nm
+    - tool_wear_min
+
 modes:
   - code: HDF
     name: Heat Dissipation Failure

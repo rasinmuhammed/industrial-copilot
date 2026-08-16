@@ -62,6 +62,10 @@ eval:  ## Run the golden eval suite (hard gates fail the build)
 eval-json:  ## Machine-readable eval report
 	$(PY) evals/run_evals.py --json
 
+onboard:  ## Discover a process definition from a dataset, and audit it
+	$(PY) scripts/onboard.py --csv data/ai4i2020.csv --label "Machine failure" \
+		--audit --out artifacts/discovered.yaml
+
 adversarial:  ## Run only the adversarial suite
 	$(PY) -m pytest tests/test_adversarial.py -q
 
