@@ -657,8 +657,9 @@ function renderStage() {
   $("subject-id").textContent = m.machine;
   $("subject-sub").textContent =
     `Variant ${m.variant} · cycle ${m.udi} · ${band === "normal" ? "within envelope" : band}`;
-  $("scope").textContent = m.machine;
-  $("q").placeholder = `Ask about ${m.machine}…`;
+  updateScopeIndicator();
+  const qInput = $("q");
+  if (qInput) qInput.placeholder = `Ask about ${m.machine}…`;
 
   const fig = $("fig-margin");
   fig.textContent = fmt(m.worst_margin);
