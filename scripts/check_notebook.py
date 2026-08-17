@@ -14,6 +14,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import re
 import sys
 from collections import Counter
 from pathlib import Path
@@ -40,10 +41,13 @@ def main() -> int:
         print(f"  [ok  ] cell {i}")
 
     rows = scope["uniq"]
-    to_dsl, to_plan = scope["plan_to_dsl"], scope["dsl_to_plan"]
+    # The notebook now trains on JSON plans rather than a positional notation,
+    # because the positional one made the model count pipe separators and it
+    # scored 14.2%. See the notebook's section 3 for the evidence.
+    to_target, to_plan = scope["plan_to_target"], scope["target_to_plan"]
 
-    stable = sum(1 for r in rows if to_dsl(to_plan(r["dsl"])) == r["dsl"])
-    ops = Counter(r["dsl"].split("|")[0] for r in rows)
+    stable = sum(1 for r in rows if to_target(to_plan(r["target"])) == r["target"])
+    ops = Counter(r["plan"]["op"] for r in rows)
 
     print(f"\n  corpus            {len(rows)} unique pairs")
     print(f"  round-trip stable {stable}/{len(rows)}")
@@ -54,7 +58,17 @@ def main() -> int:
         problems.append(f"{len(rows) - stable} targets do not round-trip")
     if len(ops) < 10:
         problems.append(f"only {len(ops)} ops represented")
-    if any("the the" in r["question"].lower() for r in rows):
+    if not any(r["plan"]["op"] == "refuse" for r in rows):
+        problems.append(
+            "no refusal examples: a constrained decoder that cannot decline "
+            "will always answer, with the nearest valid plan"
+        )
+    # Word boundaries matter here: a naive substring match flags "describe the
+    # THE-rmal gradient", which is correct English. The guard was wrong, not the
+    # corpus — and a false positive in a build gate is worse than no gate,
+    # because the next author learns to ignore it.
+    doubled = re.compile(r"\b(the|a|an|of|to)\s+\1\b", re.IGNORECASE)
+    if any(doubled.search(r["question"]) for r in rows):
         problems.append("duplicated articles in generated questions")
 
     if problems:
