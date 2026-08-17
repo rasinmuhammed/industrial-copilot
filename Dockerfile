@@ -55,12 +55,9 @@ COPY --from=build --chown=copilot:copilot /app /app
 ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    COPILOT_DB=/app/data/warehouse.duckdb \
-    PORT=8000
+    COPILOT_DB=/app/data/warehouse.duckdb
 
 USER copilot
-# Documentation only. The port actually bound is $PORT, below.
-EXPOSE 8000
 
 # Liveness is not "the port is open". The engine is only useful once the process
 # definition has loaded and the physics evaluates, so the check exercises both.
@@ -82,4 +79,4 @@ print('ok')" || exit 1
 #
 # --timeout-graceful-shutdown because an open SSE stream otherwise holds the old
 # container through the whole replay and stalls the next deploy.
-CMD ["uvicorn", "copilot.api:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-graceful-shutdown", "5"]
+CMD ["sh", "-c", "uvicorn copilot.api:app --host 0.0.0.0 --port ${PORT:-8000} --timeout-graceful-shutdown 5"]
