@@ -13,6 +13,16 @@ body { grid-template-rows: 48px 1fr; overflow: hidden; }
 .layout {
   display: grid;
   grid-template-columns: 220px minmax(0,1fr) 240px;
+  transition: grid-template-columns .32s cubic-bezier(.4,0,.2,1);
+}
+
+/* Once an answer is on screen the rails have done their job. The pipeline
+   explainer is identical on every response — it teaches a newcomer once and is
+   furniture thereafter — and the session counters are engineering telemetry,
+   not something an engineer asked for. Both step back so the answer owns the
+   width, and `Detail` brings them back for anyone who wants them. */
+.layout.reading {
+  grid-template-columns: 0 minmax(0,1fr) 0;
   min-height: 0;
   overflow: hidden;
 }
@@ -544,6 +554,30 @@ table.ev-table tr.abstain td.slot-val { color: var(--warn); }
 }
 
 /* ── right rail: session stats ───────────────────────────────────────── */
+.layout.reading .ctx-rail,
+.layout.reading .stats-rail { opacity: 0; pointer-events: none; overflow: hidden; }
+.layout.reading .thread-wrap { max-width: 52rem; margin: 0 auto; }
+
+/* Explainer belongs where a newcomer needs it: the empty state. */
+.empty-pipeline {
+  display: grid; gap: 7px; margin-top: 22px; padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.empty-pipeline .ep {
+  font-size: 11.5px; color: var(--text-3); line-height: 1.5;
+  display: grid; grid-template-columns: 6.5rem 1fr; gap: 10px;
+}
+.empty-pipeline .ep b { color: var(--text-2); font-weight: 600; }
+.detail-toggle {
+  position: fixed; right: 18px; bottom: 18px; z-index: 20;
+  font: inherit; font-size: 11.5px; letter-spacing: .02em;
+  padding: 7px 13px; border-radius: 6px; cursor: pointer;
+  background: var(--raised); color: var(--text-2);
+  border: 1px solid var(--line);
+}
+.detail-toggle:hover { color: var(--text); border-color: var(--line-strong); }
+.detail-toggle:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
+
 .stats-rail {
   background: var(--surface);
   border-left: 1px solid var(--line);
@@ -633,7 +667,31 @@ table.ev-table tr.abstain td.slot-val { color: var(--warn); }
 
 @media (max-width: 800px) {
   .layout { grid-template-columns: 1fr; }
-  .stats-rail { display: none; }
+  .layout.reading .ctx-rail,
+.layout.reading .stats-rail { opacity: 0; pointer-events: none; overflow: hidden; }
+.layout.reading .thread-wrap { max-width: 52rem; margin: 0 auto; }
+
+/* Explainer belongs where a newcomer needs it: the empty state. */
+.empty-pipeline {
+  display: grid; gap: 7px; margin-top: 22px; padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.empty-pipeline .ep {
+  font-size: 11.5px; color: var(--text-3); line-height: 1.5;
+  display: grid; grid-template-columns: 6.5rem 1fr; gap: 10px;
+}
+.empty-pipeline .ep b { color: var(--text-2); font-weight: 600; }
+.detail-toggle {
+  position: fixed; right: 18px; bottom: 18px; z-index: 20;
+  font: inherit; font-size: 11.5px; letter-spacing: .02em;
+  padding: 7px 13px; border-radius: 6px; cursor: pointer;
+  background: var(--raised); color: var(--text-2);
+  border: 1px solid var(--line);
+}
+.detail-toggle:hover { color: var(--text); border-color: var(--line-strong); }
+.detail-toggle:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
+
+.stats-rail { display: none; }
   .thread { padding: 20px 20px 12px; }
   .composer { padding: 12px 20px 16px; }
   .answer-body { padding-left: 0; }
@@ -716,8 +774,18 @@ table.ev-table tr.abstain td.slot-val { color: var(--warn); }
             <div class="prop-item-value">27 / 27</div>
           </div>
         </div>
+        <div class="empty-pipeline">
+          <div class="ep"><b>1 · Route</b>cache, then grammar, then a model only if needed</div>
+          <div class="ep"><b>2 · Validate</b>the plan must name real columns</div>
+          <div class="ep"><b>3 · Execute</b>typed operators over DuckDB</div>
+          <div class="ep"><b>4 · Narrate</b>slot references, never digits</div>
+          <div class="ep"><b>5 · Verify</b>a bare numeral is rejected</div>
+        </div>
       </div>
     </div>
+
+    <button class="detail-toggle" id="detail-toggle" type="button"
+            aria-pressed="false">Show detail</button>
 
     <!-- Composer -->
     <div class="composer">
@@ -771,47 +839,6 @@ table.ev-table tr.abstain td.slot-val { color: var(--warn); }
       </div>
     </div>
 
-    <div class="stat-group">
-      <div class="stat-group-title">Answer pipeline</div>
-      <div class="pipeline-step">
-        <span class="step-n">1</span>
-        <div>
-          <div class="step-label">Route</div>
-          <div class="step-sub">cache → grammar → exemplars → model</div>
-        </div>
-      </div>
-      <div class="pipeline-step" style="margin-top:8px">
-        <span class="step-n">2</span>
-        <div>
-          <div class="step-label">Validate plan</div>
-          <div class="step-sub">against semantic layer</div>
-        </div>
-      </div>
-      <div class="pipeline-step" style="margin-top:8px">
-        <span class="step-n">3</span>
-        <div>
-          <div class="step-label">Execute</div>
-          <div class="step-sub">typed operator over DuckDB</div>
-        </div>
-      </div>
-      <div class="pipeline-step" style="margin-top:8px">
-        <span class="step-n">4</span>
-        <div>
-          <div class="step-label">Narrate</div>
-          <div class="step-sub">slot references, never digits</div>
-        </div>
-      </div>
-      <div class="pipeline-step" style="margin-top:8px">
-        <span class="step-n">5</span>
-        <div>
-          <div class="step-label">Verify</div>
-          <div class="step-sub">bare numeral → rejected</div>
-        </div>
-      </div>
-      <p class="hint" style="margin-top:12px">
-        A verified plan is stored so the next similar question is answered from the cheap tier — no model call.
-      </p>
-    </div>
 
     <div class="stat-group">
       <div class="stat-group-title">Data</div>
@@ -837,6 +864,10 @@ table.ev-table tr.abstain td.slot-val { color: var(--warn); }
 </div><!-- .layout -->
 
 <script>
+  // The rails collapse on the first answer unless the reader has pinned them
+  // open. Declared at script scope: an earlier version put it inside a render
+  // function, so the toggle threw ReferenceError and the layout never changed.
+  let detailPinned = false;
 "use strict";
 
 const SUGGESTIONS = [
@@ -1045,6 +1076,9 @@ function renderBlock(question, d) {
       </div>` : ''}
     </div>
   `;
+  // An answer is on screen, so the rails have done their job. `Show detail`
+  // brings them back and pins them.
+  if (!detailPinned) document.querySelector('.layout')?.classList.add('reading');
   return block;
 }
 
@@ -1168,6 +1202,24 @@ async function ask() {
 
 // Init send button state
 sendBtn.disabled = true;
+
+  // ── Detail toggle ────────────────────────────────────────────────────────
+  // The rails are useful once and then they are furniture, so they retire when
+  // the first answer arrives. This brings them back for anyone who wants the
+  // pipeline or the session counters, and remembers the choice.
+  (() => {
+    const btn = document.getElementById('detail-toggle');
+    const layout = document.querySelector('.layout');
+    if (!btn || !layout) return;
+    const sync = () => {
+      btn.textContent = detailPinned ? 'Hide detail' : 'Show detail';
+      btn.setAttribute('aria-pressed', String(detailPinned));
+      const hasAnswer = !!document.querySelector('.qa-block');
+      layout.classList.toggle('reading', hasAnswer && !detailPinned);
+    };
+    btn.addEventListener('click', () => { detailPinned = !detailPinned; sync(); });
+    sync();
+  })();
 </script>
 </body>
 </html>
