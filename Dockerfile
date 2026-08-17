@@ -82,4 +82,4 @@ print('ok')" || exit 1
 #
 # --timeout-graceful-shutdown because an open SSE stream otherwise holds the old
 # container through the whole replay and stalls the next deploy.
-CMD ["sh", "-c", "uvicorn copilot.api:app --host 0.0.0.0 --port ${PORT:-8000} --timeout-graceful-shutdown 5"]
+CMD ["uvicorn", "copilot.api:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-graceful-shutdown", "5"]
