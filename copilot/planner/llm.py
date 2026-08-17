@@ -259,13 +259,24 @@ class OpenAICompatibleProvider:
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
         with httpx.Client(timeout=settings().request_timeout_s) as client:
-            response = client.post(
-                f"{self.base_url.rstrip('/')}/chat/completions",
-                headers=headers,
-                json=payload,
-            )
-            response.raise_for_status()
-            return response.json()
+            try:
+                response = client.post(
+                    f"{self.base_url.rstrip('/')}/chat/completions",
+                    headers=headers,
+                    json=payload,
+                )
+                response.raise_for_status()
+                return response.json()
+            except httpx.HTTPStatusError as err:
+                detail = ""
+                try:
+                    body = err.response.json()
+                    detail = body.get("error", {}).get("message", "") or str(body)
+                except Exception:
+                    detail = err.response.text or str(err)
+                raise RuntimeError(
+                    f"{self.name} API error ({err.response.status_code}): {detail}"
+                ) from err
 
     def complete_json(self, system: str, user: str, schema: dict[str, Any]) -> str:
         data = self._post(
