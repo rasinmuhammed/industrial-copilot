@@ -120,6 +120,7 @@ def plan_schema() -> dict[str, Any]:
                         "value": {"type": ["string", "number", "boolean"]},
                     },
                     "required": ["field", "op", "value"],
+                    "additionalProperties": False,
                 },
             },
             "bin": {
@@ -130,6 +131,7 @@ def plan_schema() -> dict[str, Any]:
                     "bins": {"type": "integer", "minimum": 2, "maximum": MAX_GROUPS},
                 },
                 "required": ["field"],
+                "additionalProperties": False,
             },
             "effect_size": {"type": "string",
                             "enum": ["cohens_d", "rate_ratio", "risk_diff"]},
