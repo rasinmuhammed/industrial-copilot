@@ -70,13 +70,7 @@ assert m.deterministic_modes, 'no process definition loaded'; \
 evaluate(OperatingPoint(300.0, 310.0, 1500.0, 40.0, 100.0, 'L')); \
 print('ok')" || exit 1
 
-# Shell form on purpose: $PORT has to expand.
-#
-# Every managed platform assigns the port and routes to it. With `--port 8000`
-# hardcoded, the app listened on 8000, the platform probed the port it had
-# assigned, and every healthcheck attempt returned service unavailable while the
-# process sat there running perfectly.
-#
-# --timeout-graceful-shutdown because an open SSE stream otherwise holds the old
-# container through the whole replay and stalls the next deploy.
-CMD ["sh", "-c", "uvicorn copilot.api:app --host 0.0.0.0 --port ${PORT:-8000} --timeout-graceful-shutdown 5"]
+# run.py reads PORT from the environment in Python, so no shell expansion is
+# needed and the binding works regardless of how the platform launches the
+# process (sh, exec, or anything else).
+CMD ["/opt/venv/bin/python", "run.py"]
