@@ -255,59 +255,62 @@ class OpenAICompatibleProvider:
     def _post(self, payload: dict[str, Any]) -> dict[str, Any]:
         import httpx
 
-        # For OpenAI and newer endpoints, map max_tokens -> max_completion_tokens
-        if self.name == "openai" and "max_tokens" in payload:
-            payload["max_completion_tokens"] = payload.pop("max_tokens")
+        # For OpenAI, default to max_completion_tokens and omit temperature for reasoning models
+        if self.name == "openai":
+            if "max_tokens" in payload:
+                payload["max_completion_tokens"] = payload.pop("max_tokens")
+            if any(self.model.lower().startswith(p) for p in ("o1", "o3", "gpt-5")):
+                payload.pop("temperature", None)
 
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
+
         with httpx.Client(timeout=settings().request_timeout_s) as client:
-            try:
-                response = client.post(
-                    f"{self.base_url.rstrip('/')}/chat/completions",
-                    headers=headers,
-                    json=payload,
-                )
-                response.raise_for_status()
-                return response.json()
-            except httpx.HTTPStatusError as err:
-                detail = ""
+            for attempt in range(3):
                 try:
-                    body = err.response.json()
-                    detail = body.get("error", {}).get("message", "") or str(body)
-                except Exception:
-                    detail = err.response.text or str(err)
-
-                # Auto-heal parameter incompatibility between max_tokens and max_completion_tokens
-                if "max_tokens" in detail and "max_completion_tokens" in payload:
-                    payload["max_tokens"] = payload.pop("max_completion_tokens")
+                    response = client.post(
+                        f"{self.base_url.rstrip('/')}/chat/completions",
+                        headers=headers,
+                        json=payload,
+                    )
+                    response.raise_for_status()
+                    return response.json()
+                except httpx.HTTPStatusError as err:
+                    detail = ""
                     try:
-                        retry_resp = client.post(
-                            f"{self.base_url.rstrip('/')}/chat/completions",
-                            headers=headers,
-                            json=payload,
-                        )
-                        retry_resp.raise_for_status()
-                        return retry_resp.json()
+                        body = err.response.json()
+                        detail = body.get("error", {}).get("message", "") or str(body)
                     except Exception:
-                        pass
-                elif "max_completion_tokens" in detail and "max_tokens" in payload:
-                    payload["max_completion_tokens"] = payload.pop("max_tokens")
-                    try:
-                        retry_resp = client.post(
-                            f"{self.base_url.rstrip('/')}/chat/completions",
-                            headers=headers,
-                            json=payload,
-                        )
-                        retry_resp.raise_for_status()
-                        return retry_resp.json()
-                    except Exception:
-                        pass
+                        detail = err.response.text or str(err)
 
-                raise RuntimeError(
-                    f"{self.name} API error ({err.response.status_code}): {detail}"
-                ) from err
+                    low = detail.lower()
+                    modified = False
+
+                    # Auto-heal temperature parameter incompatibility
+                    if "temperature" in low and "temperature" in payload:
+                        payload.pop("temperature", None)
+                        modified = True
+
+                    # Auto-heal token parameter incompatibility
+                    if "max_tokens" in low and "max_completion_tokens" in payload:
+                        payload["max_tokens"] = payload.pop("max_completion_tokens")
+                        modified = True
+                    elif "max_completion_tokens" in low and "max_tokens" in payload:
+                        payload["max_completion_tokens"] = payload.pop("max_tokens")
+                        modified = True
+
+                    # Auto-heal system vs developer role incompatibility
+                    if ("developer" in low or "system" in low) and "role" in low:
+                        for msg in payload.get("messages", []):
+                            if msg.get("role") == "system":
+                                msg["role"] = "developer"
+                                modified = True
+
+                    if not modified or attempt == 2:
+                        raise RuntimeError(
+                            f"{self.name} API error ({err.response.status_code}): {detail}"
+                        ) from err
 
     def complete_json(self, system: str, user: str, schema: dict[str, Any]) -> str:
         data = self._post(
