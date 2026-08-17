@@ -29,7 +29,7 @@ html, body { height: 100%; overflow: hidden; }
 .console {
   display: grid;
   grid-template-rows: 48px 1fr;
-  grid-template-columns: 296px minmax(0, 1fr) 320px;
+  grid-template-columns: 260px minmax(0, 1fr) 270px;
   grid-template-areas: "bar bar bar" "fleet stage activity";
   height: 100vh;
 }
@@ -133,20 +133,22 @@ html, body { height: 100%; overflow: hidden; }
 }
 
 .stage-head {
-  padding: 16px 22px 14px;
+  padding: 13px 24px 11px;
   border-bottom: 1px solid var(--line);
-  display: flex; align-items: flex-start; gap: 22px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  background: var(--surface);
+  flex-shrink: 0;
 }
-.subject h1 { font-size: 21px; font-weight: 600; letter-spacing: -.015em; }
-.subject p { font-size: 12.5px; color: var(--text-2); margin-top: 3px; }
+.subject h1 { font-size: 19px; font-weight: 600; letter-spacing: -.015em; }
+.subject p { font-size: 11.5px; color: var(--text-2); margin-top: 2px; }
 
-.headline { margin-left: auto; display: flex; gap: 26px; }
-.figure-label { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--text-3); }
-.figure-value { font-family: var(--mono); font-size: 22px; margin-top: 4px; letter-spacing: -.02em; }
+.headline { display: flex; gap: 20px; flex-shrink: 0; align-items: baseline; }
+.figure-label { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); }
+.figure-value { font-family: var(--mono); font-size: 19px; margin-top: 2px; letter-spacing: -.02em; white-space: nowrap; }
 .figure-value.crit { color: var(--crit); }
 .figure-value.warn { color: var(--warn); }
 .figure-value.live { color: var(--live); }
-.figure-unit { font-size: 12px; color: var(--text-3); margin-left: 3px; }
+.figure-unit { font-size: 11px; color: var(--text-3); margin-left: 3px; }
 
 .stage-body { min-height: 0; overflow-y: auto; padding: 18px 22px 22px; }
 
@@ -257,19 +259,19 @@ button.act:disabled { opacity: .45; cursor: default; }
 .dock-thread {
   flex: 1;
   overflow-y: auto;
-  padding: 24px 32px 16px;
+  padding: 20px 28px 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
   min-height: 0;
   scroll-behavior: smooth;
-  max-width: 900px;
+  max-width: 920px;
   margin: 0 auto;
   width: 100%;
 }
 
 .chat-msg { display: flex; flex-direction: column; animation: fadeIn 0.18s ease-out; max-width: 100%; }
-.chat-msg.user { align-self: flex-end; max-width: 82%; }
+.chat-msg.user { align-self: flex-end; max-width: 80%; }
 .chat-msg.assistant { align-self: flex-start; width: 100%; }
 
 .user-bubble {
@@ -281,6 +283,7 @@ button.act:disabled { opacity: .45; cursor: default; }
   color: var(--text);
   line-height: 1.5;
   word-break: break-word;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 .user-meta {
   display: flex; align-items: center; gap: 8px; margin-top: 5px; font-size: 10.5px;
@@ -294,14 +297,33 @@ button.act:disabled { opacity: .45; cursor: default; }
 .assistant-card {
   background: var(--surface);
   border: 1px solid var(--line-med);
-  border-radius: 14px 14px 14px 2px;
+  border-radius: 12px 12px 12px 2px;
   padding: 16px 20px;
   font-size: 13.5px;
   line-height: 1.65;
   color: var(--text);
-  box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.22);
 }
 .assistant-card.thinking { border-left: 3px solid var(--live-sat); background: var(--raised); }
+
+.assistant-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  font-size: 11.5px;
+}
+.assistant-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--live-sat);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
 
 .thinking-steps { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--text-2); }
 .thinking-step { display: flex; align-items: center; gap: 10px; }
@@ -319,6 +341,18 @@ button.act:disabled { opacity: .45; cursor: default; }
 .chat-cursor {
   display: inline-block; width: 6px; height: 14px; background: var(--live);
   vertical-align: middle; margin-left: 2px; animation: blink 0.8s infinite;
+}
+
+.chat-warning-box {
+  background: rgba(234, 179, 8, 0.08);
+  border: 1px solid rgba(234, 179, 8, 0.22);
+  border-left: 3px solid #eab308;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin: 10px 0 6px;
+  color: #facc15;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .msg-meta-bar {
@@ -341,8 +375,8 @@ button.act:disabled { opacity: .45; cursor: default; }
 .empty-chat-desc { font-size: 12.5px; max-width: 480px; line-height: 1.55; color: var(--text-2); }
 
 .dock-footer {
-  padding: 12px 32px 16px; background: var(--surface); border-top: 1px solid var(--line); flex-shrink: 0;
-  max-width: 900px; margin: 0 auto; width: 100%;
+  padding: 10px 28px 14px; background: var(--surface); border-top: 1px solid var(--line); flex-shrink: 0;
+  max-width: 920px; margin: 0 auto; width: 100%;
 }
 .composer { display: flex; align-items: center; gap: 10px; }
 .composer input {
@@ -1273,7 +1307,7 @@ function renderChatThread() {
                     : esc(msg.tier || "engine");
 
     const warnings = (msg.warnings || [])
-      .map((w) => `<div style="color:var(--warn);font-size:11.5px;margin-top:6px">⚠️ ${esc(w.message)}</div>`)
+      .map((w) => `<div class="chat-warning-box">⚠️ ${esc(w.message)}</div>`)
       .join("");
 
     const evidenceJson = msg.bundle ? esc(JSON.stringify(msg.bundle, null, 2)) : "";
@@ -1281,6 +1315,10 @@ function renderChatThread() {
     return `
       <div class="chat-msg assistant" id="msg-${idx}">
         <div class="assistant-card">
+          <div class="assistant-head">
+            <span class="assistant-title">🛡️ Argus Engine</span>
+            <span style="font-family:var(--mono);font-size:10.5px;color:var(--text-3)">${esc(msg.time || '')}</span>
+          </div>
           <div class="chat-text">${msg.renderedHtml || formatMarkdown(msg.content)}</div>
           ${warnings}
           <div class="msg-meta-bar">
