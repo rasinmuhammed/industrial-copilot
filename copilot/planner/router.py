@@ -119,7 +119,7 @@ class Router:
                 ) from exc
             except Exception as exc:  # provider/transport failure
                 raise RoutingError(
-                    f"The planning model was unreachable ({type(exc).__name__}). "
+                    f"The planning model was unreachable ({exc}). "
                     "The deterministic planner did not recognise the question either."
                 ) from exc
             self.counts["llm"] += 1
