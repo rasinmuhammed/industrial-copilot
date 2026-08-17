@@ -309,6 +309,18 @@ def available_provider() -> Provider | None:
         return None
     if choice == "anthropic" and cfg.anthropic_api_key:
         return AnthropicProvider(api_key=cfg.anthropic_api_key, model=cfg.planner_model)
+    if choice == "openai" and (key := os.environ.get("OPENAI_API_KEY")):
+        # OpenAI speaks the same chat-completions shape as the other hosted
+        # providers, so it needs no client of its own. Set COPILOT_SLM_MODEL to
+        # whichever model you want; the default is a small one, because this
+        # tier only runs for questions the grammar and exemplar tiers could not
+        # plan — 0 of 74 on the current eval set.
+        return OpenAICompatibleProvider(
+            base_url=os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+            api_key=key,
+            model=os.environ.get("COPILOT_SLM_MODEL", "gpt-4o-mini"),
+            name="openai",
+        )
     if choice == "cerebras" and (key := os.environ.get("CEREBRAS_API_KEY")):
         return OpenAICompatibleProvider(
             base_url=os.environ.get("CEREBRAS_BASE_URL", "https://api.cerebras.ai/v1"),
