@@ -255,6 +255,10 @@ class OpenAICompatibleProvider:
     def _post(self, payload: dict[str, Any]) -> dict[str, Any]:
         import httpx
 
+        # For OpenAI and newer endpoints, map max_tokens -> max_completion_tokens
+        if self.name == "openai" and "max_tokens" in payload:
+            payload["max_completion_tokens"] = payload.pop("max_tokens")
+
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
@@ -274,6 +278,33 @@ class OpenAICompatibleProvider:
                     detail = body.get("error", {}).get("message", "") or str(body)
                 except Exception:
                     detail = err.response.text or str(err)
+
+                # Auto-heal parameter incompatibility between max_tokens and max_completion_tokens
+                if "max_tokens" in detail and "max_completion_tokens" in payload:
+                    payload["max_tokens"] = payload.pop("max_completion_tokens")
+                    try:
+                        retry_resp = client.post(
+                            f"{self.base_url.rstrip('/')}/chat/completions",
+                            headers=headers,
+                            json=payload,
+                        )
+                        retry_resp.raise_for_status()
+                        return retry_resp.json()
+                    except Exception:
+                        pass
+                elif "max_completion_tokens" in detail and "max_tokens" in payload:
+                    payload["max_completion_tokens"] = payload.pop("max_tokens")
+                    try:
+                        retry_resp = client.post(
+                            f"{self.base_url.rstrip('/')}/chat/completions",
+                            headers=headers,
+                            json=payload,
+                        )
+                        retry_resp.raise_for_status()
+                        return retry_resp.json()
+                    except Exception:
+                        pass
+
                 raise RuntimeError(
                     f"{self.name} API error ({err.response.status_code}): {detail}"
                 ) from err

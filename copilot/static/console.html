@@ -203,6 +203,58 @@ button.act:disabled { opacity: .45; cursor: default; }
 .track i.warn { background: var(--warn); }
 .track i.crit { background: var(--crit); }
 
+/* ── view modes: dashboard, copilot, split ──────────────────────────────── */
+.view-switch {
+  display: flex; background: var(--raised); border: 1px solid var(--line-med);
+  border-radius: var(--r); padding: 2px; gap: 2px; margin-left: 10px;
+}
+.v-btn {
+  font: inherit; font-size: 11.5px; font-weight: 500; color: var(--text-2);
+  background: transparent; border: 0; border-radius: var(--r-sm); padding: 4px 10px;
+  cursor: pointer; transition: all 0.15s ease; display: flex; align-items: center; gap: 5px;
+}
+.v-btn:hover { color: var(--text); }
+.v-btn.active {
+  background: var(--surface); color: var(--live-sat); border: 1px solid var(--line-med);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
+
+.stage-container {
+  display: flex; flex-direction: column; flex: 1; min-height: 0; position: relative; overflow: hidden;
+}
+
+/* Mode 1: Dashboard (default) */
+.console.mode-dashboard .stage-body { flex: 1; min-height: 0; overflow-y: auto; display: block; }
+.console.mode-dashboard .dock { height: 260px; flex-shrink: 0; }
+.console.mode-dashboard .dock.expanded { height: 490px; }
+
+/* Mode 2: Copilot AI (Prominent, roomy, Predominant) */
+.console.mode-copilot .stage-body { display: none; }
+.console.mode-copilot .dock { flex: 1; height: 100%; border-top: 0; }
+.console.mode-copilot .dock-thread { padding: 18px 32px; }
+.console.mode-copilot .user-bubble { font-size: 13.5px; padding: 10px 16px; }
+.console.mode-copilot .assistant-card { font-size: 13.5px; line-height: 1.65; padding: 15px 20px; border-radius: 12px; }
+.console.mode-copilot .composer input { font-size: 13.5px; padding: 10px 15px; }
+.console.mode-copilot .dock-footer { padding: 10px 32px 14px; }
+
+/* Mode 3: Split View (Side by Side) */
+.console.mode-split .stage-container { display: grid; grid-template-columns: 1fr 1.15fr; }
+.console.mode-split .stage-body { flex: 1; min-height: 0; overflow-y: auto; border-right: 1px solid var(--line); }
+.console.mode-split .dock { flex: 1; height: 100%; border-top: 0; }
+
+/* Ambient Scope Banner */
+.ambient-scope-card {
+  background: var(--raised); border: 1px solid var(--line-med); border-radius: var(--r);
+  padding: 8px 14px; display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; font-size: 11.5px; color: var(--text-2); margin-bottom: 6px; flex-shrink: 0;
+}
+.ambient-scope-top { display: flex; align-items: center; gap: 8px; }
+.ambient-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--live); }
+.ambient-machine { font-family: var(--mono); font-size: 12.5px; font-weight: 600; color: var(--text); }
+.ambient-tag { padding: 1px 6px; border-radius: 3px; background: var(--surface); border: 1px solid var(--line); font-size: 10.5px; }
+.ambient-metrics { display: flex; align-items: center; gap: 14px; font-family: var(--mono); font-size: 11px; }
+.ambient-metrics b { color: var(--text); font-weight: 500; }
+
 /* ── copilot dock ────────────────────────────────────────────────────────── */
 .dock {
   border-top: 1px solid var(--line);
@@ -246,7 +298,7 @@ button.act:disabled { opacity: .45; cursor: default; }
 
 .user-bubble {
   background: var(--raised); border: 1px solid var(--line-strong);
-  border-radius: 12px 12px 2px 12px; padding: 8px 13px; font-size: 12.5px;
+  border-radius: 12px 12px 2px 12px; padding: 9px 14px; font-size: 13px;
   color: var(--text); line-height: 1.45; word-break: break-word;
 }
 .user-meta {
@@ -260,7 +312,7 @@ button.act:disabled { opacity: .45; cursor: default; }
 
 .assistant-card {
   background: var(--surface); border: 1px solid var(--line); border-radius: 12px 12px 12px 2px;
-  padding: 11px 15px; font-size: 13px; line-height: 1.55; color: var(--text);
+  padding: 12px 16px; font-size: 13px; line-height: 1.6; color: var(--text);
   box-shadow: 0 2px 6px rgba(0,0,0,0.12);
 }
 .assistant-card.thinking { border-left: 2px solid var(--live-sat); background: var(--raised); }
@@ -272,7 +324,7 @@ button.act:disabled { opacity: .45; cursor: default; }
   border-top-color: var(--live); border-radius: 50%; animation: spin 0.6s linear infinite;
 }
 
-.chat-text { font-size: 13px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+.chat-text { font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 .chat-text p { margin: 0 0 6px 0; }
 .chat-text p:last-child { margin-bottom: 0; }
 .chat-text strong { color: var(--text); font-weight: 600; }
@@ -297,10 +349,10 @@ button.act:disabled { opacity: .45; cursor: default; }
 
 .empty-chat {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  height: 100%; color: var(--text-3); text-align: center; gap: 6px; padding: 12px;
+  height: 100%; color: var(--text-3); text-align: center; gap: 8px; padding: 16px;
 }
-.empty-chat-title { font-size: 12.5px; font-weight: 500; color: var(--text-2); }
-.empty-chat-desc { font-size: 11.5px; max-width: 360px; line-height: 1.45; }
+.empty-chat-title { font-size: 13px; font-weight: 500; color: var(--text-2); }
+.empty-chat-desc { font-size: 12px; max-width: 440px; line-height: 1.5; }
 
 .dock-footer {
   padding: 6px 16px 8px; background: var(--surface); border-top: 1px solid var(--line); flex-shrink: 0;
@@ -396,6 +448,11 @@ button.act:disabled { opacity: .45; cursor: default; }
       <a href="/reliability">Reliability</a>
       <a href="/ask">Analysis</a>
     </nav>
+    <div class="view-switch" id="view-switcher">
+      <button class="v-btn active" id="mode-copilot" type="button" title="Predominant conversational Copilot">💬 Copilot AI</button>
+      <button class="v-btn" id="mode-split" type="button" title="Side-by-side Telemetry and AI">◫ Split View</button>
+      <button class="v-btn" id="mode-dashboard" type="button" title="Telemetry & Instrument cards">📊 Telemetry</button>
+    </div>
     <div class="bar-spacer"></div>
     <div class="tally">
       <div class="tally-item alert"><span class="dot alert"></span><b id="n-alert">-</b> crossed</div>
@@ -424,7 +481,7 @@ button.act:disabled { opacity: .45; cursor: default; }
   </aside>
 
   <!-- Stage: the selected machine. -->
-  <main class="stage">
+  <main class="stage" id="main-stage">
     <div class="stage-head">
       <div class="subject">
         <h1 id="subject-id">-</h1>
@@ -446,72 +503,89 @@ button.act:disabled { opacity: .45; cursor: default; }
       </div>
     </div>
 
-    <div class="stage-body">
-      <div class="prescription" id="prescription">
-        <div class="prescription-label">Recommended action</div>
-        <div class="prescription-text" id="rx-text">-</div>
-        <div class="prescription-why" id="rx-why"></div>
-        <div class="prescription-act">
-          <button class="act" id="rx-wo" type="button" disabled>Raise work order</button>
-          <button class="act" id="rx-explain" type="button" disabled>Explain this</button>
-        </div>
-      </div>
-
-      <div class="panels">
-        <section class="panel">
-          <div class="panel-head">
-            <span class="panel-title">Distance to each limit</span>
-            <span class="panel-note">normalised</span>
+    <div class="stage-container" id="stage-container">
+      <div class="stage-body" id="telemetry-body">
+        <div class="prescription" id="prescription">
+          <div class="prescription-label">Recommended action</div>
+          <div class="prescription-text" id="rx-text">-</div>
+          <div class="prescription-why" id="rx-why"></div>
+          <div class="prescription-act">
+            <button class="act" id="rx-wo" type="button" disabled>Raise work order</button>
+            <button class="act" id="rx-explain" type="button" disabled>Explain this</button>
           </div>
-          <div class="panel-body" id="constraints"></div>
-        </section>
+        </div>
 
-        <section class="panel">
-          <div class="panel-head">
-            <span class="panel-title">Live readings</span>
-            <span class="panel-note" id="readings-note">-</span>
+        <div class="panels">
+          <section class="panel">
+            <div class="panel-head">
+              <span class="panel-title">Distance to each limit</span>
+              <span class="panel-note">normalised</span>
+            </div>
+            <div class="panel-body" id="constraints"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <span class="panel-title">Live readings</span>
+              <span class="panel-note" id="readings-note">-</span>
+            </div>
+            <div class="panel-body" id="readings"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <span class="panel-title">Wear trajectory</span>
+              <span class="panel-note" id="rul-note">-</span>
+            </div>
+            <div class="panel-body" id="trajectory"></div>
+          </section>
+        </div>
+      </div>
+
+      <!-- Copilot Dock: Full Multi-Turn Chat & Verification Assistant -->
+      <div class="dock" id="copilot-dock">
+        <div class="dock-header">
+          <div class="dock-header-left">
+            <span class="dock-title">Argus Copilot</span>
+            <span class="scope-chip" id="scope-chip">fleet</span>
+            <span class="dock-session-tag" id="session-tag">Active session</span>
           </div>
-          <div class="panel-body" id="readings"></div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-head">
-            <span class="panel-title">Wear trajectory</span>
-            <span class="panel-note" id="rul-note">-</span>
+          <div class="dock-header-right">
+            <button class="dock-btn" id="btn-clear-chat" type="button" title="Clear conversation and start fresh session">Clear Thread</button>
+            <button class="dock-btn" id="btn-toggle-dock" type="button" title="Toggle expand dock height">⤢ Expand</button>
           </div>
-          <div class="panel-body" id="trajectory"></div>
-        </section>
-      </div>
-    </div>
-
-    <!-- Copilot Dock: Full Multi-Turn Chat & Verification Assistant -->
-    <div class="dock" id="copilot-dock">
-      <div class="dock-header">
-        <div class="dock-header-left">
-          <span class="dock-title">Argus Copilot</span>
-          <span class="scope-chip" id="scope-chip">fleet</span>
-          <span class="dock-session-tag" id="session-tag">Active session</span>
         </div>
-        <div class="dock-header-right">
-          <button class="dock-btn" id="btn-clear-chat" type="button" title="Clear conversation and start fresh session">Clear Thread</button>
-          <button class="dock-btn" id="btn-toggle-dock" type="button" title="Toggle expand dock height">⤢ Expand</button>
-        </div>
-      </div>
 
-      <div class="dock-thread" id="chat-thread">
-        <div class="empty-chat" id="chat-empty">
-          <div class="empty-chat-title">Deterministic Industrial Copilot</div>
-          <div class="empty-chat-desc">Every figure is computed from real warehouse telemetry and verified against physical invariants. Ask any question or select a prompt below.</div>
-        </div>
-      </div>
+        <div class="dock-thread" id="chat-thread">
+          <div class="ambient-scope-card" id="ambient-scope-card">
+            <div class="ambient-scope-top">
+              <span class="ambient-dot" id="amb-dot"></span>
+              <span class="ambient-machine" id="amb-machine">L-03</span>
+              <span class="ambient-tag" id="amb-variant">Variant L</span>
+              <span class="ambient-tag" id="amb-status">Within envelope</span>
+            </div>
+            <div class="ambient-metrics">
+              <span>Margin: <b id="amb-margin">0.116</b></span>
+              <span>Limit: <b id="amb-binding">HDF</b></span>
+              <span>Wear: <b id="amb-wear">8.0 min</b></span>
+              <span>Torque: <b id="amb-torque">39.2 N·m</b></span>
+            </div>
+          </div>
 
-      <div class="dock-footer">
-        <div class="prompts" id="prompts"></div>
-        <div class="composer">
-          <input id="q" placeholder="Ask about this machine or fleet dynamics…" autocomplete="off">
-          <button class="send-btn" id="send-btn" type="button" title="Send question">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-          </button>
+          <div class="empty-chat" id="chat-empty">
+            <div class="empty-chat-title">Industrial Intelligence & Analysis Copilot</div>
+            <div class="empty-chat-desc">Ask natural-language questions across fleet telemetry, run counterfactual simulations, diagnose root causes, and query multi-variable bounds verified against physical safety models.</div>
+          </div>
+        </div>
+
+        <div class="dock-footer">
+          <div class="prompts" id="prompts"></div>
+          <div class="composer">
+            <input id="q" placeholder="Ask about this machine or fleet dynamics…" autocomplete="off">
+            <button class="send-btn" id="send-btn" type="button" title="Send question">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1084,13 +1158,58 @@ $("rx-explain").addEventListener("click", () => {
 });
 
 /* ---------------------------------------------------------------------------
-   Copilot Chat Thread & Context Management
+   Copilot Chat Thread, View Modes & Context Management
    --------------------------------------------------------------------------- */
 state.chatHistory = [];
 
+function setConsoleMode(mode) {
+  const container = document.querySelector(".console");
+  if (!container) return;
+  container.classList.remove("mode-dashboard", "mode-copilot", "mode-split");
+  container.classList.add("mode-" + mode);
+
+  ["dashboard", "copilot", "split"].forEach((m) => {
+    const btn = $("mode-" + m);
+    if (btn) btn.classList.toggle("active", m === mode);
+  });
+
+  try { localStorage.setItem("argus_console_mode", mode); } catch {}
+  scrollThreadToBottom();
+}
+
+const btnModeDash = $("mode-dashboard");
+const btnModeCopilot = $("mode-copilot");
+const btnModeSplit = $("mode-split");
+if (btnModeDash) btnModeDash.addEventListener("click", () => setConsoleMode("dashboard"));
+if (btnModeCopilot) btnModeCopilot.addEventListener("click", () => setConsoleMode("copilot"));
+if (btnModeSplit) btnModeSplit.addEventListener("click", () => setConsoleMode("split"));
+
 function updateScopeIndicator() {
   const chip = $("scope-chip");
-  if (chip) chip.textContent = state.selected || "fleet";
+  const current = state.selected || "fleet";
+  if (chip) chip.textContent = current;
+
+  const m = state.machines.find((x) => x.machine === state.selected);
+  const ambMachine = $("amb-machine");
+  const ambVariant = $("amb-variant");
+  const ambStatus = $("amb-status");
+  const ambMargin = $("amb-margin");
+  const ambBinding = $("amb-binding");
+  const ambWear = $("amb-wear");
+  const ambTorque = $("amb-torque");
+  const ambDot = $("amb-dot");
+
+  if (m && ambMachine) {
+    ambMachine.textContent = m.machine;
+    if (ambVariant) ambVariant.textContent = `Variant ${m.variant}`;
+    const band = m.state || bandOf(m.worst_margin);
+    if (ambStatus) ambStatus.textContent = band === "normal" ? "Within envelope" : band.toUpperCase();
+    if (ambMargin) ambMargin.textContent = fmt(m.worst_margin);
+    if (ambBinding) ambBinding.textContent = m.binding || "-";
+    if (ambWear) ambWear.textContent = `${fmt(m.wear, 0)} min`;
+    if (ambTorque) ambTorque.textContent = `${fmt(m.torque, 1)} N·m`;
+    if (ambDot) ambDot.className = `ambient-dot ${band === "alert" ? "crit" : band === "watch" ? "warn" : "live"}`;
+  }
 }
 
 function formatMarkdown(text) {
@@ -1118,16 +1237,33 @@ function renderChatThread() {
   const thread = $("chat-thread");
   if (!thread) return;
 
+  const m = state.machines.find((x) => x.machine === state.selected) || state.machines[0];
+  const ambientCard = `
+    <div class="ambient-scope-card" id="ambient-scope-card">
+      <div class="ambient-scope-top">
+        <span class="ambient-dot ${m && (m.state === 'alert' ? 'crit' : m.state === 'watch' ? 'warn' : 'live')}" id="amb-dot"></span>
+        <span class="ambient-machine" id="amb-machine">${esc(m ? m.machine : 'Fleet')}</span>
+        <span class="ambient-tag" id="amb-variant">${m ? `Variant ${esc(m.variant)}` : '15 units'}</span>
+        <span class="ambient-tag" id="amb-status">${m ? (m.state === 'normal' ? 'Within envelope' : esc(m.state || 'normal').toUpperCase()) : 'Active'}</span>
+      </div>
+      <div class="ambient-metrics">
+        <span>Margin: <b id="amb-margin">${m ? fmt(m.worst_margin) : '-'}</b></span>
+        <span>Limit: <b id="amb-binding">${m ? esc(m.binding || '-') : '-'}</b></span>
+        <span>Wear: <b id="amb-wear">${m ? fmt(m.wear, 0) + ' min' : '-'}</b></span>
+        <span>Torque: <b id="amb-torque">${m ? fmt(m.torque, 1) + ' N·m' : '-'}</b></span>
+      </div>
+    </div>`;
+
   if (state.chatHistory.length === 0) {
-    thread.innerHTML = `
+    thread.innerHTML = ambientCard + `
       <div class="empty-chat" id="chat-empty">
-        <div class="empty-chat-title">Deterministic Industrial Copilot</div>
-        <div class="empty-chat-desc">Every figure is computed from real warehouse telemetry and verified against physical invariants. Ask any question or select a prompt below.</div>
+        <div class="empty-chat-title">Industrial Intelligence & Analysis Copilot</div>
+        <div class="empty-chat-desc">Ask natural-language questions across fleet telemetry, run counterfactual simulations, diagnose root causes, and query multi-variable bounds verified against physical safety models.</div>
       </div>`;
     return;
   }
 
-  thread.innerHTML = state.chatHistory.map((msg, idx) => {
+  const messagesHtml = state.chatHistory.map((msg, idx) => {
     if (msg.role === "user") {
       return `
         <div class="chat-msg user">
@@ -1174,6 +1310,7 @@ function renderChatThread() {
       </div>`;
   }).join("");
 
+  thread.innerHTML = ambientCard + messagesHtml;
   scrollThreadToBottom();
 }
 
@@ -1293,7 +1430,7 @@ async function askNow() {
     thinkingNode.remove();
     state.chatHistory.push({
       role: "assistant",
-      content: `The engine encountered a network or server error: ${err.message}`,
+      content: `The engine encountered an error: ${err.message}`,
       refused: true,
       tier: "error",
       time: new Date().toTimeString().slice(0, 8),
@@ -1346,6 +1483,8 @@ document.addEventListener("keydown", (e) => {
    Boot
    --------------------------------------------------------------------------- */
 (async function boot() {
+  const savedMode = localStorage.getItem("argus_console_mode") || "copilot";
+  setConsoleMode(savedMode);
   await loadFleet();
   await Promise.all([loadAllRul(), loadWorkOrders()]);
   updateScopeIndicator();
