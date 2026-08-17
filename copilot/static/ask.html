@@ -956,6 +956,19 @@ function renderBlock(question, d) {
   const critical = (d.warnings || []).filter(w => w.severity === 'critical');
   const caveats  = (d.warnings || []).filter(w => w.severity !== 'critical');
 
+  // Critical warnings are prepended into the VERIFIED narration so the
+  // fail-closed renderer covers them too. Rendering them as a banner as well
+  // showed the same sentence twice, word for word. The banner wins; the prose
+  // keeps whatever is left.
+  const stripBanners = (text, warnings) => {
+    let out = text;
+    for (const w of warnings) {
+      const msg = (w.message || '').trim();
+      if (msg && out.includes(msg)) out = out.replace(msg, '').trim();
+    }
+    return out.replace(/^\s*\n+/, '').trim();
+  };
+
   const warnHtml = critical.map(w => `
     <div class="warning-banner crit">
       <svg viewBox="0 0 16 16" width="14" height="14"><path d="M8 1L1 14h14L8 1zm0 3l5 9H3l5-9zm-1 4v2h2V8H7zm0 3v2h2v-2H7z"/></svg>
@@ -982,7 +995,7 @@ function renderBlock(question, d) {
 
     <div class="answer-body">
       ${warnHtml}
-      <div class="narration">${esc(d.narration)}</div>
+      <div class="narration">${esc(stripBanners(d.narration, critical))}</div>
       ${caveatsHtml}
 
       <div class="meta-strip">

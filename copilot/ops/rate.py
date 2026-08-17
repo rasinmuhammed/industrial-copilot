@@ -358,10 +358,13 @@ def _verify_monotone_premise(
     dominant = "lowest" if first > last else "highest"
     bundle.warn(
         "premise_refuted",
-        f"Failure rate across {axis_label} is {shape}, not monotonic. "
-        f"The {dominant} band has the higher rate. Any claim that failures simply "
-        f"rise with {axis_label} is not supported by this data — lead with that "
-        f"before explaining mechanism.",
+        # Written for the engineer reading it, not for the narrator. An earlier
+        # version ended "— lead with that before explaining mechanism", which is
+        # an instruction to the writer that leaked into the answer and appeared
+        # on screen as though it were advice to the reader.
+        f"Failure rate across {axis_label} is {shape}, not monotonic: the "
+        f"{dominant} band carries the higher rate. The premise that failures "
+        f"rise with {axis_label} is not supported by this data.",
         severity=Severity.CRITICAL,
         affects=["premise.shape"],
     )

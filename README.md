@@ -16,7 +16,7 @@ $ make ask Q="Why are we seeing more failures at high rotational speeds?"
 
 Scope: all cycles
 
-Failure rate across rotational speed is U-shaped, not monotonic. The lowest band has the higher rate. Any claim that failures simply rise with rotational speed is not supported by this data — lead with that before explaining mechanism.
+Failure rate across rotational speed is U-shaped, not monotonic: the lowest band carries the higher rate. The premise that failures rise with rotational speed is not supported by this data.
 
 Across this axis the failure rate is U-shaped: the first band is at 12.2 % against 2.24 % at the last.
 That is a ratio of 5.4 between the two ends.
