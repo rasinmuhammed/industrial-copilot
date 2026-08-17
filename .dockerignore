@@ -1,0 +1,36 @@
+# Build context hygiene.
+#
+# There was no .dockerignore at all, so `COPY . .` pulled the entire working
+# tree into the image: data/ is 2.7 GB and results/ is 4.3 GB of local run
+# artifacts. Seven gigabytes crossed to the builder for an application whose
+# source is under a megabyte, on every build.
+#
+# The warehouse is deliberately NOT shipped. It is generated from the CSV by
+# `make build`, so the image carries the recipe and not the output.
+
+.git
+.gitignore
+.venv
+__pycache__
+**/__pycache__
+*.pyc
+*.pyo
+
+# Local run artifacts and generated data — regenerated, never shipped.
+results/
+data/results/
+data/*.duckdb
+data/*.duckdb.wal
+data/cmms.db*
+data/exemplars.jsonl
+evals/reports/
+artifacts/*.png
+
+# Developer surface the container has no use for.
+.claude/
+.preview/
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+*.egg-info
+notebooks/
