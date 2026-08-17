@@ -203,188 +203,175 @@ button.act:disabled { opacity: .45; cursor: default; }
 .track i.warn { background: var(--warn); }
 .track i.crit { background: var(--crit); }
 
-/* ── view modes: dashboard, copilot, split ──────────────────────────────── */
-.view-switch {
-  display: flex; background: var(--raised); border: 1px solid var(--line-med);
-  border-radius: var(--r); padding: 2px; gap: 2px; margin-left: 10px;
-}
-.v-btn {
-  font: inherit; font-size: 11.5px; font-weight: 500; color: var(--text-2);
-  background: transparent; border: 0; border-radius: var(--r-sm); padding: 4px 10px;
-  cursor: pointer; transition: all 0.15s ease; display: flex; align-items: center; gap: 5px;
-}
-.v-btn:hover { color: var(--text); }
-.v-btn.active {
-  background: var(--surface); color: var(--live-sat); border: 1px solid var(--line-med);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
-}
-
-.stage-container {
-  display: flex; flex-direction: column; flex: 1; min-height: 0; position: relative; overflow: hidden;
-}
-
-/* Mode 1: Dashboard (default) */
-.console.mode-dashboard .stage-body { flex: 1; min-height: 0; overflow-y: auto; display: block; }
-.console.mode-dashboard .dock { height: 260px; flex-shrink: 0; }
-.console.mode-dashboard .dock.expanded { height: 490px; }
-
-/* Mode 2: Copilot AI (Prominent, roomy, Predominant) */
-.console.mode-copilot .stage-body { display: none; }
-.console.mode-copilot .dock { flex: 1; height: 100%; border-top: 0; }
-.console.mode-copilot .dock-thread { padding: 18px 32px; }
-.console.mode-copilot .user-bubble { font-size: 13.5px; padding: 10px 16px; }
-.console.mode-copilot .assistant-card { font-size: 13.5px; line-height: 1.65; padding: 15px 20px; border-radius: 12px; }
-.console.mode-copilot .composer input { font-size: 13.5px; padding: 10px 15px; }
-.console.mode-copilot .dock-footer { padding: 10px 32px 14px; }
-
-/* Mode 3: Split View (Side by Side) */
-.console.mode-split .stage-container { display: grid; grid-template-columns: 1fr 1.15fr; }
-.console.mode-split .stage-body { flex: 1; min-height: 0; overflow-y: auto; border-right: 1px solid var(--line); }
-.console.mode-split .dock { flex: 1; height: 100%; border-top: 0; }
-
-/* Ambient Scope Banner */
+/* ── Ambient Scope Banner ─────────────────────────────────────────────── */
 .ambient-scope-card {
-  background: var(--raised); border: 1px solid var(--line-med); border-radius: var(--r);
-  padding: 8px 14px; display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; font-size: 11.5px; color: var(--text-2); margin-bottom: 6px; flex-shrink: 0;
+  background: var(--raised);
+  border: 1px solid var(--line-med);
+  border-radius: var(--r);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--text-2);
+  margin-bottom: 8px;
+  flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
 }
-.ambient-scope-top { display: flex; align-items: center; gap: 8px; }
-.ambient-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--live); }
-.ambient-machine { font-family: var(--mono); font-size: 12.5px; font-weight: 600; color: var(--text); }
-.ambient-tag { padding: 1px 6px; border-radius: 3px; background: var(--surface); border: 1px solid var(--line); font-size: 10.5px; }
-.ambient-metrics { display: flex; align-items: center; gap: 14px; font-family: var(--mono); font-size: 11px; }
+.ambient-scope-top { display: flex; align-items: center; gap: 9px; }
+.ambient-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--live); }
+.ambient-machine { font-family: var(--mono); font-size: 13.5px; font-weight: 600; color: var(--text); }
+.ambient-tag { padding: 2px 7px; border-radius: 4px; background: var(--surface); border: 1px solid var(--line); font-size: 11px; }
+.ambient-metrics { display: flex; align-items: center; gap: 16px; font-family: var(--mono); font-size: 11.5px; }
 .ambient-metrics b { color: var(--text); font-weight: 500; }
 
-/* ── copilot dock ────────────────────────────────────────────────────────── */
+/* ── Copilot Stage & Chat Thread ─────────────────────────────────────────── */
 .dock {
-  border-top: 1px solid var(--line);
-  background: var(--surface);
   display: flex;
   flex-direction: column;
-  height: 270px;
-  transition: height 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  flex: 1;
   min-height: 0;
-  position: relative;
-  z-index: 10;
+  background: var(--surface);
 }
-.dock.expanded { height: 490px; }
+
 .dock-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 7px 16px;
+  padding: 9px 24px;
   border-bottom: 1px solid var(--line);
   background: var(--raised);
   flex-shrink: 0;
 }
-.dock-header-left, .dock-header-right { display: flex; align-items: center; gap: 8px; }
-.dock-title { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-2); }
-.dock-session-tag { font-size: 11px; color: var(--text-3); }
+.dock-header-left, .dock-header-right { display: flex; align-items: center; gap: 10px; }
+.dock-title { font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-2); }
+.dock-session-tag { font-size: 11.5px; color: var(--text-3); }
 .dock-btn {
-  font: inherit; font-size: 11px; background: transparent; color: var(--text-3);
-  border: 1px solid var(--line); border-radius: var(--r-sm); padding: 3px 8px; cursor: pointer;
+  font: inherit; font-size: 11.5px; background: transparent; color: var(--text-3);
+  border: 1px solid var(--line); border-radius: var(--r-sm); padding: 4px 10px; cursor: pointer;
   transition: all 0.12s ease;
 }
 .dock-btn:hover { color: var(--text); background: var(--surface); border-color: var(--line-strong); }
 
 .dock-thread {
-  flex: 1; overflow-y: auto; padding: 12px 18px; display: flex; flex-direction: column; gap: 12px;
-  min-height: 0; scroll-behavior: smooth;
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  scroll-behavior: smooth;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .chat-msg { display: flex; flex-direction: column; animation: fadeIn 0.18s ease-out; max-width: 100%; }
-.chat-msg.user { align-self: flex-end; max-width: 85%; }
+.chat-msg.user { align-self: flex-end; max-width: 82%; }
 .chat-msg.assistant { align-self: flex-start; width: 100%; }
 
 .user-bubble {
-  background: var(--raised); border: 1px solid var(--line-strong);
-  border-radius: 12px 12px 2px 12px; padding: 9px 14px; font-size: 13px;
-  color: var(--text); line-height: 1.45; word-break: break-word;
+  background: var(--raised);
+  border: 1px solid var(--line-strong);
+  border-radius: 14px 14px 2px 14px;
+  padding: 11px 16px;
+  font-size: 13.5px;
+  color: var(--text);
+  line-height: 1.5;
+  word-break: break-word;
 }
 .user-meta {
-  display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 10px;
+  display: flex; align-items: center; gap: 8px; margin-top: 5px; font-size: 10.5px;
   color: var(--text-3); justify-content: flex-end;
 }
 .user-scope-tag {
-  font-family: var(--mono); font-size: 9.5px; padding: 1px 5px;
+  font-family: var(--mono); font-size: 10px; padding: 1px 6px;
   background: var(--surface); border: 1px solid var(--line); border-radius: 3px;
 }
 
 .assistant-card {
-  background: var(--surface); border: 1px solid var(--line); border-radius: 12px 12px 12px 2px;
-  padding: 12px 16px; font-size: 13px; line-height: 1.6; color: var(--text);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  background: var(--surface);
+  border: 1px solid var(--line-med);
+  border-radius: 14px 14px 14px 2px;
+  padding: 16px 20px;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--text);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.18);
 }
-.assistant-card.thinking { border-left: 2px solid var(--live-sat); background: var(--raised); }
+.assistant-card.thinking { border-left: 3px solid var(--live-sat); background: var(--raised); }
 
-.thinking-steps { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--text-2); }
-.thinking-step { display: flex; align-items: center; gap: 8px; }
+.thinking-steps { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--text-2); }
+.thinking-step { display: flex; align-items: center; gap: 10px; }
 .step-spinner {
-  width: 11px; height: 11px; border: 2px solid var(--line-strong);
+  width: 12px; height: 12px; border: 2px solid var(--line-strong);
   border-top-color: var(--live); border-radius: 50%; animation: spin 0.6s linear infinite;
 }
 
-.chat-text { font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
-.chat-text p { margin: 0 0 6px 0; }
+.chat-text { font-size: 13.5px; line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
+.chat-text p { margin: 0 0 8px 0; }
 .chat-text p:last-child { margin-bottom: 0; }
 .chat-text strong { color: var(--text); font-weight: 600; }
-.chat-text .bullet-line { padding-left: 10px; position: relative; margin: 3px 0; }
+.chat-text .bullet-line { padding-left: 12px; position: relative; margin: 4px 0; }
 .chat-text .bullet-line::before { content: "•"; position: absolute; left: 0; color: var(--live-sat); }
 .chat-cursor {
-  display: inline-block; width: 6px; height: 13px; background: var(--live);
+  display: inline-block; width: 6px; height: 14px; background: var(--live);
   vertical-align: middle; margin-left: 2px; animation: blink 0.8s infinite;
 }
 
 .msg-meta-bar {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px;
-  padding-top: 7px; border-top: 1px solid var(--line); font-size: 11px; color: var(--text-3);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px;
+  padding-top: 10px; border-top: 1px solid var(--line); font-size: 11px; color: var(--text-3);
 }
 
 .evidence-drawer {
-  margin-top: 7px; padding: 9px 12px; background: var(--raised); border: 1px solid var(--line);
-  border-radius: var(--r-sm); font-size: 11px; font-family: var(--mono); color: var(--text-2);
-  display: none; max-height: 160px; overflow-y: auto; white-space: pre-wrap;
+  margin-top: 10px; padding: 12px 14px; background: var(--raised); border: 1px solid var(--line);
+  border-radius: var(--r-sm); font-size: 11.5px; font-family: var(--mono); color: var(--text-2);
+  display: none; max-height: 200px; overflow-y: auto; white-space: pre-wrap;
 }
 .evidence-drawer.open { display: block; }
 
 .empty-chat {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  height: 100%; color: var(--text-3); text-align: center; gap: 8px; padding: 16px;
+  height: 100%; color: var(--text-3); text-align: center; gap: 10px; padding: 24px;
 }
-.empty-chat-title { font-size: 13px; font-weight: 500; color: var(--text-2); }
-.empty-chat-desc { font-size: 12px; max-width: 440px; line-height: 1.5; }
+.empty-chat-title { font-size: 15px; font-weight: 600; color: var(--text); }
+.empty-chat-desc { font-size: 12.5px; max-width: 480px; line-height: 1.55; color: var(--text-2); }
 
 .dock-footer {
-  padding: 6px 16px 8px; background: var(--surface); border-top: 1px solid var(--line); flex-shrink: 0;
+  padding: 12px 32px 16px; background: var(--surface); border-top: 1px solid var(--line); flex-shrink: 0;
+  max-width: 900px; margin: 0 auto; width: 100%;
 }
-.composer { display: flex; align-items: center; gap: 8px; }
+.composer { display: flex; align-items: center; gap: 10px; }
 .composer input {
-  flex: 1; font: inherit; font-size: 13px; background: var(--field); color: var(--text);
-  border: 1px solid var(--line-med); border-radius: var(--r); padding: 8px 12px;
+  flex: 1; font: inherit; font-size: 13.5px; background: var(--field); color: var(--text);
+  border: 1px solid var(--line-med); border-radius: var(--r); padding: 10px 16px;
   transition: border-color 0.15s ease;
 }
 .composer input:focus { outline: none; border-color: var(--live-sat); }
 .send-btn {
   background: var(--raised); color: var(--text-2); border: 1px solid var(--line-med);
-  border-radius: var(--r); padding: 7px 11px; cursor: pointer; display: flex;
+  border-radius: var(--r); padding: 9px 14px; cursor: pointer; display: flex;
   align-items: center; justify-content: center; transition: all 0.15s ease;
 }
 .send-btn:hover { background: var(--live-soft); color: var(--live-sat); border-color: var(--live-line); }
 
 .prompts {
-  display: flex; gap: 5px; margin-bottom: 6px; overflow-x: auto; padding-bottom: 2px;
+  display: flex; gap: 6px; margin-bottom: 8px; overflow-x: auto; padding-bottom: 3px;
   scrollbar-width: none;
 }
 .prompts::-webkit-scrollbar { display: none; }
 .prompt {
-  font: inherit; font-size: 11px; color: var(--text-2); background: var(--raised);
-  border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; cursor: pointer;
+  font: inherit; font-size: 11.5px; color: var(--text-2); background: var(--raised);
+  border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; cursor: pointer;
   white-space: nowrap; flex-shrink: 0; transition: all 0.12s ease;
 }
 .prompt:hover { color: var(--text); background: var(--surface); border-color: var(--line-strong); }
 
 .badge {
-  font-size: 10px; letter-spacing: .04em; text-transform: uppercase; padding: 2px 6px;
+  font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; padding: 2px 7px;
   border-radius: 3px; border: 1px solid var(--line-med); color: var(--text-2);
 }
 .badge.verified { color: var(--live); border-color: var(--live-line); background: var(--live-soft); }
@@ -448,11 +435,6 @@ button.act:disabled { opacity: .45; cursor: default; }
       <a href="/reliability">Reliability</a>
       <a href="/ask">Analysis</a>
     </nav>
-    <div class="view-switch" id="view-switcher">
-      <button class="v-btn active" id="mode-copilot" type="button" title="Predominant conversational Copilot">💬 Copilot AI</button>
-      <button class="v-btn" id="mode-split" type="button" title="Side-by-side Telemetry and AI">◫ Split View</button>
-      <button class="v-btn" id="mode-dashboard" type="button" title="Telemetry & Instrument cards">📊 Telemetry</button>
-    </div>
     <div class="bar-spacer"></div>
     <div class="tally">
       <div class="tally-item alert"><span class="dot alert"></span><b id="n-alert">-</b> crossed</div>
@@ -480,7 +462,7 @@ button.act:disabled { opacity: .45; cursor: default; }
     <div class="rail-body" id="fleet-list"></div>
   </aside>
 
-  <!-- Stage: the selected machine. -->
+  <!-- Stage: the selected machine & Predominant Copilot AI. -->
   <main class="stage" id="main-stage">
     <div class="stage-head">
       <div class="subject">
@@ -503,89 +485,48 @@ button.act:disabled { opacity: .45; cursor: default; }
       </div>
     </div>
 
-    <div class="stage-container" id="stage-container">
-      <div class="stage-body" id="telemetry-body">
-        <div class="prescription" id="prescription">
-          <div class="prescription-label">Recommended action</div>
-          <div class="prescription-text" id="rx-text">-</div>
-          <div class="prescription-why" id="rx-why"></div>
-          <div class="prescription-act">
-            <button class="act" id="rx-wo" type="button" disabled>Raise work order</button>
-            <button class="act" id="rx-explain" type="button" disabled>Explain this</button>
-          </div>
+    <!-- Copilot AI Conversation Interface -->
+    <div class="dock" id="copilot-dock">
+      <div class="dock-header">
+        <div class="dock-header-left">
+          <span class="dock-title">Argus Copilot</span>
+          <span class="scope-chip" id="scope-chip">fleet</span>
+          <span class="dock-session-tag" id="session-tag">Active session</span>
         </div>
-
-        <div class="panels">
-          <section class="panel">
-            <div class="panel-head">
-              <span class="panel-title">Distance to each limit</span>
-              <span class="panel-note">normalised</span>
-            </div>
-            <div class="panel-body" id="constraints"></div>
-          </section>
-
-          <section class="panel">
-            <div class="panel-head">
-              <span class="panel-title">Live readings</span>
-              <span class="panel-note" id="readings-note">-</span>
-            </div>
-            <div class="panel-body" id="readings"></div>
-          </section>
-
-          <section class="panel">
-            <div class="panel-head">
-              <span class="panel-title">Wear trajectory</span>
-              <span class="panel-note" id="rul-note">-</span>
-            </div>
-            <div class="panel-body" id="trajectory"></div>
-          </section>
+        <div class="dock-header-right">
+          <button class="dock-btn" id="btn-clear-chat" type="button" title="Clear conversation and start fresh session">Clear Thread</button>
         </div>
       </div>
 
-      <!-- Copilot Dock: Full Multi-Turn Chat & Verification Assistant -->
-      <div class="dock" id="copilot-dock">
-        <div class="dock-header">
-          <div class="dock-header-left">
-            <span class="dock-title">Argus Copilot</span>
-            <span class="scope-chip" id="scope-chip">fleet</span>
-            <span class="dock-session-tag" id="session-tag">Active session</span>
+      <div class="dock-thread" id="chat-thread">
+        <div class="ambient-scope-card" id="ambient-scope-card">
+          <div class="ambient-scope-top">
+            <span class="ambient-dot" id="amb-dot"></span>
+            <span class="ambient-machine" id="amb-machine">L-03</span>
+            <span class="ambient-tag" id="amb-variant">Variant L</span>
+            <span class="ambient-tag" id="amb-status">Within envelope</span>
           </div>
-          <div class="dock-header-right">
-            <button class="dock-btn" id="btn-clear-chat" type="button" title="Clear conversation and start fresh session">Clear Thread</button>
-            <button class="dock-btn" id="btn-toggle-dock" type="button" title="Toggle expand dock height">⤢ Expand</button>
-          </div>
-        </div>
-
-        <div class="dock-thread" id="chat-thread">
-          <div class="ambient-scope-card" id="ambient-scope-card">
-            <div class="ambient-scope-top">
-              <span class="ambient-dot" id="amb-dot"></span>
-              <span class="ambient-machine" id="amb-machine">L-03</span>
-              <span class="ambient-tag" id="amb-variant">Variant L</span>
-              <span class="ambient-tag" id="amb-status">Within envelope</span>
-            </div>
-            <div class="ambient-metrics">
-              <span>Margin: <b id="amb-margin">0.116</b></span>
-              <span>Limit: <b id="amb-binding">HDF</b></span>
-              <span>Wear: <b id="amb-wear">8.0 min</b></span>
-              <span>Torque: <b id="amb-torque">39.2 N·m</b></span>
-            </div>
-          </div>
-
-          <div class="empty-chat" id="chat-empty">
-            <div class="empty-chat-title">Industrial Intelligence & Analysis Copilot</div>
-            <div class="empty-chat-desc">Ask natural-language questions across fleet telemetry, run counterfactual simulations, diagnose root causes, and query multi-variable bounds verified against physical safety models.</div>
+          <div class="ambient-metrics">
+            <span>Margin: <b id="amb-margin">0.116</b></span>
+            <span>Limit: <b id="amb-binding">HDF</b></span>
+            <span>Wear: <b id="amb-wear">8.0 min</b></span>
+            <span>Torque: <b id="amb-torque">39.2 N·m</b></span>
           </div>
         </div>
 
-        <div class="dock-footer">
-          <div class="prompts" id="prompts"></div>
-          <div class="composer">
-            <input id="q" placeholder="Ask about this machine or fleet dynamics…" autocomplete="off">
-            <button class="send-btn" id="send-btn" type="button" title="Send question">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-            </button>
-          </div>
+        <div class="empty-chat" id="chat-empty">
+          <div class="empty-chat-title">Industrial Intelligence & Analysis Copilot</div>
+          <div class="empty-chat-desc">Ask natural-language questions across fleet telemetry, run counterfactual simulations, diagnose root causes, and query multi-variable bounds verified against physical safety models.</div>
+        </div>
+      </div>
+
+      <div class="dock-footer">
+        <div class="prompts" id="prompts"></div>
+        <div class="composer">
+          <input id="q" placeholder="Ask about this machine or fleet dynamics…" autocomplete="off">
+          <button class="send-btn" id="send-btn" type="button" title="Send question">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          </button>
         </div>
       </div>
     </div>
@@ -1128,61 +1069,43 @@ async function loadWorkOrders() {
         outcome, and outcomes are what tune the thresholds.</div>`;
 }
 
-/* Raising a work order closes the loop: the alert becomes a task, and when the
-   technician closes it the outcome feeds threshold learning. */
-$("rx-wo").addEventListener("click", async () => {
-  const m = state.machines.find((x) => x.machine === state.selected);
-  if (!m) return;
-  const btn = $("rx-wo");
-  btn.disabled = true; btn.textContent = "Raising…";
-  try {
-    await fetch("/cmms/work_orders", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        machine_id: m.machine, udi: m.udi, alert_mode: m.binding, raised_by: "console",
-      }),
-    });
-    btn.textContent = "Raised";
-    await loadWorkOrders();
-  } catch {
-    btn.textContent = "Failed"; btn.disabled = false;
-  }
-  setTimeout(() => { btn.textContent = "Raise work order"; btn.disabled = false; }, 2500);
-});
-
-$("rx-explain").addEventListener("click", () => {
-  const m = state.machines.find((x) => x.machine === state.selected);
-  if (!m) return;
-  $("q").value = `What are the main failure modes on ${m.machine}?`;
-  askNow();
-});
-
-/* ---------------------------------------------------------------------------
-   Copilot Chat Thread, View Modes & Context Management
-   --------------------------------------------------------------------------- */
-state.chatHistory = [];
-
-function setConsoleMode(mode) {
-  const container = document.querySelector(".console");
-  if (!container) return;
-  container.classList.remove("mode-dashboard", "mode-copilot", "mode-split");
-  container.classList.add("mode-" + mode);
-
-  ["dashboard", "copilot", "split"].forEach((m) => {
-    const btn = $("mode-" + m);
-    if (btn) btn.classList.toggle("active", m === mode);
+/* Work order listeners (if present) */
+const rxWoBtn = $("rx-wo");
+if (rxWoBtn) {
+  rxWoBtn.addEventListener("click", async () => {
+    const m = state.machines.find((x) => x.machine === state.selected);
+    if (!m) return;
+    rxWoBtn.disabled = true; rxWoBtn.textContent = "Raising…";
+    try {
+      await fetch("/cmms/work_orders", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          machine_id: m.machine, udi: m.udi, alert_mode: m.binding, raised_by: "console",
+        }),
+      });
+      rxWoBtn.textContent = "Raised";
+      await loadWorkOrders();
+    } catch {
+      rxWoBtn.textContent = "Failed"; rxWoBtn.disabled = false;
+    }
+    setTimeout(() => { rxWoBtn.textContent = "Raise work order"; rxWoBtn.disabled = false; }, 2500);
   });
-
-  try { localStorage.setItem("argus_console_mode", mode); } catch {}
-  scrollThreadToBottom();
 }
 
-const btnModeDash = $("mode-dashboard");
-const btnModeCopilot = $("mode-copilot");
-const btnModeSplit = $("mode-split");
-if (btnModeDash) btnModeDash.addEventListener("click", () => setConsoleMode("dashboard"));
-if (btnModeCopilot) btnModeCopilot.addEventListener("click", () => setConsoleMode("copilot"));
-if (btnModeSplit) btnModeSplit.addEventListener("click", () => setConsoleMode("split"));
+const rxExplainBtn = $("rx-explain");
+if (rxExplainBtn) {
+  rxExplainBtn.addEventListener("click", () => {
+    const m = state.machines.find((x) => x.machine === state.selected);
+    if (!m) return;
+    $("q").value = `What are the main failure modes on ${m.machine}?`;
+    askNow();
+  });
+}
+
+/* ---------------------------------------------------------------------------
+   Copilot Chat Thread & Context Management
+   --------------------------------------------------------------------------- */
+state.chatHistory = [];
 
 function updateScopeIndicator() {
   const chip = $("scope-chip");
@@ -1455,19 +1378,6 @@ if (clearBtn) {
   });
 }
 
-// Expand / Collapse Dock
-const toggleBtn = $("btn-toggle-dock");
-if (toggleBtn) {
-  toggleBtn.addEventListener("click", () => {
-    const dock = $("copilot-dock");
-    if (dock) {
-      dock.classList.toggle("expanded");
-      toggleBtn.textContent = dock.classList.contains("expanded") ? "⤓ Collapse" : "⤢ Expand";
-      scrollThreadToBottom();
-    }
-  });
-}
-
 /* Keyboard: an operator's hands stay on the keyboard, so selection moves with
    the arrows and the stream toggles with a key. */
 document.addEventListener("keydown", (e) => {
@@ -1483,8 +1393,6 @@ document.addEventListener("keydown", (e) => {
    Boot
    --------------------------------------------------------------------------- */
 (async function boot() {
-  const savedMode = localStorage.getItem("argus_console_mode") || "copilot";
-  setConsoleMode(savedMode);
   await loadFleet();
   await Promise.all([loadAllRul(), loadWorkOrders()]);
   updateScopeIndicator();
