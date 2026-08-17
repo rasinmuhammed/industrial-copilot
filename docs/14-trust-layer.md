@@ -1,4 +1,4 @@
-# 14 · The Trust Layer — what we got wrong, and the thing that fixes it
+# 14 · The Trust Layer - what we got wrong, and the thing that fixes it
 
 > Reflection written after adversarial hardening, before the next build phase.
 > Everything here was verified against the code or against published research.
@@ -8,7 +8,7 @@
 
 ## 1 · The sentence that indicts the whole system
 
-`copilot/stream.py:191` — the entry point of the only code path that would ever
+`copilot/stream.py:191` - the entry point of the only code path that would ever
 see production data:
 
 ```python
@@ -67,8 +67,8 @@ assert a conclusion drawn from a dead sensor.
 AI4I 2020 is synthetic, complete, in-order, single-regime, correctly-calibrated,
 and never has a stuck channel. We never wrote code to handle any of those going
 wrong, because the data never made us. That is exactly the criticism we already
-answered once for *thresholds* — we showed threshold discovery recovers the
-documented values from data alone — but we never answered it for *data quality*.
+answered once for *thresholds* - we showed threshold discovery recovers the
+documented values from data alone - but we never answered it for *data quality*.
 
 The threshold work proved the physics is not memorised. It did not prove the
 pipeline is not brittle. Those are different claims, and we only earned one.
@@ -78,7 +78,7 @@ pipeline is not brittle. Those are different claims, and we only earned one.
 Today a margin abstains when its uncertainty interval straddles zero. That is a
 statement about *sensor precision*. It is the right rule for a healthy noisy
 sensor and the wrong rule for a broken one, because a stuck sensor has **zero**
-noise — its interval is tight, so it will never abstain. It will say SAFE, with
+noise - its interval is tight, so it will never abstain. It will say SAFE, with
 maximum confidence, forever.
 
 The research is explicit on this: stuck faults are hard to detect precisely
@@ -92,21 +92,21 @@ abstention rule that inverts on the most common sensor fault in industry.
 
 Grouped by layer. Every one is a real production condition, not a hypothetical.
 
-### Layer 1 — instrument
+### Layer 1 - instrument
 
 | # | Condition | What our system does today |
 |---|---|---|
 | 1 | **Stuck-at / frozen channel** | Reports large healthy headroom forever, with tight intervals and high confidence |
 | 2 | **Bias / miscalibration** after sensor swap | Silently shifts every margin by the bias; the KB monitor eventually blames the *threshold* |
 | 3 | **Slow drift** | Undetectable at onset by design; the hardest fault class in the literature |
-| 4 | **Spike / dropout** | The robust track damps torque spikes only — the other five channels are unguarded |
+| 4 | **Spike / dropout** | The robust track damps torque spikes only - the other five channels are unguarded |
 | 5 | **Precision degradation** | Uncertainty model is static; a degrading sensor keeps its original assumed σ |
 | 6 | **Saturation / railing** | A channel pinned at full scale reads as a legitimate extreme value |
 | 7 | **NaN / null / missing key** | `float(None)` → `TypeError`; missing key → `KeyError`; tick dies |
 | 8 | **Unit change** (K→°C, N·m→lb-ft) | Dimensional system validates *plan* units, never *ingest* units |
 | 9 | **Staleness** | No timestamp is read at all. A margin from four hours ago is presented as current |
 
-### Layer 1.5 — transport
+### Layer 1.5 - transport
 
 | # | Condition | What our system does today |
 |---|---|---|
@@ -115,16 +115,16 @@ Grouped by layer. Every one is a real production condition, not a hypothetical.
 | 12 | **Backpressure / dropped samples** | A gap is invisible; slope is computed across it as if continuous |
 | 13 | **Clock skew, DST, NTP step** | Synthetic 2-min takt assumed; no real clock discipline |
 
-### Layer 2.5 — regime
+### Layer 2.5 - regime
 
 | # | Condition | What our system does today |
 |---|---|---|
 | 14 | **Recipe / product changeover** | One global threshold set; a new regime looks like mass anomaly |
-| 15 | **Maintenance reset** (tool change zeroes wear) | Forecasts a crossing that will never happen — no CMMS work-order ingest |
+| 15 | **Maintenance reset** (tool change zeroes wear) | Forecasts a crossing that will never happen - no CMMS work-order ingest |
 | 16 | **Cold start** on a new asset | No baseline; robust track needs history it does not have |
 | 17 | **Fleet heterogeneity** across 1,000 sites | Thresholds are global constants, not per-asset priors |
 
-### Layer 3 — inference
+### Layer 3 - inference
 
 | # | Condition | What our system does today |
 |---|---|---|
@@ -135,14 +135,14 @@ Grouped by layer. Every one is a real production condition, not a hypothetical.
 
 Items 18 and 19 deserve emphasis because they are the ones that *look* like
 insight. A ranked list of assets is the single most actionable artifact a
-maintenance copilot produces — it dispatches technicians. It is also the artifact
+maintenance copilot produces - it dispatches technicians. It is also the artifact
 most likely to be pure noise, and we currently print it without qualification.
 
 ---
 
 ## 4 · The thing that fixes it
 
-### 4.1 The insight — and the first version of it that was wrong
+### 4.1 The insight - and the first version of it that was wrong
 
 The original form of this argument was: our semantic layer declares
 `power_w = torque_nm * rotational_speed_rpm * 2 * pi / 60`, we use it as a type
@@ -169,7 +169,7 @@ Two such relations exist here, both verified against all 10,000 rows:
 In fault detection and isolation theory, an analytical redundancy relation is any
 equation among measured signals that must hold when every instrument is honest.
 Its residual is ~0 in the fault-free case and departs sharply when a signal lies
-— detecting instrument faults *without adding hardware*, because the redundancy
+- detecting instrument faults *without adding hardware*, because the redundancy
 is analytical rather than physical.
 
 We already have the relations. We wrote them down for a different reason. We
@@ -187,9 +187,9 @@ again.
 | Parity residual | Margins | Diagnosis | Action |
 |---|---|---|---|
 | ≈ 0 | positive | healthy | none |
-| ≈ 0 | **negative** | **process fault** — the machine is genuinely in trouble | dispatch to the machine |
-| **large** | either | **instrument fault** — a channel is lying | dispatch to the sensor |
-| large | — | model invalid for this regime | abstain and say why |
+| ≈ 0 | **negative** | **process fault** - the machine is genuinely in trouble | dispatch to the machine |
+| **large** | either | **instrument fault** - a channel is lying | dispatch to the sensor |
+| large | - | model invalid for this regime | abstain and say why |
 
 Every Argus platform on the market conflates rows two and three. That is the
 origin of alarm fatigue: operators stop trusting a system that cries wolf about
@@ -206,7 +206,7 @@ innovations. They are formally indistinguishable from that channel alone.
 This is a standard identifiability result in FDI, not an implementation
 shortcoming, and it has a sharp consequence: **CUSUM never fires on a
 single-channel bias.** An earlier version of the fault-injection harness
-appeared to catch torque bias at +31 cycles — that was a coincident baseline
+appeared to catch torque bias at +31 cycles - that was a coincident baseline
 false alarm on a different channel, which is exactly how this class of mistake
 survives into production.
 
@@ -221,16 +221,16 @@ caught **on the first sample at 82 σ**.
 
 That declaration is the useful engineering output. If a plant wants bias
 protection on torque, it needs a second measurement or a physical relation
-involving it — a procurement decision, and this is the module that can name it.
+involving it - a procurement decision, and this is the module that can name it.
 
 ### 4.3 What it lets the system say
 
 Measured output from the running system, four cycles after a torque channel was
 frozen mid-stream:
 
-> **M-07 — ABSTAIN.** `torque_nm` unusable (frozen: 5 identical readings,
+> **M-07 - ABSTAIN.** `torque_nm` unusable (frozen: 5 identical readings,
 > against a limit of 5 derived from this channel's own measured repeat rate).
-> This is an instrument fault, not a process fault — dispatch to the sensor.
+> This is an instrument fault, not a process fault - dispatch to the sensor.
 > Verify the named channel before acting on this machine.
 
 One page for that fault across 150 frozen cycles; 297 further alerts suppressed.
@@ -239,17 +239,17 @@ No copilot says this today. They say a number.
 Note what makes it defensible: **no threshold in the module was chosen.** The
 stuck limit is a chi-square quantile at a stated false-positive rate; the CUSUM
 limit is inverted from a target average run length via Siegmund's approximation
-(validated against the textbook value — k = 0.5, h = 5 gives 465 cycles); the
+(validated against the textbook value - k = 0.5, h = 5 gives 465 cycles); the
 gate is a normal quantile.
 
 The noise model is not declared either. It is identified per channel by method
-of moments on the first differences — `Var(Δz) = q + 2r`,
+of moments on the first differences - `Var(Δz) = q + 2r`,
 `Cov(Δz_t, Δz_{t-1}) = −r`. On this dataset that recovers torque's documented
 σ = 10 N·m as **10.039 from the data alone**.
 
 That mattered more than expected. The first implementation *did* hard-code the
 noise figures, with a comment claiming they were measured. They were invented,
-and the temperature values were six times too large — which flagged **94% of
+and the temperature values were six times too large - which flagged **94% of
 healthy cycles as frozen sensors**. A constant chosen but described as derived
 is the precise failure this project exists to prevent, and it still got in. It
 was caught by measuring, not by review.
@@ -262,7 +262,7 @@ injected fault class is caught: hard freeze at +4 cycles, dropout at +3, NaN at
 ### 4.4 Speaking the plant's own language
 
 The four outcomes map exactly onto **NAMUR NE 107**, the standard that process
-industries already use for device health — *Failure*, *Function check*,
+industries already use for device health - *Failure*, *Function check*,
 *Out of specification*, *Maintenance required*. Emitting NE 107 status alongside
 each margin means the copilot's diagnostic vocabulary is one an instrumentation
 technician already reads on their handheld, and it routes into existing asset
@@ -274,7 +274,7 @@ only that ML has benchmarks.
 
 ### 4.5 The inference-layer counterpart: falsify your own ranking
 
-For items 18 and 19, one cheap general guard covers both — a **permutation
+For items 18 and 19, one cheap general guard covers both - a **permutation
 null**. Before reporting that a group is worst, shuffle the group labels a few
 thousand times and ask how often chance alone produces a spread this extreme. If
 the observed ranking sits inside the permuted null, the honest output is *"no
@@ -283,7 +283,7 @@ at this sample size"*.
 
 It needs no distributional assumption, works for any grouping, costs
 milliseconds at our data sizes, and turns the single most dangerous artifact we
-produce — the ranked asset list — into one that has passed a falsification test.
+produce - the ranked asset list - into one that has passed a falsification test.
 
 It also composes with what we already have: the premise gate tests claims the
 *user* brings. The permutation null tests claims *we* would otherwise volunteer.
@@ -303,17 +303,17 @@ is incomplete, because it says nothing about where the numbers came from.
 Where this takes us:
 
 > **A margin is only as real as the sensor that produced it. So compute the
-> margin, and compute — from the same physical model, at the same instant — the
+> margin, and compute - from the same physical model, at the same instant - the
 > evidence that the sensor is telling the truth. Report both, and when the
 > second one fails, refuse to report the first.**
 
 Three questions, answered in order, every tick:
 
-1. **Is the signal real?** — parity residuals, noise-floor collapse, staleness,
+1. **Is the signal real?** - parity residuals, noise-floor collapse, staleness,
    range. Fails → NE 107 status, name the channel, abstain on that machine only.
-2. **Is the number right?** — Analysis IR, dimensional types, verified
+2. **Is the number right?** - Analysis IR, dimensional types, verified
    narration. Already built.
-3. **Is the claim supported?** — premise gates, permutation nulls, confound
+3. **Is the claim supported?** - premise gates, permutation nulls, confound
    detection. Mostly built; add the null.
 
 A system that answers all three, and says which one failed when one does, is not
@@ -328,11 +328,11 @@ Instruments get trusted. Chatbots get audited.
 - This does not make us better than Siemens or Cognite as a *product*. They own
   the OT connector moat, real vibration and thermographic modalities, and years
   of deployment learning. The claim is narrower and defensible: on the axes the
-  brief names — latency, context engineering, hallucination reduction — plus the
+  brief names - latency, context engineering, hallucination reduction - plus the
   instrument/process split, this answers better.
 - Parity relations require a physical model. We have one because the AI4I
   failure modes are documented arithmetic. A plant with undocumented equipment
-  needs the relations discovered or elicited first — that is real work, and it
+  needs the relations discovered or elicited first - that is real work, and it
   is the honest limit of the approach.
 - Items 3 (slow drift) and 21 (unforecastable failures) are not fully solvable.
   Drift at onset is information-theoretically hard; a fraction of failures have

@@ -1,4 +1,4 @@
-"""`data_quality` — what is wrong with this dataset, computed not recited.
+"""`data_quality` - what is wrong with this dataset, computed not recited.
 
 A copilot that surfaces its data's defects is more useful than one that silently
 averages over them. Three issues in AI4I are not stated on the dataset page and
@@ -20,7 +20,7 @@ from copilot.ir import AnalysisPlan, OpName
 from copilot.knowledge import failure_modes
 from copilot.ops.registry import TABLE, ExecutionContext, new_bundle, register
 
-# Physics invariants — quantities that must hold regardless of operating point.
+# Physics invariants - quantities that must hold regardless of operating point.
 # A violation means instrumentation, not operations. See docs/06-RELIABILITY.md.
 _INVARIANTS = (
     (
@@ -193,7 +193,7 @@ def _documented_twf_events() -> int | None:
 
     Read from an explicit KB field rather than scraped out of the prose. An
     earlier version parsed the first large number it found in the note and
-    picked up the window size instead — a good illustration of why numbers
+    picked up the window size instead - a good illustration of why numbers
     belong in fields, not sentences.
     """
     for mode in failure_modes()["modes"]:

@@ -11,7 +11,7 @@ a system that answers almost nothing.
 
 That is not hypothetical. The streaming path drifted to a 48% abstain rate and
 nobody noticed, because no gate looked at coverage. A system that is never wrong
-because it rarely speaks is not trusted — it is ignored, which is a worse
+because it rarely speaks is not trusted - it is ignored, which is a worse
 outcome than being occasionally wrong and known to be.
 
 The honest object is the pair, which is what selective prediction has always
@@ -34,7 +34,7 @@ WHAT IS MEASURED
                      sound: a valid plan, every numeral traced to a slot
   refusal precision  of questions we declined, the fraction that genuinely
                      should be declined
-  silent failure     answered when we should have refused — the only truly
+  silent failure     answered when we should have refused - the only truly
                      bad cell, because it is a confident wrong answer
 
 An honest system maximises coverage subject to silent failures being zero.
@@ -57,7 +57,7 @@ from copilot.session import SessionState  # noqa: E402
 # ── The question bank.
 #
 # `answerable` means a competent analyst with this dataset in front of them
-# could produce a defensible answer. It does NOT mean our system does — that is
+# could produce a defensible answer. It does NOT mean our system does - that is
 # the thing being measured, and labelling it any other way would make the
 # benchmark self-congratulatory.
 #
@@ -128,7 +128,7 @@ ANSWERABLE: list[str] = [
     "when will the tool cross the overstrain limit at 200 min wear",
     "how long until failure at 60 Nm",
     # RNF is a parameter-independent background rate. Answering IS correct here,
-    # provided the answer states that the cause is not determinable — which it
+    # provided the answer states that the cause is not determinable - which it
     # does. An earlier version of this bank labelled it unanswerable and scored
     # a correct answer as a silent failure.
     "Why did the random failures happen?",
@@ -139,7 +139,7 @@ ANSWERABLE: list[str] = [
     "data quality report",
 ]
 
-# Questions that MUST be declined. Answering any of these is a silent failure —
+# Questions that MUST be declined. Answering any of these is a silent failure -
 # a confident answer to something the data cannot support.
 UNANSWERABLE: list[tuple[str, str]] = [
     ("What is the vibration signature on this machine?", "no vibration sensor exists"),
@@ -245,7 +245,7 @@ def _histogram(values) -> dict[str, int]:
 
 
 # NOTE: an earlier version of this harness re-implemented the unsourced-numeral
-# check here and reported 53.8% soundness — against a shipping verifier that
+# check here and reported 53.8% soundness - against a shipping verifier that
 # enforces zero and passes every golden case. The harness was wrong: a slot
 # holding 39.98690 renders at its declared 4 significant figures as "39.99",
 # and the naive comparison called that untraceable.
@@ -273,7 +273,7 @@ def evaluate(engine: Engine, question: str, answerable: bool) -> Outcome:
 
     # The renderer is fail-closed and runs on every answer, so this reads its
     # verdict rather than second-guessing it. `degraded` means it fell back to
-    # the template after the model narration failed verification — still sound,
+    # the template after the model narration failed verification - still sound,
     # but worth counting separately.
     sound = bool(getattr(answer, "verified", False))
     degraded = bool(getattr(answer, "degraded", False))
@@ -319,11 +319,11 @@ def render(report: Report) -> str:
         f"  tiers                {m['tiers']}",
     ]
     if report.silent_failures:
-        lines += ["", "  SILENT FAILURES — a confident answer to an unanswerable question:"]
+        lines += ["", "  SILENT FAILURES - a confident answer to an unanswerable question:"]
         for o in report.silent_failures:
             lines.append(f"    {o.question[:62]:64s} [{o.tier}]")
     if report.missed:
-        lines += ["", f"  MISSED — declined but answerable ({len(report.missed)}):"]
+        lines += ["", f"  MISSED - declined but answerable ({len(report.missed)}):"]
         for o in report.missed[:20]:
             lines.append(f"    {o.question[:62]:64s} [{o.tier}] {o.detail[:28]}")
     unsound = [o for o in report.outcomes if o.answered and not o.sound]

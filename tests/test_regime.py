@@ -63,14 +63,14 @@ class TestTheRadiusIsNotLearned:
     """Two earlier designs tried to learn it. Both were unstable."""
 
     def test_the_radius_comes_from_the_error_budget(self):
-        """A chi-square quantile at a stated false-new rate over three axes —
+        """A chi-square quantile at a stated false-new rate over three axes -
         not a number anybody picked."""
         assert 15.0 < RADIUS < 18.0
 
     def test_a_regimes_spread_is_supplied_not_accumulated(self):
         """Accumulating the cluster's own variance is unstable in both
         directions. Let it grow and a regime that absorbs a few neighbouring
-        points widens, absorbs more, and swallows the space — measured: five
+        points widens, absorbs more, and swallows the space - measured: five
         regimes found in two-regime data, flapping every few cycles. Freeze it
         early instead and a variance from forty samples is too tight, so the
         regime rejects its own future points and shatters into eleven.
@@ -94,7 +94,7 @@ class TestSteadyProductionIsOneMode:
 
     def test_unchanging_production_yields_exactly_one_regime(self, cycles, scale):
         """AI4I is one recipe. rpm and torque are coupled at r = -0.875, so the
-        data lies on a curved manifold with large natural spread — precisely the
+        data lies on a curved manifold with large natural spread - precisely the
         shape that a naive clustering carves into arbitrary chunks.
         """
         tracker, _ = _run(cycles, scale)
@@ -142,7 +142,7 @@ class TestAChangeoverIsFound:
         """Detection lag is a function of separation, not a tunable.
 
         The simulated change here sits at d^2 = 24.5 against a radius of 16.27
-        — distinct, but the two balls overlap, so post-change scatter keeps
+        - distinct, but the two balls overlap, so post-change scatter keeps
         landing inside the old mode and resetting the counter. Measured lag was
         282 cycles rather than the 12 a clean break would give.
 
@@ -233,7 +233,7 @@ class TestTheObserverUsesIt:
 
     def test_a_changeover_stops_looking_like_a_fleet_of_sensor_faults(self, scale):
         """Without regime tracking a recipe change moves every channel at once
-        and the observer reports each as an instrument fault — a screen of
+        and the observer reports each as an instrument fault - a screen of
         alarms for a planned event, which is the fastest way to lose a control
         room. Measured: 212 fault ticks without, 58 with."""
         without, _ = self._stream(None)

@@ -1,6 +1,6 @@
-# Industrial Copilot — single-node deployment.
+# Industrial Copilot - single-node deployment.
 #
-# Deliberately boring. No CUDA, no model weights baked in, no cloud SDK. The
+# standard implementation. No CUDA, no model weights baked in, no cloud SDK. The
 # whole system answers from the grammar tier with every API key unset, so the
 # image needs Python, seven wheels, and the process definition. That property is
 # worth more in a plant than anything clever would be: an air-gapped site can
@@ -10,7 +10,7 @@
 #   docker run -p 8000:8000 -v "$PWD/data:/app/data:ro" industrial-copilot
 #
 # The LLM planner tier is optional and off unless a key is supplied. Without one
-# the engine still answers every golden question — it just declines the long
+# the engine still answers every golden question - it just declines the long
 # tail instead of guessing at it.
 
 FROM python:3.12-slim AS build
@@ -29,7 +29,7 @@ RUN /opt/venv/bin/pip install --no-deps .
 
 # Build the warehouse at IMAGE BUILD time, not at boot.
 #
-# The image ships the CSV and not the DuckDB file — the warehouse is derived, so
+# The image ships the CSV and not the DuckDB file - the warehouse is derived, so
 # shipping it would mean shipping the output instead of the recipe. But nothing
 # then built it, so the container started, the first request called
 # Engine.build(), and there was no warehouse to open. The platform healthcheck

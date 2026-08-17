@@ -1,4 +1,4 @@
-"""`describe` — distribution summary for one or more metrics over a cohort.
+"""`describe` - distribution summary for one or more metrics over a cohort.
 
 Answers acceptance criterion 1, "understand machine behaviour": what are typical
 operating conditions here?

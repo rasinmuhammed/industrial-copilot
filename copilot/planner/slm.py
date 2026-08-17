@@ -1,10 +1,10 @@
-"""SLM planner — Ollama-backed local model with JSON grammar constraints.
+"""SLM planner - Ollama-backed local model with JSON grammar constraints.
 
 This is the inference adapter for an SLM trained with ``scripts/export_sft_data.py``
 and fine-tuned via ``notebooks/planner_distillation.ipynb``.
 
 It uses Ollama's ``format`` parameter to enforce the plan schema at the
-token level — the model cannot produce structurally invalid JSON.  This
+token level - the model cannot produce structurally invalid JSON.  This
 is the same mechanism used by ``ConstrainedPlanner`` (for Ollama) and the
 schema passed to Anthropic/Cerebras providers.
 
@@ -60,7 +60,7 @@ class SLMPlanner:
                 {"role": "user",   "content": question},
             ],
             "stream": False,
-            # JSON grammar constraint — identical to ConstrainedPlanner
+            # JSON grammar constraint - identical to ConstrainedPlanner
             "format": plan_schema(),
             "options": {
                 "temperature": 0,
@@ -88,12 +88,12 @@ class SLMPlanner:
     def complete_json(
         self, system: str, user: str, schema: dict[str, Any]
     ) -> str:
-        """Provider protocol method — delegates to ``propose``."""
+        """Provider protocol method - delegates to ``propose``."""
         raw = self.propose(user)
         return json.dumps(raw)
 
     def complete_text(self, system: str, user: str, max_tokens: int) -> str:
-        """Narration path — SLM is a planner only; raise to let LLM narrate."""
+        """Narration path - SLM is a planner only; raise to let LLM narrate."""
         raise NotImplementedError("SLMPlanner handles planning only; narration falls back to templates")
 
 

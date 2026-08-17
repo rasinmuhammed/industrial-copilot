@@ -1,4 +1,4 @@
-"""`envelope` — the safe operating window, and the minimal change to reach it.
+"""`envelope` - the safe operating window, and the minimal change to reach it.
 
 This is the operator a classifier fundamentally cannot provide. Because the
 constraints are analytic, we **invert** them: instead of scoring a setpoint an
@@ -163,7 +163,7 @@ def _prescribe(
     """Solve for the minimal single-variable change restoring every margin.
 
     Candidates are evaluated by *magnitude of intervention*, and each is verified
-    by re-running the full physics — a prescription that fixes one boundary while
+    by re-running the full physics - a prescription that fixes one boundary while
     crossing another is not a prescription.
 
     Every target is placed `safety` inside the boundary rather than on it. A
@@ -208,7 +208,7 @@ def _prescribe(
              point.perturb(rotational_speed_rpm=delta))
         )
 
-    # Tool replacement resets wear entirely — always available, never minimal.
+    # Tool replacement resets wear entirely - always available, never minimal.
     candidates.append(
         ("tool_wear_min", "replace the tool", -point.tool_wear_min, "min",
          point.perturb(tool_wear_min=-point.tool_wear_min))
@@ -221,7 +221,7 @@ def _prescribe(
         bundle.warn(
             "abstained",
             "No single-variable change restores every margin at this operating point. "
-            "A combined change is required — for example replacing the tool and "
+            "A combined change is required - for example replacing the tool and "
             "reducing torque together.",
             severity=Severity.CRITICAL,
         )
@@ -274,8 +274,8 @@ def _resolve_point(
     # A named quantity OVERRIDES the cohort; it does not have to replace it.
     #
     # This used to require three of the five before it honoured any of them, so
-    # "what torque should I run at 200 minutes of wear" — one named quantity,
-    # and the entire subject of the question — fell through to the branch below
+    # "what torque should I run at 200 minutes of wear" - one named quantity,
+    # and the entire subject of the question - fell through to the branch below
     # and reported the envelope at the cohort's MEAN wear of 108 minutes. The
     # answer stated its own operating point, so it was not lying; it simply
     # answered about a machine in average condition when the engineer asked
@@ -309,7 +309,7 @@ def _resolve_point(
         return None
 
     # Baseline: observed conditions where there are any, nominal where there are
-    # not. A fully hypothetical setpoint is a legitimate question — an engineer
+    # not. A fully hypothetical setpoint is a legitimate question - an engineer
     # may ask about a configuration that has never been run.
     if matched:
         air = float(row[0])
@@ -345,7 +345,7 @@ def _resolve_point(
     point = {**baseline, **{k: float(v) for k, v in explicit.items()}}
     # Process temperature tracks ambient, so an explicit air temperature with no
     # stated process temperature would otherwise pair a new ambient with an old
-    # absolute process reading — and the HDF margin is their difference.
+    # absolute process reading - and the HDF margin is their difference.
     if "air_temp_k" in explicit and "process_temp_k" not in explicit:
         point["process_temp_k"] = point["air_temp_k"] + (
             baseline["process_temp_k"] - baseline["air_temp_k"]

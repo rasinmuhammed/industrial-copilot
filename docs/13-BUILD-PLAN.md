@@ -1,4 +1,4 @@
-# 13 — Build Plan
+# 13 - Build Plan
 
 > Ordered so a **complete, defensible, evaluable system exists after Phase 4.**
 > Everything after that is additive, never load-bearing.
@@ -8,7 +8,7 @@
 
 ---
 
-## Phase 1 — Physics warehouse and knowledge base
+## Phase 1 - Physics warehouse and knowledge base
 
 **Deliverable:** the data foundation and the SOP.
 
@@ -28,7 +28,7 @@
 
 ---
 
-## Phase 2 — Analysis IR and operator registry
+## Phase 2 - Analysis IR and operator registry
 
 **Deliverable:** the correctness foundation. Everything above this is presentation.
 
@@ -53,7 +53,7 @@
 
 ---
 
-## Phase 3 — Router, session, narrator, verifier
+## Phase 3 - Router, session, narrator, verifier
 
 **Deliverable:** the latency and anti-hallucination machinery.
 
@@ -77,7 +77,7 @@
 
 ---
 
-## Phase 4 — Evals and CLI ← **system is complete and defensible here**
+## Phase 4 - Evals and CLI ← **system is complete and defensible here**
 
 | File | Purpose |
 |---|---|
@@ -98,7 +98,7 @@
 
 ---
 
-## Phase 5 — Reliability
+## Phase 5 - Reliability
 
 | File | Purpose |
 |---|---|
@@ -114,7 +114,7 @@
 
 ---
 
-## Phase 6 — Discovery
+## Phase 6 - Discovery
 
 | File | Purpose |
 |---|---|
@@ -129,7 +129,7 @@
 
 ---
 
-## Phase 7 — Streaming
+## Phase 7 - Streaming
 
 | File | Purpose |
 |---|---|
@@ -144,22 +144,22 @@
 
 ---
 
-## Phase 8 — Interfaces
+## Phase 8 - Interfaces
 
-- **Evidence-card chat** — every answer expands to show the plan, the evidence
+- **Evidence-card chat** - every answer expands to show the plan, the evidence
   table, and the margin arithmetic. *"Show your work"* as a UI primitive: the
   anti-hallucination thesis made visible rather than claimed.
-- **Envelope Explorer** — true failure boundary in rpm × torque, draggable
+- **Envelope Explorer** - true failure boundary in rpm × torque, draggable
   setpoint, live margins. A computed region, not a decision surface.
-- **Fleet view** — streaming margin tiles, lead-time alerts, click-to-focus chat.
+- **Fleet view** - streaming margin tiles, lead-time alerts, click-to-focus chat.
 
 ---
 
-## Phase 9 — Adaptive planning *(bonus)*
+## Phase 9 - Adaptive planning *(bonus)*
 
 Two sub-phases, deliberately ordered. See [08-DISCOVERY.md](08-DISCOVERY.md) §8.
 
-### 9a — Verified-exemplar store (Tier 2)
+### 9a - Verified-exemplar store (Tier 2)
 
 Every answered question emits `(question, plan, did_it_verify?)`. Store the
 verified ones; embed with a frozen encoder; kNN-retrieve at plan time.
@@ -170,7 +170,7 @@ in the whole bonus track, and it generates the training data for 9b.
 *Gate:* measurable tier-2 hit rate on the golden set; no regression in
 `numeric_exactness`.
 
-### 9b — Planner LoRA (Tier 3), Unsloth + Together
+### 9b - Planner LoRA (Tier 3), Unsloth + Together
 
 Distil the exemplar store into a LoRA so the prompt shrinks and latency drops.
 
@@ -185,7 +185,7 @@ Distil the exemplar store into a LoRA so the prompt shrinks and latency drops.
 On regression, roll back to 9a, which never stopped working.
 
 > Teaching a model *facts about machines* is the failure mode this project exists
-> to eliminate. Teaching it *intent → plan* is the correct target — and the reward
+> to eliminate. Teaching it *intent → plan* is the correct target - and the reward
 > is verifiable, so the labels are free.
 
 ---

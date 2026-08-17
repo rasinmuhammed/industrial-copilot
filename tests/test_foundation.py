@@ -1,7 +1,7 @@
 """Foundation tests: units, plan validation, and the first two operators.
 
 These lock in the guarantees the architecture rests on. A failure here is not a
-cosmetic regression — it means a stated property no longer holds.
+cosmetic regression - it means a stated property no longer holds.
 """
 
 from __future__ import annotations
@@ -68,7 +68,7 @@ class TestUnits:
 
 
 # --------------------------------------------------------------------------
-# Plan validation — the hallucination barrier
+# Plan validation - the hallucination barrier
 # --------------------------------------------------------------------------
 
 
@@ -375,7 +375,7 @@ def _by_udi(ctx, udi: int):
 class TestRootCause:
     def test_orphan_failure_returns_undetermined(self, ctx):
         """9 rows are labelled failures with no documented mode. Tested for
-        structure and found to have none — 'undetermined' is verified correct."""
+        structure and found to have none - 'undetermined' is verified correct."""
         bundle = _by_udi(ctx, 9016)
         assert bundle.slots["cycle.failed"].value == "yes"
         assert bundle.slots["cause.verdict"].value == "cause_undetermined"

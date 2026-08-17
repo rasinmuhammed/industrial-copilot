@@ -1,4 +1,4 @@
-"""Which kind of claim is this — exact, statistical, or impossible?
+"""Which kind of claim is this - exact, statistical, or impossible?
 
 THE CRITICISM THIS ANSWERS
 --------------------------
@@ -26,7 +26,7 @@ Three regimes, and the system always says which one it is in:
                 verifiable to the last decimal. HDF, PWF, OSF here.
   STATISTICAL   failure occurs somewhere in a region with no crisp edge. The
                 honest object is an interval with a COVERAGE GUARANTEE, not a
-                point. TWF here — the tool fails somewhere in a wear window.
+                point. TWF here - the tool fails somewhere in a wear window.
   IRREDUCIBLE   no relationship to any measured parameter. Not hard to predict:
                 impossible. RNF here, by the dataset's own construction.
 
@@ -70,7 +70,7 @@ sample. Two properties matter here and no other method has both:
 The only assumption is exchangeability: that a future tool is drawn from the
 same population as the calibration tools. That assumption is checkable, it is
 far weaker than any parametric alternative, and when a maintenance regime
-changes it is the assumption that breaks — which is worth stating plainly to
+changes it is the assumption that breaks - which is important to note to
 the engineer rather than burying in a footnote.
 """
 
@@ -151,7 +151,7 @@ class ConformalInterval:
         return (
             f"{quantity} falls between {self.lower:g} and {self.upper:g} {self.unit}"
             f" with at least {self.confidence:.0%} probability. This is a "
-            f"distribution-free guarantee from {self.n} observed failures — it "
+            f"distribution-free guarantee from {self.n} observed failures - it "
             f"holds whatever the true degradation shape is, assuming only that "
             f"future tools resemble past ones."
         ).strip()

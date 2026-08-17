@@ -3,7 +3,7 @@
 WHY THIS EXISTS
 ---------------
 The observer decides whether a *reading* deserves belief. This decides whether a
-*message* deserves to become a reading at all — a different question, and the
+*message* deserves to become a reading at all - a different question, and the
 one every streaming deployment actually trips over.
 
 A CSV replay hides all of it: rows arrive once, in order, with a clean index. A
@@ -19,7 +19,7 @@ follow are not exotic; they are the normal weather of industrial messaging:
   * **Out-of-order arrival.** Two gateways, two paths, different latency. A
     late sample applied as if current drags the state estimate backwards.
   * **Gaps.** A dropped connection leaves a hole. Computing a slope across it as
-    though the samples were adjacent invents a trend that never happened — and
+    though the samples were adjacent invents a trend that never happened - and
     the forecast built on that slope is confidently wrong.
   * **Clock skew.** NTP steps, DST, a gateway with a dead RTC reporting 1970.
     An event timestamped in the future poisons any watermark that trusts it.
@@ -40,7 +40,7 @@ WHAT THIS GUARANTEES
 Nothing reaches the observer that is a duplicate, out of order beyond the
 declared lateness bound, or timestamped implausibly. Everything that is dropped
 is counted and attributable, because a silent drop is indistinguishable from a
-sensor that stopped — and those demand opposite responses.
+sensor that stopped - and those demand opposite responses.
 """
 
 from __future__ import annotations

@@ -14,8 +14,8 @@ Two subtleties that matter in practice and are handled explicitly:
     dimension but are not interchangeable. Converting 10 °C-of-rise to K is +0,
     not +273.15. Comparing an absolute to a delta is a bug and is rejected.
   * **Angle is dimensionless, deliberately.** A radian is m/m. Tracking angle as
-    a base dimension is tempting — it looks like it would catch rpm/rad-per-second
-    confusion — but it breaks the identity `torque × ω = power`, which holds
+    a base dimension is tempting - it looks like it would catch rpm/rad-per-second
+    confusion - but it breaks the identity `torque × ω = power`, which holds
     *precisely because* radians are dimensionless. rpm and rad/s therefore share
     dimension T⁻¹ and differ by a scale factor of 2π/60, which `to_si` applies.
     That is what actually prevents the bug: any derived quantity is computed in
@@ -145,16 +145,16 @@ UNITS: Final[dict[str, Unit]] = {
         # A percentage is a ratio scaled by 1/100, so convert('%', 'ratio') works.
         Unit("%", DIMENSIONLESS, scale=0.01, label="percent"),
         Unit("Δ%", DIMENSIONLESS, scale=0.01, is_delta=True, label="percentage point difference"),
-        # temperature — absolute
+        # temperature - absolute
         Unit("K", _TEMPERATURE, label="kelvin"),
         Unit("degC", _TEMPERATURE, offset=273.15, label="degrees celsius"),
-        # temperature — difference (ΔK and Δ°C are numerically identical)
+        # temperature - difference (ΔK and Δ°C are numerically identical)
         Unit("ΔK", _TEMPERATURE, is_delta=True, label="kelvin difference"),
         Unit("ΔdegC", _TEMPERATURE, is_delta=True, label="celsius difference"),
         # Difference flavours for every quantity a margin is expressed in.
         # Numerically identical to their absolute counterparts (offset 0), but
-        # declaring them separately means "power margin > 3500 W" — comparing a
-        # headroom to an absolute threshold — is rejected rather than computed.
+        # declaring them separately means "power margin > 3500 W" - comparing a
+        # headroom to an absolute threshold - is rejected rather than computed.
         Unit("Δrpm", _ANGULAR_VELOCITY, scale=2 * math.pi / 60, is_delta=True,
              label="rpm difference"),
         Unit("ΔN·m", _TORQUE, is_delta=True, label="newton metre difference"),
@@ -217,7 +217,7 @@ _ALIASES: Final[dict[str, str]] = {
 def unit(symbol: str | Unit | None) -> Unit:
     """Resolve a unit symbol, tolerating common spellings.
 
-    Raises UnitError on anything unrecognised — silence here is how bad data
+    Raises UnitError on anything unrecognised - silence here is how bad data
     becomes a wrong answer.
     """
     if isinstance(symbol, Unit):

@@ -121,7 +121,7 @@ def main() -> None:
     if valid / n >= 0.80:
         print("  VERDICT: SLM coverage sufficient to replace exemplar tier (≥ 80%)")
     else:
-        print(f"  VERDICT: Coverage {valid/n:.0%} < 80% — grammar tier remains primary")
+        print(f"  VERDICT: Coverage {valid/n:.0%} < 80% - grammar tier remains primary")
 
 
 if __name__ == "__main__":

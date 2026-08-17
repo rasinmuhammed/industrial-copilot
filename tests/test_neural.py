@@ -1,6 +1,6 @@
 """Deep learning on the sensor stream: built, measured, and it lost.
 
-The question was fair — a predictive-maintenance system with no learned model on
+The question was fair - a predictive-maintenance system with no learned model on
 the sensor path invites the assumption that the author avoided the work. So the
 work was done: a residual autoencoder over the channel vector, trained on
 healthy cycles, scored against the failures and against a linear baseline.
@@ -61,7 +61,7 @@ class TestItIsRealAndItRuns:
         assert per_point < 1e-3          # microseconds, not milliseconds
 
     def test_training_uses_healthy_cycles_only(self, split):
-        """Training on everything teaches the model that failures are normal —
+        """Training on everything teaches the model that failures are normal -
         the commonest way an anomaly detector is quietly ruined. It then
         reconstructs the faults perfectly and flags nothing."""
         train, _, failed = split
@@ -112,7 +112,7 @@ class TestWhyItLosesIsTheInterestingPart:
 
         Nothing about the joint distribution marks them, so no density model can
         find them however deep it is. This is not a limitation of the
-        architecture chosen — it is a property of the failure mechanism.
+        architecture chosen - it is a property of the failure mechanism.
         """
         train, _, failed = split
         mean, sd = train.mean(0), train.std(0)

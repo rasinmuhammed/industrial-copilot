@@ -9,7 +9,7 @@ beats an estimate, and a learned model would replace a known quantity with a
 guess.
 
 But the physics only reaches as far as the relations somebody wrote down. This
-dataset has two — the thermal coupling and wear monotonicity — and a real plant
+dataset has two - the thermal coupling and wear monotonicity - and a real plant
 has a handful more. Everything outside them is unmodelled, and "unmodelled" is
 exactly where a density estimator earns its place: it learns what NORMAL looks
 like jointly, across all channels at once, without anyone having to state the
@@ -34,7 +34,7 @@ WHY NUMPY AND NOT A FRAMEWORK
 The network is 5→3→5. Importing a deep-learning framework to run roughly fifty
 multiply-accumulates would add hundreds of megabytes to an image that currently
 holds seven light dependencies, for a model that fits in a few hundred floats.
-Forward and backward passes are written out explicitly here — it is thirty lines
+Forward and backward passes are written out explicitly here - it is thirty lines
 of arithmetic, it runs in microseconds, and it deploys anywhere Python does,
 including the edge boxes where this would actually live.
 
@@ -88,7 +88,7 @@ class DetectorScore:
     def worst_channel(self) -> str:
         """Which channel the model failed hardest to reconstruct.
 
-        Not an attribution — a reconstruction error is a joint property and
+        Not an attribution - a reconstruction error is a joint property and
         blaming one input is a well-known way to over-read an autoencoder. It is
         a starting point for a human, and the docstring says so because the
         number will otherwise be read as a diagnosis.

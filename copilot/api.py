@@ -68,7 +68,7 @@ _engine: Engine | None = None
 #   CROSS-USER BLEED. `session_id` defaulted to the literal "default", so every
 #   caller who did not supply one shared a single conversation. Engineer A
 #   scoped to L variants; Engineer B then asked for the OVERALL failure rate and
-#   received A's L-variant scope — a confident, verified, correctly computed
+#   received A's L-variant scope - a confident, verified, correctly computed
 #   answer to a question nobody asked. Follow-up context is acceptance criterion
 #   4 of the brief, and it was the exact mechanism that leaked.
 #
@@ -132,7 +132,7 @@ def feedback_learner() -> FeedbackLearner:
 class AskRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
     #: Omit for a one-shot question. Supply a stable id to keep follow-up
-    #: context — and note that anyone sharing the id shares the conversation.
+    #: context - and note that anyone sharing the id shares the conversation.
     session_id: str | None = None
     include_evidence: bool = False
 
@@ -222,7 +222,7 @@ def api_telemetry(
 ) -> dict[str, Any]:
     """The raw sensor record, paged.
 
-    Every other view in the product is derived — margins, states, horizons.
+    Every other view in the product is derived - margins, states, horizons.
     This is the one place an engineer can read what the instruments actually
     said, which is what makes the derived numbers auditable rather than
     asserted.
@@ -263,7 +263,7 @@ def _sse(payload: dict[str, Any], event: str = "message") -> str:
 
 
 # A stream must terminate. /stream/alerts defaulted to limit=None, which at the
-# default takt multiplier runs 10,000 cycles at 0.2 s each — 33 minutes per
+# default takt multiplier runs 10,000 cycles at 0.2 s each - 33 minutes per
 # connection, with no ceiling on `limit` and no ceiling on concurrent
 # connections. Each holds a StreamScorer with per-machine observer state, so a
 # handful of idle browser tabs is a resource leak and a deliberate handful is a
@@ -333,7 +333,7 @@ async def stream_margins(
 
 
 # --------------------------------------------------------------------------
-# Envelope — the true boundary, for plotting
+# Envelope - the true boundary, for plotting
 # --------------------------------------------------------------------------
 
 
@@ -411,13 +411,13 @@ def envelope_projection(
 ) -> dict[str, Any]:
     """The safe operating window as a function of FUTURE tool wear.
 
-    The novel view. An envelope is usually drawn as a static region — "are we
+    The novel view. An envelope is usually drawn as a static region - "are we
     inside it?" But the overstrain ceiling is threshold/wear, so the window
     *closes* as the tool wears, and its binding constraint switches from power
     overload to overstrain part-way through the tool's life.
 
-    That turns two separate questions — "how much room do I have?" and "how long
-    have I got?" — into one picture: how fast the room is disappearing. It is
+    That turns two separate questions - "how much room do I have?" and "how long
+    have I got?" - into one picture: how fast the room is disappearing. It is
     drawable only because the boundary is computed rather than learned.
     """
     from copilot.physics import OSF_THRESHOLD, PWF_HIGH, PWF_LOW, RAD_PER_RPM, WEAR_RATE_PER_CYCLE
@@ -590,7 +590,7 @@ def drift_probe(
     """Inject a fault and watch the system diagnose its own inputs (Gate 2).
 
     The point is the asymmetry. A drifting thermocouple and a genuinely slowing
-    process produce the SAME symptom — the heat-dissipation alert count moves —
+    process produce the SAME symptom - the heat-dissipation alert count moves -
     but the process does not control ambient temperature, so the invariants
     separate them. A 0.4 K drift halves HDF alerts, which a conventional copilot
     reports as a good month.
@@ -672,7 +672,7 @@ def threshold_discovery() -> dict[str, Any]:
     """Re-derive the documented limits from outcomes alone.
 
     The bracket between the largest non-failing value and the smallest failing
-    one is a valid estimate of a deterministic boundary — and its WIDTH is the
+    one is a valid estimate of a deterministic boundary - and its WIDTH is the
     honest uncertainty. L recovers to 0.01% on 87 supporting failures; H to
     3.4% on 2. That is why a knowledge-base entry must carry an interval and
     not a point.
@@ -739,8 +739,8 @@ def console() -> str:
     with an industrial dataset behind it: it opened on a headline and waited to
     be asked something, when the operator's first question is always the same
     and the system already knows the answer to it. The console answers it
-    unprompted — every machine, worst first, with the binding constraint and
-    the setpoint that restores margin — and keeps language as a docked tool for
+    unprompted - every machine, worst first, with the binding constraint and
+    the setpoint that restores margin - and keeps language as a docked tool for
     the questions the panels do not already answer.
     """
     return _static("console.html")
@@ -753,7 +753,7 @@ def ask_view() -> str:
 
 
 # --------------------------------------------------------------------------
-# CMMS — work order lifecycle
+# CMMS - work order lifecycle
 # --------------------------------------------------------------------------
 
 
@@ -842,7 +842,7 @@ def feedback_report() -> dict[str, Any]:
 
 
 # --------------------------------------------------------------------------
-# RUL — remaining useful life
+# RUL - remaining useful life
 # --------------------------------------------------------------------------
 
 

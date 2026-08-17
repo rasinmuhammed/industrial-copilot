@@ -2,7 +2,7 @@
 
 The planner never writes SQL. It emits an `AnalysisPlan`, and this module turns
 the plan's declarative filters into parameterised predicates. Values are always
-bound, never interpolated — the field name is the only part of a filter that
+bound, never interpolated - the field name is the only part of a filter that
 reaches the SQL text, and it has already been checked against the semantic layer,
 so it cannot be attacker-controlled.
 
@@ -44,7 +44,7 @@ class ExecutionContext:
     """Everything an op needs that is not the plan itself.
 
     THREAD SAFETY. `con` is the process-wide connection and must never be used
-    directly by an op — use `cursor`, which hands back a thread-local view of
+    directly by an op - use `cursor`, which hands back a thread-local view of
     the same database.
 
     A DuckDB connection serialises internally but its result cursor does not:

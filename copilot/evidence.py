@@ -3,7 +3,7 @@
 Every quantity the engineer ever sees is a `Slot`. The narrator may refer to
 slots by id but may not write digits; the verifier then rejects any bare numeral
 (see copilot/verify.py). This is the Proof-Carrying Numbers protocol
-(arXiv:2509.06902) — verification lives in the renderer, not the model.
+(arXiv:2509.06902) - verification lives in the renderer, not the model.
 
 Two properties are load-bearing:
 
@@ -112,7 +112,7 @@ class Slot(BaseModel):
     """One verifiable quantity.
 
     `id` is fully qualified so that cohort attribution is structural. `render()`
-    is the ONLY way a value becomes text — precision and unit come from the slot,
+    is the ONLY way a value becomes text - precision and unit come from the slot,
     never from a language model.
     """
 
@@ -291,7 +291,7 @@ class EvidenceBundle(BaseModel):
         return {s.cohort for s in self.slots.values()}
 
     def numeric_values(self) -> set[str]:
-        """Rendered forms of every slot — the verifier's whitelist."""
+        """Rendered forms of every slot - the verifier's whitelist."""
         return {s.render() for s in self.slots.values() if s.value is not None}
 
     def evidence_table(self) -> str:

@@ -5,7 +5,7 @@ WHY THIS EXISTS
 `failure_modes.yaml` declared the failure boundaries. `physics.py` also declared
 them, as module-level `Final` literals. Two sources of truth for the same
 number, no mechanism to notice them diverging, sitting in the most load-bearing
-file in the system — the precise failure this project exists to prevent.
+file in the system - the precise failure this project exists to prevent.
 
 It also made the scale story a claim rather than a capability. The brief asks
 how the architecture evolves to 1,000 factories; the honest answer with compiled
@@ -140,7 +140,7 @@ class ProcessModel:
     # modes. This is the general one, driven entirely by the config, and it is
     # deliberately NOT the same code.
     #
-    # That could have re-created the duplication just removed — two engines that
+    # That could have re-created the duplication just removed - two engines that
     # can disagree. It does not, because the disagreement is made into a test:
     # tests/test_process_model.py runs both over all 10,000 rows and requires
     # them to agree exactly. The same discipline as evals/reference.py, where an

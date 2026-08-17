@@ -1,6 +1,6 @@
 """Real-time streaming inference.
 
-Three throughput figures, measured, for three different things — conflating
+Three throughput figures, measured, for three different things - conflating
 them would overstate the case:
 
     raw margin arithmetic (tuples)        0.22 us   4.6 M/sec/core
@@ -67,7 +67,7 @@ PERSISTENCE = 3
 FORECAST_HORIZON = 25
 
 # Deadband. A latched forecast alarm re-arms only once the projection is
-# comfortably clear of the horizon, not the moment it ticks past it — otherwise
+# comfortably clear of the horizon, not the moment it ticks past it - otherwise
 # ordinary torque variation makes the same alarm chatter for a tool's whole life.
 REARM_FACTOR = 1.6
 
@@ -134,7 +134,7 @@ class Tick:
     elapsed_us: float
     #: Normalised distance to each documented limit, from the SAME cycle as
     #: `worst_margin`. The console shows both, and when only the minimum
-    #: streamed it had to pair a live headline with distances fetched at load —
+    #: streamed it had to pair a live headline with distances fetched at load -
     #: two numbers on one screen, computed 9,990 cycles apart, that a reader
     #: would reasonably assume were the same reading. Carrying all three costs
     #: nothing: they are already computed to take the minimum.
@@ -207,7 +207,7 @@ class StreamScorer:
 
     uncertainty: Uncertainty = DEFAULT_UNCERTAINTY
     #: Interrogate the inputs before computing on them. When None, the scorer
-    #: falls back to the static `uncertainty` above — which is what this class
+    #: falls back to the static `uncertainty` above - which is what this class
     #: did for its whole life, and why a frozen sensor read as SAFE forever.
     observer: FleetObserver | None = field(default_factory=FleetObserver)
     persistence: int = PERSISTENCE
@@ -225,9 +225,9 @@ class StreamScorer:
 
         # ── Interrogate before computing.
         #
-        # This used to be six bare float() calls. Everything below it — signed
+        # This used to be six bare float() calls. Everything below it - signed
         # margins, interval arithmetic, three-state verdicts, the fail-closed
-        # renderer — is rigorous arithmetic, and all of it was being performed
+        # renderer - is rigorous arithmetic, and all of it was being performed
         # on unexamined numbers. The more careful the downstream, the more
         # confidently the system asserted a conclusion drawn from a dead sensor.
         trust = None
@@ -308,7 +308,7 @@ class StreamScorer:
 
         if trust is not None and not trust.trusted and not trust.calibrating:
             # The instrument layer says these numbers are not usable. Report the
-            # sensor, name the channel, and decline to judge the machine — the
+            # sensor, name the channel, and decline to judge the machine - the
             # distinction that separates a dispatch to the technician from a
             # dispatch to the asset, and the origin of alarm fatigue when a
             # system conflates them.
@@ -338,7 +338,7 @@ class StreamScorer:
             )
 
         # Hysteresis. Without it an intermittent channel re-arms the latch on
-        # every good cycle and pages on every bad one — 517 alerts where there
+        # every good cycle and pages on every bad one - 517 alerts where there
         # was one fault.
         state.trust_clear_run += 1
         if state.trust_clear_run >= TRUST_RECOVERY:
@@ -393,7 +393,7 @@ class StreamScorer:
         self, row, point, robust_point, margins, firing, abstaining, verdict, slope,
         state: _MachineState,
     ) -> list[Alert]:
-        """`margins` here are the ROBUST margins — the same track that made the
+        """`margins` here are the ROBUST margins - the same track that made the
         firing decision. Reporting instantaneous margins alongside a robust
         decision produces alerts that say "boundary crossed" beside a healthy
         number, which is worse than no alert at all."""
@@ -452,7 +452,7 @@ class StreamScorer:
                 state.alerted.discard(mode)
                 state.alerted.discard(f"sensor:{mode}")
 
-        # Predicted crossing — the lead time an operator can actually act on.
+        # Predicted crossing - the lead time an operator can actually act on.
         # Forecast from the ROBUST point, never a single sample.
         forecast = _forecast_osf(robust_point)
         if forecast is not None and "OSF" not in firing:
@@ -558,7 +558,7 @@ def replay(
     """Replay the warehouse as an event stream.
 
     `speed` is a multiplier on the 2-minute takt; 0 means as fast as possible.
-    Stands in for a Kafka/MQTT consumer — the scorer is unaware of the source.
+    Stands in for a Kafka/MQTT consumer - the scorer is unaware of the source.
     """
     scorer = scorer or StreamScorer()
     con = connect()

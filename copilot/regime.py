@@ -15,7 +15,7 @@ fastest way to lose a control room, and it was the largest gap remaining.
 WHERE MACHINE LEARNING BELONGS
 ------------------------------
 Here, and not on the numeric path. The system deliberately keeps learned models
-away from anything that produces a figure — physics does that, and the figure
+away from anything that produces a figure - physics does that, and the figure
 has to be exact. But "which of several operating modes is this machine in right
 now" is not a physics question. It is an unsupervised segmentation problem with
 no ground truth, nobody to label it, and a need to discover modes never seen
@@ -35,7 +35,7 @@ Instead: sequential leader clustering with a statistically derived radius. A
 point joins the nearest regime if its Mahalanobis distance falls inside a
 chi-square quantile at a stated false-assignment rate; otherwise it is evidence
 of a new mode. The radius is a consequence of the declared error rate and the
-channel noise the observer already identified — not a number anyone picked. The
+channel noise the observer already identified - not a number anyone picked. The
 number of regimes is discovered, not configured.
 
 Two properties matter for a control room:
@@ -44,7 +44,7 @@ Two properties matter for a control room:
     normal event and says so.
   * **An unknown regime abstains rather than guesses.** A mode never seen
     before has no baseline, so the honest output is "this is new, I am
-    learning it" — the same discipline the observer already applies to a
+    learning it" - the same discipline the observer already applies to a
     cold-started channel.
 """
 
@@ -66,7 +66,7 @@ __all__ = [
 ]
 
 # The axes that define a mode of operation: the setpoints an operator chooses.
-# Tool wear is excluded deliberately — it is a monotone counter that rises
+# Tool wear is excluded deliberately - it is a monotone counter that rises
 # within every regime, so including it would split one recipe into a new
 # "regime" every few hundred cycles.
 REGIME_AXES: tuple[str, ...] = (
@@ -121,7 +121,7 @@ class Regime:
         Let it grow and a regime that absorbs a few neighbouring points widens,
         absorbs more, and eventually swallows the space: five regimes found in
         two-regime data, flapping every few cycles. Freeze it early instead and
-        the opposite happens — a variance estimated from forty samples is too
+        the opposite happens - a variance estimated from forty samples is too
         tight, so the regime starts rejecting its own future points and shatters
         into eleven.
 
@@ -143,7 +143,7 @@ class Regime:
         Diagonal rather than full: a full covariance needs far more samples to
         estimate stably, and a singular matrix on a young regime is a silent
         source of nonsense. The cost is that a mode whose axes are strongly
-        coupled — as rpm and torque are here, at r = -0.875 — is modelled as a
+        coupled - as rpm and torque are here, at r = -0.875 - is modelled as a
         ball around a curve rather than the curve itself. That is conservative:
         it merges genuinely distinct modes before it splits one.
         """
@@ -234,7 +234,7 @@ class RegimeTracker:
             if self.current is not None and label != self.current:
                 current_distance = self.regimes[self.current].distance(values)
                 if current_distance <= RADIUS:
-                    # Still plausibly in the current mode — stay put.
+                    # Still plausibly in the current mode - stay put.
                     self.regimes[self.current].update(values)
                     return RegimeVerdict(RegimeStatus.KNOWN, self.current,
                                          current_distance)

@@ -1,4 +1,4 @@
-"""`root_cause` — attribute failures by evaluating the documented physics.
+"""`root_cause` - attribute failures by evaluating the documented physics.
 
 This is the operator the whole architecture exists to enable. On this dataset
 HDF, PWF and OSF are recovered from their documented rules with zero false
@@ -101,7 +101,7 @@ def root_cause(plan: AnalysisPlan, ctx: ExecutionContext) -> EvidenceBundle:
 
 
 # --------------------------------------------------------------------------
-# Single observation — the "why did THIS fail?" path
+# Single observation - the "why did THIS fail?" path
 # --------------------------------------------------------------------------
 
 
@@ -125,7 +125,7 @@ def _single_row(bundle: EvidenceBundle, ctx: ExecutionContext, where: str, param
         if is_fired:
             fired.append(mode)
 
-    # TWF — stochastic, so a probability and never a certainty.
+    # TWF - stochastic, so a probability and never a certainty.
     wear = float(row["tool_wear_min"])
     in_window = TWF_WINDOW[0] <= wear <= TWF_WINDOW[1]
     bundle.put("TWF.in_window", "yes" if in_window else "no", unit="")
@@ -218,7 +218,7 @@ def _orphan(bundle: EvidenceBundle, row: dict[str, Any]) -> None:
         "data_quality",
         "This cycle is labelled a failure but no documented mode fires, and all "
         "margins sit in the normal range. It is one of 9 such rows in the published "
-        "dataset. The cause cannot be determined from the available parameters — "
+        "dataset. The cause cannot be determined from the available parameters - "
         "this is a limitation of the data, not an inconclusive analysis.",
         severity=Severity.WARNING,
         affects=["cause.verdict"],
@@ -226,7 +226,7 @@ def _orphan(bundle: EvidenceBundle, row: dict[str, Any]) -> None:
 
 
 def _explain_absence(bundle: EvidenceBundle, row: dict[str, Any]) -> None:
-    """Answer "why did nothing fire?" — classifiers cannot explain a non-event.
+    """Answer "why did nothing fire?" - classifiers cannot explain a non-event.
 
     Distance is computed per RULE, not per condition. HDF is conjunctive, so a
     row can sit far below 1380 rpm and still be nowhere near an HDF failure if
@@ -265,7 +265,7 @@ def _explain_absence(bundle: EvidenceBundle, row: dict[str, Any]) -> None:
 
 
 # --------------------------------------------------------------------------
-# Cohort — the "what causes failures here?" path
+# Cohort - the "what causes failures here?" path
 # --------------------------------------------------------------------------
 
 
@@ -321,7 +321,7 @@ def _cohort(
     # The unexplained remainder is not one thing. TWF has no crisp boundary, so
     # the honest object is an interval with a coverage guarantee. RNF has no
     # predicate over any measured parameter, so it is not merely hard to predict
-    # — it is impossible, and offering a number would be fabricating one.
+    # - it is impossible, and offering a number would be fabricating one.
     #
     # Reporting a single "explained" figure invited the reader to treat the
     # remainder as a shortfall to be closed. It is not. It is the process

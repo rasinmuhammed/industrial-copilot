@@ -9,7 +9,7 @@ Two properties matter beyond cost:
 
   * **Follow-ups resolve structurally.** "What about the H variants?" mutates one
     filter on the previous plan rather than re-planning, which is both faster and
-    more correct — the analysis stays identical, so the comparison is valid.
+    more correct - the analysis stays identical, so the comparison is valid.
   * **State is visible and correctable.** A bad resolution in turn 3 must not
     propagate silently, so every answer restates its resolved scope.
 """
@@ -96,7 +96,7 @@ class SessionState(BaseModel):
         does not.
 
         A focus that lingers past the answer it belonged to makes the scope line
-        lie — the previous turn's cycle number would be reported as the scope of
+        lie - the previous turn's cycle number would be reported as the scope of
         a fleet-wide rate.
         """
         self.focus = None

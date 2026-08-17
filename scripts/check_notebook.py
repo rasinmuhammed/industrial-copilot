@@ -2,7 +2,7 @@
 """Dry-run the Kaggle notebook without a GPU.
 
 "Runs in one go" is a requirement, not a hope. This executes every code cell on
-the CPU path — environment, DSL, corpus generation, validation — and verifies
+the CPU path - environment, DSL, corpus generation, validation - and verifies
 that every generated target survives a DSL -> plan -> DSL round trip. Training,
 evaluation and export are gated behind HAS_GPU and are skipped here.
 
@@ -65,7 +65,7 @@ def main() -> int:
         )
     # Word boundaries matter here: a naive substring match flags "describe the
     # THE-rmal gradient", which is correct English. The guard was wrong, not the
-    # corpus — and a false positive in a build gate is worse than no gate,
+    # corpus - and a false positive in a build gate is worse than no gate,
     # because the next author learns to ignore it.
     doubled = re.compile(r"\b(the|a|an|of|to)\s+\1\b", re.IGNORECASE)
     if any(doubled.search(r["question"]) for r in rows):
@@ -76,7 +76,7 @@ def main() -> int:
         for p in problems:
             print(f"    · {p}")
         return 1
-    print("\n  PASSED — the notebook runs top to bottom on the CPU path.")
+    print("\n  PASSED - the notebook runs top to bottom on the CPU path.")
     return 0
 
 

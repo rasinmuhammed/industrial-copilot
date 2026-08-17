@@ -1,4 +1,4 @@
-"""`compare` — contrast two cohorts across metrics.
+"""`compare` - contrast two cohorts across metrics.
 
 Answers the brief's third example question directly: "compare the operating
 conditions of machines that failed versus those that did not."
@@ -6,7 +6,7 @@ conditions of machines that failed versus those that did not."
 Carries the confounding detector. In this dataset r(rpm, torque) = -0.875, so
 *every* analysis attributing an effect to rotational speed is confounded by
 torque. An op that reports a difference without saying so is producing a
-technically-true, practically-misleading answer — which is worse than a wrong
+technically-true, practically-misleading answer - which is worse than a wrong
 one because it survives review.
 """
 
@@ -110,7 +110,7 @@ def compare(plan: AnalysisPlan, ctx: ExecutionContext) -> EvidenceBundle:
         bundle.put(f"{a.name}.{metric}.sd", sd_a, unit=unit, n=n_a)
         bundle.put(f"{b.name}.{metric}.sd", sd_b, unit=unit, n=n_b)
 
-        # The difference is a DELTA quantity — declaring it as such prevents it
+        # The difference is a DELTA quantity - declaring it as such prevents it
         # being compared against an absolute threshold downstream.
         bundle.put(f"delta.{metric}", mean_a - mean_b, unit=delta_unit, quality=quality)
 

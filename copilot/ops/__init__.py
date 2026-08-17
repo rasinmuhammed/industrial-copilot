@@ -1,7 +1,7 @@
 """Operator registry.
 
 Importing this package registers every implemented operator. The registry is
-closed at import time — a planner cannot introduce an operation at runtime.
+closed at import time - a planner cannot introduce an operation at runtime.
 """
 
 from copilot.ops import compare as _compare  # noqa: F401

@@ -1,4 +1,4 @@
-"""Argus — margin-based industrial maintenance copilot.
+"""Argus - margin-based industrial maintenance copilot.
 
 An explicit package rather than an implicit namespace one. That is not a style
 preference: the Dockerfile installs dependencies in their own layer by copying
@@ -9,7 +9,7 @@ at the layer with:
     failed to compute cache key: "/copilot/__init__.py": not found
 
 The package imported fine locally the whole time, because setuptools resolves
-namespace packages happily — so nothing in the test suite or the dev server
+namespace packages happily - so nothing in the test suite or the dev server
 could see it. Only the container build could, and only at deploy time.
 """
 

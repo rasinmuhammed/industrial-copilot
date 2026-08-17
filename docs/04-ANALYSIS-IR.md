@@ -1,4 +1,4 @@
-# 04 — Analysis IR and the Operator Registry
+# 04 - Analysis IR and the Operator Registry
 
 > The model emits a **validated data structure**, never SQL and never prose
 > containing numbers. This document is the contract.
@@ -10,7 +10,7 @@
 | Property | Text-to-SQL | Analysis IR |
 |---|---|---|
 | Hallucinated column | Runtime error, or silently wrong join | **Rejected at validation** |
-| Failure mode | Wrong answer, looks right | "No plan matched" — *detectable* |
+| Failure mode | Wrong answer, looks right | "No plan matched" - *detectable* |
 | Backend portability | Re-tune prompts per dialect | Recompile the same object |
 | Cacheable across tenants | No (filters embedded in text) | Yes (plan ≠ filter) |
 | Auditable | Diff SQL strings | Diff structured plans |
@@ -18,7 +18,7 @@
 
 The decisive point is the *failure mode*. Text-to-SQL fails by producing
 plausible wrong answers. A closed registry fails by producing **no answer**,
-which is recoverable — escalate, ask a clarifying question, or use the guarded
+which is recoverable - escalate, ask a clarifying question, or use the guarded
 escape hatch.
 
 ---
@@ -41,7 +41,7 @@ class Binning(BaseModel):
     bins: int | list[float] = 5
 
 class AnalysisPlan(BaseModel):
-    op: OpName                       # closed enum — see §3
+    op: OpName                       # closed enum - see §3
     cohorts: list[Cohort] = []
     filters: list[Filter] = []       # applied to all cohorts
     metrics: list[str] = []          # must ∈ semantic_layer.metrics
@@ -60,17 +60,17 @@ class AnalysisPlan(BaseModel):
 
 ### 2.1 Validation pipeline
 
-Order matters — cheapest rejection first.
+Order matters - cheapest rejection first.
 
-1. **Structural** — Pydantic types and enums.
-2. **Vocabulary** — every `field`/`metric`/`dimension` exists in the semantic
+1. **Structural** - Pydantic types and enums.
+2. **Vocabulary** - every `field`/`metric`/`dimension` exists in the semantic
    layer. *This is the hallucination barrier.*
-3. **Dimensional** — comparisons and arithmetic are unit-coherent. `torque_nm < 8.6`
+3. **Dimensional** - comparisons and arithmetic are unit-coherent. `torque_nm < 8.6`
    with a `K` literal is rejected. Prevents the °C-vs-K class of bug.
-4. **Cardinality** — `group_by` on a high-cardinality field without a limit is rejected.
-5. **Statistical viability** — an op requiring cohort comparison with an empty
+4. **Cardinality** - `group_by` on a high-cardinality field without a limit is rejected.
+5. **Statistical viability** - an op requiring cohort comparison with an empty
    cohort is rejected before execution.
-6. **Op-specific** — `params` validated against the op's own schema.
+6. **Op-specific** - `params` validated against the op's own schema.
 
 On failure: **one** repair attempt with the validation error fed back. If it
 fails again, the system refuses and explains what it could not resolve. It never
@@ -117,9 +117,9 @@ Twelve operators. Closed set. Each is independently unit-tested against
 | `forecast` | "When do we cross?" | E[cycles], inverse-Gaussian interval, mode at risk |
 | `records` | "Show me those rows." | capped raw rows, drill-down evidence |
 | `data_quality` | "Can I trust this?" | orphan failures, RNF roll-up, KB drift, invariant status |
-| `sql_explore` | anything unanticipated | **guarded escape hatch** — see §5 |
+| `sql_explore` | anything unanticipated | **guarded escape hatch** - see §5 |
 
-### 3.1 `root_cause` — the flagship
+### 3.1 `root_cause` - the flagship
 
 Input: a row, a cohort, or a hypothetical operating point.
 
@@ -127,8 +127,8 @@ Output per deterministic mode:
 
 ```
 mode        fired   margin              crossing point
-HDF         no      +2.4 K, +171 rpm    —
-PWF         no      +2740 W below ceil  —
+HDF         no      +2.4 K, +171 rpm    -
+PWF         no      +2740 W below ceil  -
 OSF         YES     −1433 min·N·m       crossed at wear = 189 min
 TWF         window  wear 214 ∈ [200,240]  P(fail) ≈ 5.4 % per cycle
 ```
@@ -136,13 +136,13 @@ TWF         window  wear 214 ∈ [200,240]  P(fail) ≈ 5.4 % per cycle
 Contract:
 - Reports **every** firing mode, never one (23 rows fire ≥2 modes).
 - Reports the **crossing point** where the trajectory is known.
-- TWF returns a **probability**, never a certainty — it is stochastic.
+- TWF returns a **probability**, never a certainty - it is stochastic.
 - RNF is **never** attributed; it is by definition unpredictable.
 - Orphan failures return `cause_undetermined` with the margin evidence. This is a
   *verified correct* answer (see [01-DATASET.md](01-DATASET.md) §4.1), not a
   fallback.
 
-### 3.2 `envelope` — prescription by inversion
+### 3.2 `envelope` - prescription by inversion
 
 Because constraints are analytic, solve for the control variable rather than
 searching:
@@ -159,9 +159,9 @@ Find:   minimal Δ restoring all margins ≥ 0
 
 Also returns the **feasible region** in the rpm × torque plane, which is what the
 Envelope Explorer renders. This is a computed region, not a classifier decision
-surface — no other approach can draw it correctly.
+surface - no other approach can draw it correctly.
 
-### 3.3 `compare` and `drivers` — automatic confounder detection
+### 3.3 `compare` and `drivers` - automatic confounder detection
 
 `r(rpm, torque) = −0.8750` in this dataset. Therefore **every** rpm analysis is
 confounded by torque. Both ops:
@@ -181,15 +181,15 @@ Almost no copilot does this, and this dataset punishes its absence.
 
 ### 3.4 Premise verification (Gate 1)
 
-When a question embeds a comparative claim — *"why are we seeing **more** failures
-at high rpm?"* — the planner sets `verify_premise: true`. The engine tests the
+When a question embeds a comparative claim - *"why are we seeing **more** failures
+at high rpm?"* - the planner sets `verify_premise: true`. The engine tests the
 claim **before** answering:
 
 ```
 premise:  failure rate increases with rotational speed
 test:     rate by rpm quintile
 result:   12.17 % → 1.60 % → 0.60 % → 0.45 % → 2.24 %
-verdict:  REFUTED — U-shaped; 5.4× higher at LOW speed
+verdict:  REFUTED - U-shaped; 5.4× higher at LOW speed
 ```
 
 The narrator must lead with the refutation, then explain the true mechanism. A
@@ -213,7 +213,7 @@ Non-negotiable, enforced in code:
 
 ---
 
-## 5. `sql_explore` — the guarded escape hatch
+## 5. `sql_explore` - the guarded escape hatch
 
 A closed registry has a coverage ceiling. Rather than pretend otherwise:
 
@@ -223,7 +223,7 @@ A closed registry has a coverage ceiling. Rather than pretend otherwise:
 - Read-only view; no DDL, no writes, no attach.
 - Row budget (10k) and wall-clock budget (2 s), enforced.
 - Output passes through the **same** PCN verifier.
-- Answer is **labelled** `exploratory — not a certified analysis`.
+- Answer is **labelled** `exploratory - not a certified analysis`.
 - Query is logged with the question for registry-gap review.
 
 This closes the expressiveness gap without weakening the hot path, and the log
@@ -246,4 +246,4 @@ This is where text-to-SQL copilots die in production.
 
 ---
 
-**Next:** [05-GROUNDING.md](05-GROUNDING.md) — how a number reaches the engineer.
+**Next:** [05-GROUNDING.md](05-GROUNDING.md) - how a number reaches the engineer.

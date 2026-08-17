@@ -1,4 +1,4 @@
-# 06 — Reliability: Messy Sensors, Drift, and Stale Knowledge
+# 06 - Reliability: Messy Sensors, Drift, and Stale Knowledge
 
 > **80 % of industrial AI projects never leave pilot**, and the documented cause
 > is *not* algorithm performance. This document is where the project spends its
@@ -27,7 +27,7 @@ mechanism:
 | **Drift** | 4 | invariant monitor + KB calibration | SENSOR vs PROCESS |
 | **Noise** | 5 | interval from sensor spec | widened margin |
 | **Constant value** | 6 | staleness detector | quarantine |
-| **Uncertainty** | 7 | native — it *is* the interval | propagated |
+| **Uncertainty** | 7 | native - it *is* the interval | propagated |
 | **Stuck-at-zero** | 8 | range + staleness | quarantine |
 
 The literature flags the nastiest property: *"drift is difficult because the
@@ -42,7 +42,7 @@ The most consequential design decision in this document.
 
 Alerting must not be binary. Since **outliers are the most frequent error type**,
 a binary alerting system converts the most common data fault directly into false
-alarms — and alarm fatigue is the documented reason operators stop trusting these
+alarms - and alarm fatigue is the documented reason operators stop trusting these
 systems.
 
 ### 2.1 Interval-valued margins
@@ -55,9 +55,9 @@ Scenario: wear = 210 min, L variant (limit 11,000 min·N·m)
 
 torque reading      margin interval        decision
 ───────────────────────────────────────────────────────────────────
-45 N·m (trusted)    [ 1550,  1550 ]        SAFE     — wholly positive
-45 ± 8  (suspect)   [ −130,  3230 ]        ABSTAIN  — straddles zero
-45 ± 25 (degraded)  [−3700,  6800 ]        ABSTAIN  — straddles zero
+45 N·m (trusted)    [ 1550,  1550 ]        SAFE     - wholly positive
+45 ± 8  (suspect)   [ −130,  3230 ]        ABSTAIN  - straddles zero
+45 ± 25 (degraded)  [−3700,  6800 ]        ABSTAIN  - straddles zero
 ```
 
 **Rule:** alert only when the *entire* interval is negative; declare safe only
@@ -72,7 +72,7 @@ Interval width sources, in priority order:
 1. Declared sensor accuracy from instrument metadata
 2. Observed short-window dispersion (Hampel/MAD estimator)
 3. Imputation bounds when a value is missing (last known ± physical rate limit)
-4. A wide default when provenance is unknown — which correctly yields ABSTAIN
+4. A wide default when provenance is unknown - which correctly yields ABSTAIN
 
 ### 2.2 Two-track evaluation
 
@@ -88,7 +88,7 @@ instantaneous track still shows it, tagged.
 
 ---
 
-## 3. Gate 2 — is the instrument honest?
+## 3. Gate 2 - is the instrument honest?
 
 ### 3.1 Physics invariants
 
@@ -113,7 +113,7 @@ shift means **operations**. Tested by injection:
 > by `sd/√n`, the standard error for *independent* samples; ΔT has a lag-1
 > autocorrelation of 0.997, so its effective sample size is 10 of 2,000 and the
 > naive statistic overstated the evidence roughly fourteenfold. The verdicts
-> never changed — what identifies a sensor fault is the contrast between
+> never changed - what identifies a sensor fault is the contrast between
 > channels, not the absolute magnitude.
 
 | Scenario | HDF alerts | z(ΔT) | z(rpm) | Verdict |
@@ -125,14 +125,14 @@ shift means **operations**. Tested by injection:
 Read the second row carefully.
 
 > A **0.4 K thermocouple drift makes heat-dissipation alerts drop by 54 %.**
-> A conventional copilot reports *"HDF failures down 54 % — good month."* The
+> A conventional copilot reports *"HDF failures down 54 % - good month."* The
 > sensor is broken and the plant is now blind to exactly the failure mode it
 > believes it solved.
 >
 > **A safety incident dressed as a KPI improvement.**
 
 Same symptom, opposite cause, cleanly separated. No classifier can make this
-distinction — it has no notion of what *must* be true.
+distinction - it has no notion of what *must* be true.
 
 ### 3.3 Additional instrument checks
 
@@ -146,18 +146,18 @@ distinction — it has no notion of what *must* be true.
 
 ---
 
-## 4. Gate 3 — is the rule still valid?
+## 4. Gate 3 - is the rule still valid?
 
 The dangerous drift is not the sensor. It is the **rule silently becoming wrong**
-— a tool supplier changes and the real overstrain limit is now 10,200, not
+- a tool supplier changes and the real overstrain limit is now 10,200, not
 11,000. The system is confidently, invisibly wrong.
 
 ### 4.1 The KB calibration monitor
 
 Two counters, computed from quantities we already have:
 
-- **Surprise failures** — a failure occurred at `margin > 0` → threshold too *loose*
-- **False alarms** — `margin < 0` with no failure → threshold too *tight*
+- **Surprise failures** - a failure occurred at `margin > 0` → threshold too *loose*
+- **False alarms** - `margin < 0` with no failure → threshold too *tight*
 
 Measured sensitivity by perturbing the OSF threshold:
 
@@ -176,11 +176,11 @@ Three properties:
 
 1. **Zero only at the true threshold.**
 2. **Monotone** in the magnitude of the error.
-3. **Directional** — which counter fires tells you *which way to move*.
+3. **Directional** - which counter fires tells you *which way to move*.
 
 It requires **no model and no retraining**: only margins we already compute and
 failures the CMMS eventually reports. It therefore works with **delayed labels**,
-which is essential — real work orders arrive days after the event.
+which is essential - real work orders arrive days after the event.
 
 We could not find this construct in any product or paper.
 
@@ -207,7 +207,7 @@ systems. It is what makes a threshold change safe.
 
 | Failure | Defense |
 |---|---|
-| Silent regression on provider model upgrade | Plans are **data** — diff plans across versions structurally, not prose. Eval suite is a CI gate. |
+| Silent regression on provider model upgrade | Plans are **data** - diff plans across versions structurally, not prose. Eval suite is a CI gate. |
 | Sycophancy / accepting a false premise | Gate 1 premise verification |
 | Overconfidence on thin data | Wilson CI mandatory; refuse point estimates when CI half-width > 50 % |
 | Stale cache serving wrong answers | Answer cache keyed on `data_version` + `kb_version`; plan cache is data-independent and safe |
@@ -219,17 +219,17 @@ systems. It is what makes a threshold change safe.
 
 ## 6. Operational reliability
 
-- **Alarm rationalisation** — debounce, persistence counts (N consecutive), and
+- **Alarm rationalisation** - debounce, persistence counts (N consecutive), and
   ISA-18.2 prioritisation. A margin crossing at fleet scale will bury an operator
   otherwise.
-- **Alert self-audit** — for every alert, later record whether the crossing
+- **Alert self-audit** - for every alert, later record whether the crossing
   actually occurred and whether anyone acted. Yields closed-loop precision/recall
   on our *own alerting*, which is the input to tuning the gate. Almost nobody
   instruments this.
-- **Explaining non-events** — *"why did nothing fire?"* is answerable:
+- **Explaining non-events** - *"why did nothing fire?"* is answerable:
   *"all five margins stayed positive; closest approach was power at +412 W at
   14:32."* Classifiers cannot explain an absence.
-- **Cold start** — a new asset class with no failure history gets hierarchical
+- **Cold start** - a new asset class with no failure history gets hierarchical
   priors from sibling assets, with wide intervals that correctly produce more
   ABSTAIN until evidence accumulates.
 
@@ -248,4 +248,4 @@ systems. It is what makes a threshold change safe.
 
 ---
 
-**Next:** [07-CONTEXT.md](07-CONTEXT.md) — routing, session state, and latency.
+**Next:** [07-CONTEXT.md](07-CONTEXT.md) - routing, session state, and latency.

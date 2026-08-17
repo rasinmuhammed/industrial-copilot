@@ -13,7 +13,7 @@ version: 1
 
 # Process-level constants. Previously these lived as literals in physics.py
 # *as well as* here, which meant two sources of truth for the same number and
-# no mechanism to notice them diverging — the exact failure mode this system
+# no mechanism to notice them diverging - the exact failure mode this system
 # exists to prevent, sitting in its most load-bearing file.
 #
 # This file is now authoritative. physics.py reads it. A different process is a

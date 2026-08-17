@@ -183,11 +183,11 @@ def main() -> int:
     # -- summary ------------------------------------------------------------
     print("\n" + "=" * 74)
     if failures:
-        print(f"FAILED — {len(failures)} claim(s) did not reproduce:")
+        print(f"FAILED - {len(failures)} claim(s) did not reproduce:")
         for f in failures:
             print(f"  · {f}")
         return 1
-    print("PASSED — every documented figure reproduces exactly.")
+    print("PASSED - every documented figure reproduces exactly.")
     return 0
 
 

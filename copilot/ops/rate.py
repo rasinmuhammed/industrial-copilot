@@ -1,11 +1,11 @@
-"""`rate` — failure rates and counts, optionally grouped or binned.
+"""`rate` - failure rates and counts, optionally grouped or binned.
 
 Answers acceptance criterion 2, "analyse historical data". This is also the op
 that carries premise verification: a question like "why are we seeing MORE
 failures at high rpm?" is answered by testing the claim first.
 
 Every rate carries a Wilson interval. Groups below the reporting floor are
-emitted as counts with intervals rather than as a percentage — 4.2% from 12
+emitted as counts with intervals rather than as a percentage - 4.2% from 12
 observations is a lie of precision.
 """
 
@@ -132,8 +132,8 @@ def _dimension_groups(plan: AnalysisPlan, ctx: ExecutionContext, where: str, par
 
     # A real cap on open-valued dimensions.
     #
-    # Validation skips dimensions with no declared value set — machine_id today,
-    # any asset tag in a real fleet — on the grounds that "the executor caps
+    # Validation skips dimensions with no declared value set - machine_id today,
+    # any asset tag in a real fleet - on the grounds that "the executor caps
     # it". The executor did not. Grouping by a 10,000-machine site would emit
     # four slots per machine into an evidence bundle held entirely in memory,
     # and every one of them would be rendered.
@@ -178,7 +178,7 @@ def _binned_groups(plan: AnalysisPlan, ctx: ExecutionContext, where: str, params
             step = (float(hi) - float(lo)) / k
             edges = [float(lo) + i * step for i in range(k + 1)]
 
-    # Deduplicate while preserving order — quantiles collide on skewed columns.
+    # Deduplicate while preserving order - quantiles collide on skewed columns.
     edges = sorted(set(edges))
     if len(edges) < 2:
         # The cohort has collapsed the axis to one value; fall back to an
@@ -202,8 +202,8 @@ def _binned_groups(plan: AnalysisPlan, ctx: ExecutionContext, where: str, params
 
     # A real cap on open-valued dimensions.
     #
-    # Validation skips dimensions with no declared value set — machine_id today,
-    # any asset tag in a real fleet — on the grounds that "the executor caps
+    # Validation skips dimensions with no declared value set - machine_id today,
+    # any asset tag in a real fleet - on the grounds that "the executor caps
     # it". The executor did not. Grouping by a 10,000-machine site would emit
     # four slots per machine into an evidence bundle held entirely in memory,
     # and every one of them would be rendered.
@@ -235,7 +235,7 @@ def _falsify_the_ranking(bundle: EvidenceBundle, groups, axis_label: str) -> Non
     """Test our own ranking before publishing it.
 
     The premise gates test claims the USER brings. This tests the claim the
-    system would otherwise volunteer just by printing groups in order — that the
+    system would otherwise volunteer just by printing groups in order - that the
     differences between them mean something.
 
     Ranking N groups and naming a worst guarantees an extreme even when every
@@ -246,7 +246,7 @@ def _falsify_the_ranking(bundle: EvidenceBundle, groups, axis_label: str) -> Non
     round-robin and therefore cannot have a real effect, show a 3.58 point
     spread that a reader would act on. The product variants, which have a real
     documented effect, show a SMALLER spread of 1.82 points. The bigger number
-    is the fake one — which is exactly why this cannot be left to judgement.
+    is the fake one - which is exactly why this cannot be left to judgement.
     """
     counts = tuple((f, n) for _, f, n in groups)
     if len(counts) < 3 or sum(n for _, n in counts) == 0:
@@ -273,7 +273,7 @@ def _falsify_the_ranking(bundle: EvidenceBundle, groups, axis_label: str) -> Non
 def _verify_categorical_premise(bundle: EvidenceBundle, plan: AnalysisPlan, groups) -> None:
     """Gate 1, categorical form. Test a claim that a NAMED group fails more.
 
-    "Why do high quality variants fail more often?" is false on this data — H
+    "Why do high quality variants fail more often?" is false on this data - H
     fails at 2.09% against L at 3.92%. Before this existed the question routed
     to `describe` and was answered with air-temperature statistics while the
     premise went unchallenged, which is the worst available outcome: a confident
@@ -308,7 +308,7 @@ def _verify_categorical_premise(bundle: EvidenceBundle, plan: AnalysisPlan, grou
     if subject_rate > 0:
         bundle.put("premise.ratio", highest_rate / subject_rate, unit="ratio", sig_figs=2)
     # No digits here. Critical warnings are prepended into the NARRATED region,
-    # which the numeric verifier scans — so the figures belong in slots and the
+    # which the numeric verifier scans - so the figures belong in slots and the
     # warning stays qualitative. The verifier caught this on its own author.
     bundle.warn(
         "premise_refuted",
@@ -325,8 +325,8 @@ def _verify_monotone_premise(
 ) -> None:
     """Gate 1. Test whether the rate actually rises across the axis.
 
-    The brief's own example question — "why are we seeing more failures at high
-    rotational speeds?" — is false on this data: the relationship is U-shaped and
+    The brief's own example question - "why are we seeing more failures at high
+    rotational speeds?" - is false on this data: the relationship is U-shaped and
     failures are 5.4x more common at LOW speed. A copilot that answers the
     question as asked confabulates a supporting story.
     """
@@ -359,7 +359,7 @@ def _verify_monotone_premise(
     bundle.warn(
         "premise_refuted",
         # Written for the engineer reading it, not for the narrator. An earlier
-        # version ended "— lead with that before explaining mechanism", which is
+        # version ended "- lead with that before explaining mechanism", which is
         # an instruction to the writer that leaked into the answer and appeared
         # on screen as though it were advice to the reader.
         f"Failure rate across {axis_label} is {shape}, not monotonic: the "

@@ -83,7 +83,7 @@ td.ok{color:var(--live)} td.no{color:var(--crit)} td.warnc{color:var(--warn)}
     <div class="gate-h">
       <span class="gate-n">GATE 2</span>
       <h2>Is the instrument telling the truth?</h2>
-      <p>A drifting sensor and a genuinely changing process produce the <b>same symptom</b> —
+      <p>A drifting sensor and a genuinely changing process produce the <b>same symptom</b> -
          the alert count moves. They demand opposite responses. The discriminator is physics
          that must hold at any operating point: the process does not control ambient
          temperature, so a thermal shift with steady mechanics can only be the instrument.</p>
@@ -92,7 +92,7 @@ td.ok{color:var(--live)} td.no{color:var(--crit)} td.warnc{color:var(--warn)}
       <div class="scenarios" id="drift-scen"></div>
       <div class="split">
         <div>
-          <div class="verdict" id="d-verdict"><span class="lamp"></span><span class="txt">—</span></div>
+          <div class="verdict" id="d-verdict"><span class="lamp"></span><span class="txt">-</span></div>
           <table class="t"><tbody id="d-z"></tbody></table>
         </div>
         <div>
@@ -111,7 +111,7 @@ td.ok{color:var(--live)} td.no{color:var(--crit)} td.warnc{color:var(--warn)}
     <div class="gate-h">
       <span class="gate-n">GATE 3</span>
       <h2>Is the rule still valid?</h2>
-      <p>The dangerous drift is not the sensor — it is the <b>rule</b> silently becoming wrong.
+      <p>The dangerous drift is not the sensor - it is the <b>rule</b> silently becoming wrong.
          A tool supplier changes and the real overstrain limit moves; every margin is then
          verifiably computed, and wrong. Two counters catch it with no model and no
          retraining: a failure at positive margin means the threshold is too loose, an alert
@@ -126,7 +126,7 @@ td.ok{color:var(--live)} td.no{color:var(--crit)} td.warnc{color:var(--warn)}
       </div>
       <div class="split">
         <div>
-          <div class="verdict" id="k-verdict"><span class="lamp"></span><span class="txt">—</span></div>
+          <div class="verdict" id="k-verdict"><span class="lamp"></span><span class="txt">-</span></div>
           <div class="expl" id="k-advice" style="margin:0"></div>
         </div>
         <div>
@@ -152,7 +152,7 @@ td.ok{color:var(--live)} td.no{color:var(--crit)} td.warnc{color:var(--warn)}
       <h2>The rules are recoverable from data alone</h2>
       <p>The fair criticism of a physics-first system is that the dataset handed us its
          thresholds. It did not have to. Bracketing between the largest non-failing value and
-         the smallest failing one estimates a deterministic boundary from outcomes — and the
+         the smallest failing one estimates a deterministic boundary from outcomes - and the
          <b>width of that bracket is the honest uncertainty</b>. L lands within 0.01% on 87
          supporting failures; H within 3.4% on two. That is precisely why a knowledge-base
          entry must carry an interval and never a point.</p>
@@ -349,7 +349,7 @@ async function loadCMMS() {
     <tr><td>${esc(w.mode)}</td>
         <td class="n">${esc(w.variant)}</td>
         <td class="n ${w.weight_delta > 0 ? 'ok' : w.weight_delta < 0 ? 'warnc' : ''}">${w.weight_delta > 0 ? '+' : ''}${w.weight_delta.toFixed(4)}</td>
-        <td class="n">${w.precision !== null ? (w.precision * 100).toFixed(1) + '%' : '—'}</td>
+        <td class="n">${w.precision !== null ? (w.precision * 100).toFixed(1) + '%' : '-'}</td>
     </tr>
   `).join("") || '<tr><td colspan="4" style="text-align:center;color:var(--text-3)">No KB adjustments yet</td></tr>';
 }

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Fleet · Argus</title>
-<meta name="description" content="Fleet control room — every machine ranked on one axis of risk.">
+<meta name="description" content="Fleet control room - every machine ranked on one axis of risk.">
 <link rel="stylesheet" href="/static/app.css">
 <style>
 body { grid-template-rows: 48px 1fr auto; overflow: hidden; }
@@ -283,8 +283,8 @@ main {
   .detail-rail { border-left: 0; border-top: 1px solid var(--line); max-height: 35vh; }
 }
 
-/* Every screen in this product answers a question. Reliability already did —
-   "Is the instrument telling the truth?" — and the copilot now opens the same
+/* Every screen in this product answers a question. Reliability already did -
+   "Is the instrument telling the truth?" - and the copilot now opens the same
    way. Fleet and Envelope had no heading at all, so a reader arrived at a wall
    of controls with no statement of what the screen is FOR. */
 .screen-ask {
@@ -338,26 +338,26 @@ main {
   <div class="fleet-floor">
     <div class="fleet-header">
       <div class="fleet-stat">
-        <span class="fleet-stat-n crit" id="c-alert">—</span>
+        <span class="fleet-stat-n crit" id="c-alert">-</span>
         <span class="fleet-stat-label">Boundary violation</span>
       </div>
       <div class="fleet-stat">
-        <span class="fleet-stat-n warn" id="c-watch">—</span>
+        <span class="fleet-stat-n warn" id="c-watch">-</span>
         <span class="fleet-stat-label">Within 5 %</span>
       </div>
       <div class="fleet-stat">
-        <span class="fleet-stat-n" id="c-normal">—</span>
+        <span class="fleet-stat-n" id="c-normal">-</span>
         <span class="fleet-stat-label">Normal</span>
       </div>
 
       <div class="fleet-header-spacer"></div>
 
       <div class="fleet-stat" style="align-items:flex-end">
-        <span class="fleet-stat-n" id="c-worst" style="font-size:18px">—</span>
+        <span class="fleet-stat-n" id="c-worst" style="font-size:18px">-</span>
         <span class="fleet-stat-label">Closest approach</span>
       </div>
       <div class="playback-info">
-        Cycle <b id="playhead-lbl">—</b>
+        Cycle <b id="playhead-lbl">-</b>
       </div>
     </div>
 
@@ -372,7 +372,7 @@ main {
 </main>
 
 <div class="scrubber">
-  <span class="scrubber-label">Cycle <b id="scrub-lbl">—</b></span>
+  <span class="scrubber-label">Cycle <b id="scrub-lbl">-</b></span>
   <input type="range" id="scrubber" min="30" max="10000" step="1" value="10000">
   <button class="btn" id="play-btn" aria-pressed="false">Play</button>
   <button class="btn" id="jump-btn">Jump to first alert</button>
@@ -409,7 +409,7 @@ function paint() {
   $('c-alert').textContent  = counts.alert;
   $('c-watch').textContent  = counts.watch;
   $('c-normal').textContent = counts.normal;
-  $('c-worst').textContent  = worst ? pct(worst.worst_margin) : '—';
+  $('c-worst').textContent  = worst ? pct(worst.worst_margin) : '-';
   $('playhead-lbl').textContent = playhead.toLocaleString();
   $('scrub-lbl').textContent    = playhead.toLocaleString();
   $('scrubber').max = max_udi;
@@ -503,8 +503,8 @@ function renderDetail() {
     <div class="detail-section">
       <div class="detail-section-title">Degradation forecast</div>
       <dl>
-        <div class="kv"><dt>Expected RUL</dt><dd class="num">${m.rul.expected_cycles !== null ? m.rul.expected_cycles + ' cycles' : '—'}</dd></div>
-        <div class="kv"><dt>90% interval</dt><dd class="num">${m.rul.ci_lo !== null ? `[${m.rul.ci_lo}, ${m.rul.ci_hi}]` : '—'}</dd></div>
+        <div class="kv"><dt>Expected RUL</dt><dd class="num">${m.rul.expected_cycles !== null ? m.rul.expected_cycles + ' cycles' : '-'}</dd></div>
+        <div class="kv"><dt>90% interval</dt><dd class="num">${m.rul.ci_lo !== null ? `[${m.rul.ci_lo}, ${m.rul.ci_hi}]` : '-'}</dd></div>
       </dl>
     </div>` : ''}
 

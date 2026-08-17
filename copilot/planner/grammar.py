@@ -2,7 +2,7 @@
 
 Covers the question vocabulary a plant actually uses, in about a millisecond,
 with no model and no credentials. Everything it handles is a question that never
-reaches an LLM — which is where most of the latency budget is won.
+reaches an LLM - which is where most of the latency budget is won.
 
 It is deliberately *conservative*: it emits a confidence score and escalates
 rather than guessing. A wrong plan produced quickly is worse than a slow correct
@@ -77,8 +77,8 @@ _INTENT_PATTERNS: list[tuple[OpName, float, re.Pattern[str]]] = [
         r"\b(failure rate|how often|how (many|much) fail\w*|rate of failure"
         r"|percentage .* fail\w*|proportion .* fail\w*|breakdown (of|by)"
         r"|by (variant|type)|more failures|group(ed)? by"
-        # A causal claim about a continuous metric — "is torque causing so many
-        # failures?" — is a premise, and premise verification is the flagship
+        # A causal claim about a continuous metric - "is torque causing so many
+        # failures?" - is a premise, and premise verification is the flagship
         # capability. It was silently unreachable from the natural phrasing:
         # the binned rate this routes to already runs the monotone test.
         r"|(causing|driving|responsible for|to blame for|behind) [^.?]{0,30}fail\w*"
@@ -105,8 +105,8 @@ _DRILL_DOWN = re.compile(
 _VARIANT = re.compile(r"\b([LMH])\b(?:\s*(?:variant|type|quality|grade))?")
 _VARIANT_WORD = re.compile(r"\b(low|medium|high)[- ]?(?:quality|grade|variant|type)\b", re.I)
 _UDI = re.compile(r"\b(?:udi|cycle|row|record)\s*#?\s*(\d{1,5})\b", re.IGNORECASE)
-# A machine id is self-identifying — `L-03` is not a phrase that occurs by
-# accident — so the noun in front of it is optional.
+# A machine id is self-identifying - `L-03` is not a phrase that occurs by
+# accident - so the noun in front of it is optional.
 #
 # Requiring it was a silent-substitution bug of the worst kind. "How often does
 # L-03 fail?" did not match, the machine filter was never added, and the answer
@@ -132,7 +132,7 @@ _CHANGE = re.compile(
 
 _VARIANT_WORDS = {"low": "L", "medium": "M", "high": "H"}
 
-# A comparative claim about a NAMED group — "why do H variants fail more" — is a
+# A comparative claim about a NAMED group - "why do H variants fail more" - is a
 # premise, and it can be false. Gate 1 previously only tested monotone premises
 # over a binned axis, so a false categorical claim sailed through and the system
 # answered a different question entirely.
@@ -276,7 +276,7 @@ def _extract_dimensions(text: str) -> list[str]:
 
 
 # Ops that compute statistics OVER a population. Filtering them to failures
-# only would answer "what is the failure rate among failures?" — always 100%.
+# only would answer "what is the failure rate among failures?" - always 100%.
 _POPULATION_OPS = frozenset(
     {OpName.RATE, OpName.TREND, OpName.DRIVERS, OpName.COMPARE, OpName.DATA_QUALITY}
 )
@@ -296,7 +296,7 @@ def _extract_filters(text: str, state: SessionState | None, op: OpName) -> list[
     # The machine id is consumed from the text before variants are read. The
     # letter in `L-03` is a word-boundary match for the bare-variant pattern, so
     # without this "failure rate for L-03 variants" would scope to BOTH machine
-    # L-03 and every L-variant machine in the plant — an intersection nobody
+    # L-03 and every L-variant machine in the plant - an intersection nobody
     # asked for, and one that silently changes the denominator.
     remaining = text
     if (m := _MACHINE.search(text)) is not None:
@@ -352,7 +352,7 @@ def _build(
         binning = _binning_for(text, metrics)
         group_by = [d for d in dimensions if d not in {"udi", "failure_mode"}]
         if binning is None and not group_by and grain is None:
-            # "what's the failure rate?" — a bare overall rate is a valid plan.
+            # "what's the failure rate?" - a bare overall rate is a valid plan.
             return AnalysisPlan(op=op, filters=filters)
         return AnalysisPlan(
             op=op,
@@ -458,7 +458,7 @@ def _extract_operating_point(text: str) -> dict[str, float | str]:
 def _try_followup(text: str, state: SessionState) -> GrammarMatch | None:
     """Mutate the previous plan instead of re-planning.
 
-    "What about the H variants?" should change one filter and nothing else — that
+    "What about the H variants?" should change one filter and nothing else - that
     keeps the comparison valid and usually keeps the question off the LLM tier.
     Handles bare forms too: "And M?", "M variants?", "For L?".
     """
@@ -477,7 +477,7 @@ def _try_followup(text: str, state: SessionState) -> GrammarMatch | None:
             "drill-down into the previous result",
         )
 
-    # Extract variant from the text first — works for both long and bare forms.
+    # Extract variant from the text first - works for both long and bare forms.
     variant = None
     if (m := _VARIANT_WORD.search(text)) is not None:
         variant = _VARIANT_WORDS[m.group(1).lower()]

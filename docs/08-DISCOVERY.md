@@ -1,4 +1,4 @@
-# 08 — Knowledge Discovery: Learning the Boundary, Not the Label
+# 08 - Knowledge Discovery: Learning the Boundary, Not the Label
 
 > **The fair criticism:** our exactness is an artifact of UCI documenting its own
 > rules. Real bearings do not come with a threshold spec sheet.
@@ -10,7 +10,7 @@
 
 ## 1. Reframe: learn the boundary, not the label
 
-Conventional PdM learns `P(failure | x)` — a quantity that does not compose under
+Conventional PdM learns `P(failure | x)` - a quantity that does not compose under
 aggregation, does not invert to a setpoint, and cannot be audited by an engineer.
 
 We learn the **boundary itself**: the functional form `f(x)` and the threshold
@@ -51,7 +51,7 @@ never a point estimate.
 
 ---
 
-## 3. Why it works — and it is not the model
+## 3. Why it works - and it is not the model
 
 Look at the two F1 columns. Same algorithm, same data. Raw sensors: **0.39–0.48,
 useless.** Dimensionally-constructed quantities: **0.89–1.00.**
@@ -66,7 +66,7 @@ wear [min]   × torque [N·m]              =  strain [min·N·m] ← forced by u
 
 You do not *search* for these. You *derive* them. Dimensional analysis collapses
 the hypothesis space from "all functions of five variables" to "the handful of
-dimensionally coherent combinations" — which is what makes physics discovery
+dimensionally coherent combinations" - which is what makes physics discovery
 tractable rather than a symbolic-regression fishing expedition.
 
 **And units are free in a real plant**: OPC-UA tag metadata, instrument ranges,
@@ -108,7 +108,7 @@ sensor tags + units (OPC-UA metadata)
 ## 4. Split discovery from evaluation
 
 ```
-OFFLINE — slow, uncertain, heavy       ONLINE — fast, exact, auditable
+OFFLINE - slow, uncertain, heavy       ONLINE - fast, exact, auditable
   dimensional construction               margin evaluation
   boundary estimation + CI               0.22 µs, arithmetic
   hierarchical pooling across fleet      composable, verifiable
@@ -128,7 +128,7 @@ judgment is genuinely required.
 ## 5. Uncertain thresholds change nothing structurally
 
 When θ is estimated rather than given, θ carries a CI, so the **margin becomes an
-interval** — which is *already* the representation ([06-RELIABILITY.md](06-RELIABILITY.md) §2.1).
+interval** - which is *already* the representation ([06-RELIABILITY.md](06-RELIABILITY.md) §2.1).
 
 | Component | Change required |
 |---|---|
@@ -146,7 +146,7 @@ strongest property of the design.
 
 ## 6. This inverts the data-disadvantage argument
 
-The objection: *incumbent vendors have orders of magnitude more data.* True — but
+The objection: *incumbent vendors have orders of magnitude more data.* True - but
 it assumes data must become **model weights**, which decay, need retraining, and
 cannot be inspected.
 
@@ -158,7 +158,7 @@ global prior  →  asset class  →  site  →  individual asset
 ```
 
 A threshold learned across 200 machines of one class becomes a hierarchical prior
-for machine 201, then updates on local data. That is data efficiency by pooling —
+for machine 201, then updates on local data. That is data efficiency by pooling -
 and it is precisely the "cross-line learning" capability, with real statistical
 machinery underneath rather than a slogan.
 
@@ -174,8 +174,8 @@ machinery underneath rather than a slogan.
   failure history yields nothing, and hierarchical priors help only once a
   sibling exists.
 - **The F1 figures above are in-sample.** Legitimate for *bracketing a
-  deterministic boundary* — the interval [max-negative, min-positive] is a valid
-  estimate — but productisation requires cross-validated brackets and proper
+  deterministic boundary* - the interval [max-negative, min-positive] is a valid
+  estimate - but productisation requires cross-validated brackets and proper
   confidence intervals, not point estimates. This is specified, not yet built.
 - **Not every mode has a closed form.** Spectral signatures will not reduce to
   `f(x) > θ`. Those need learned health indicators; the margin abstraction then
@@ -186,7 +186,7 @@ machinery underneath rather than a slogan.
 
 ---
 
-**Next:** [09-STREAMING.md](09-STREAMING.md) — real-time inference and forecasting.
+**Next:** [09-STREAMING.md](09-STREAMING.md) - real-time inference and forecasting.
 
 ---
 
@@ -197,7 +197,7 @@ machinery underneath rather than a slogan.
 
 Weight-level online learning in a plant is a compliance problem, not an
 engineering one: catastrophic forgetting, no stable production eval signal, no
-clean rollback, and an unanswerable audit question — *"why did the system change
+clean rollback, and an unanswerable audit question - *"why did the system change
 its answer?"* *"the weights drifted."* We do not do it.
 
 But the system **is** continually learning. Just in artifacts you can inspect,
@@ -213,12 +213,12 @@ Every answered question emits a triple:
 (question, plan, did_it_verify?)
 ```
 
-That label is **free and objective** — the plan either validated, executed and
+That label is **free and objective** - the plan either validated, executed and
 passed the PCN verifier, or it did not. No human annotation, no preference
 model. This is Reinforcement Learning from Verifiable Rewards, and semantic
 parsing is close to the ideal task for it.
 
-### 8.2 Fast loop — instant, zero training  ✅ BUILT
+### 8.2 Fast loop - instant, zero training  ✅ BUILT
 
 A **verified-exemplar store** (`copilot/planner/exemplars.py`). Embed the
 question, kNN against exemplars whose plans previously verified, rebind the
@@ -249,18 +249,18 @@ rather than measurement, rejected most genuine paraphrases.
 **What is stored is the plan's SHAPE, never the plan.** Filters name rows; the
 shape names the analysis. Building this surfaced the same confusion as a live
 bug in the plan cache: its key normalised "cycle 9016" to "cycle <n>", so every
-such question shared one entry — but the cached *value* retained the concrete
+such question shared one entry - but the cached *value* retained the concrete
 filter, and "why did cycle 2750 fail" returned cycle 4045's answer. Both now
 store shapes and rebind entities from the question being asked.
 
-### 8.3 Slow loop — nightly, this is where Unsloth belongs
+### 8.3 Slow loop - nightly, this is where Unsloth belongs
 
 Distil the accumulated exemplars into a LoRA. That shrinks the retrieved-example
 prompt, which cuts both latency and cost. Promotion is **gated on the golden
 set**: a new adapter ships only if it beats the incumbent. If it regresses, roll
 back to the exemplar store, which never stopped working.
 
-The frontier model acts as **teacher** — it handles the genuinely novel tail, and
+The frontier model acts as **teacher** - it handles the genuinely novel tail, and
 its verified plans become tomorrow's exemplars. The expensive path therefore
 shrinks over time by construction.
 
@@ -272,7 +272,7 @@ shrinks over time by construction.
 | 1 | grammar matcher | ~1 ms | never (hand-written) |
 | 2 | **kNN over verified exemplars** | ~5–10 ms | **instantly, no training** |
 | 3 | SLM + constrained decoding | ~150–400 ms | nightly LoRA (Unsloth) |
-| 4 | frontier API (teacher) | ~400–600 ms | — |
+| 4 | frontier API (teacher) | ~400–600 ms | - |
 
 ### 8.5 Three conditions on the fine-tuning work
 
@@ -281,5 +281,5 @@ shrinks over time by construction.
 2. **Eval-gated promotion.** An adapter that does not beat the golden set does
    not ship.
 3. **Tier 2 before Tier 3.** The exemplar store delivers most of the adaptive
-   benefit for a fraction of the effort — and it generates the LoRA's training
+   benefit for a fraction of the effort - and it generates the LoRA's training
    data, which de-risks the whole track.

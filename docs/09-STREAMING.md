@@ -1,4 +1,4 @@
-# 09 — Real-Time Streaming Inference and Forecasting
+# 09 - Real-Time Streaming Inference and Forecasting
 
 > *"By the time you find the anomaly, the batch is already compromised."*
 >
@@ -15,18 +15,18 @@
 | `evaluate()` returning a margin object | **1.09 µs → 918 k/sec/core** |
 | Full stream scorer (robust track + alerting) | **~14 µs** → ~72 k/sec/core |
 | Requirement, 2,000-machine site @ 1 Hz | 2,000 events/sec |
-| **Headroom on one core — raw arithmetic** | **2,310×** |
-| **Headroom on one core — full scorer** | **~36×** |
+| **Headroom on one core - raw arithmetic** | **2,310×** |
+| **Headroom on one core - full scorer** | **~36×** |
 
 This is not the result of optimisation. **There is no model to run at inference
 time.** Intelligence lives in the knowledge base, built offline; online is
 arithmetic.
 
-> Conventional systems put intelligence in **weights evaluated online** — latency
+> Conventional systems put intelligence in **weights evaluated online** - latency
 > scales with intelligence, every site needs the artifact versioned and
 > drift-monitored.
 >
-> We put intelligence in **rules discovered offline** — inference cost is
+> We put intelligence in **rules discovered offline** - inference cost is
 > constant, edge deployment is trivial, and there is no artifact to drift.
 
 This directly answers the third documented cause of industrial-AI pilot failure
@@ -71,7 +71,7 @@ inference latency structurally irrelevant.
              ┌───────┐
              │ GATE  │  confidence × delta-within-safe-band
              └───┬─┬─┘
-        operator │ │ [PLC writeback — roadmap]
+        operator │ │ [PLC writeback - roadmap]
                  ▼ ▼
               SSE / UI
 ```
@@ -96,7 +96,7 @@ degradation trajectory, so forecasts can be validated against *observed* events.
 
 Strain = wear × torque. Wear accrues with known drift; torque is N(40, 10).
 Strain is therefore a **Wiener process with drift**, and time-to-threshold is a
-first-passage problem with a closed-form **inverse-Gaussian** solution — the
+first-passage problem with a closed-form **inverse-Gaussian** solution - the
 standard PHM degradation-to-RUL formulation.
 
 ```
@@ -165,7 +165,7 @@ ALERT   M-03   OSF                          confidence: high
 ### 4.2 Flood control
 
 Debounce, persistence counts, per-asset rate limits, and ISA-18.2 prioritisation.
-Suppressed alerts are still recorded — suppression is auditable.
+Suppressed alerts are still recorded - suppression is auditable.
 
 ### 4.3 Self-audit
 
@@ -189,7 +189,7 @@ is the input to tuning the gate, and almost nobody instruments it.
 
 The Envelope Explorer draws a **computed region**, not a classifier decision
 surface. No approach based on a learned failure probability can draw it correctly
-— which is why it is a proof of the thesis rather than decoration.
+- which is why it is a proof of the thesis rather than decoration.
 
 ---
 
@@ -205,4 +205,4 @@ surface. No approach based on a learned failure probability can draw it correctl
 
 ---
 
-**Next:** [10-EVALS.md](10-EVALS.md) — how all of this is measured.
+**Next:** [10-EVALS.md](10-EVALS.md) - how all of this is measured.

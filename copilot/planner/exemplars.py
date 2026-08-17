@@ -1,11 +1,11 @@
-"""Tier 2 — a store of plans that were verified to work.
+"""Tier 2 - a store of plans that were verified to work.
 
 Every answered question emits a triple:
 
     (question, plan, did_it_verify?)
 
 That label is **free and objective**. The plan either validated, executed and
-passed the numeric verifier, or it did not — no human annotation, no preference
+passed the numeric verifier, or it did not - no human annotation, no preference
 model, no judge. It is the reward signal a planner actually needs, and it costs
 nothing to collect.
 
@@ -63,7 +63,7 @@ __all__ = [
 # leaving a wide separation gap. 0.55 sits ~4.3x above the highest unrelated
 # score while capturing the clear paraphrases; weak ones fall through and are
 # escalated, which is the right asymmetry. Reusing a wrong shape cannot produce
-# a wrong NUMBER — validation and the verifier still run — but it would answer
+# a wrong NUMBER - validation and the verifier still run - but it would answer
 # the wrong question, and an escalation only costs latency.
 REUSE_THRESHOLD = 0.55
 # Above this the questions differ only in entities, so the exemplar's metric
@@ -94,7 +94,7 @@ def polarity(text: str) -> bool:
 #
 # `cohorts` belongs here, not with the entities: "failed versus healthy" IS the
 # comparison being made. Omitting it produced a shape that could never validate,
-# because `compare` requires two cohorts — so every compare exemplar was stored
+# because `compare` requires two cohorts - so every compare exemplar was stored
 # and then silently discarded on retrieval.
 _SHAPE_FIELDS = ("op", "cohorts", "metrics", "dimensions", "group_by", "bin",
                  "time_grain", "effect_size", "limit", "confidence", "verify_premise")
@@ -125,7 +125,7 @@ class HashingEmbedder:
         run. A benchmark figure that is not reproducible is not a figure.
       * a PERSISTED store would have been quietly corrupt. Vectors written by
         one process would not match vectors computed by the next, so every
-        saved exemplar becomes unreachable after a restart — with no error,
+        saved exemplar becomes unreachable after a restart - with no error,
         just a system that mysteriously stops learning.
 
     crc32 is deterministic, C-speed, and adequate for a hashing trick where
@@ -190,7 +190,7 @@ def rebind(
     """Rebuild a plan from a shape, taking entities from the CURRENT question.
 
     A shape describes the analysis; filters name the rows. Reusing a stored plan
-    verbatim answers the old question with the new question's wording — which is
+    verbatim answers the old question with the new question's wording - which is
     exactly the failure that made "why did cycle 2750 fail" return cycle 4045.
     """
     from copilot.ir import OpName
@@ -203,7 +203,7 @@ def rebind(
 
     payload = dict(shape)
 
-    # Entities come from the question being asked NOW — params exactly as much
+    # Entities come from the question being asked NOW - params exactly as much
     # as filters. `plan_shape` stores only the configuration half, so anything
     # naming a wear, a torque, a variant or a claim is re-derived here. A key
     # the current question does not mention is simply absent, and the op falls
@@ -224,7 +224,7 @@ def rebind(
     try:
         filters = _extract_filters(lowered, state, OpName(payload["op"]))
         # A premise claim needs the cross-group comparison, so a filter on the
-        # claimed field would defeat the very test being run — you cannot ask
+        # claimed field would defeat the very test being run - you cannot ask
         # "is H the worst" while looking only at H. Scoped breakdowns like
         # "failure rate for L variants" legitimately group AND filter, so this
         # is narrowed to the premise case rather than banned outright. Without
@@ -250,7 +250,7 @@ def rebind(
 #: question's operating point.
 #:
 #: That is what happened. Every phrasing of the envelope question returned the
-#: torque window for whichever wear was asked about FIRST in the process — a
+#: torque window for whichever wear was asked about FIRST in the process - a
 #: verified, exact, correctly-computed safe operating range for a machine in a
 #: different condition than the one the engineer described. It is the
 #: prescriptive capability, which is the part of this product an operator would
@@ -333,7 +333,7 @@ class ExemplarStore:
     def record(self, question: str, plan: AnalysisPlan, *, tier: str = "grammar") -> bool:
         """Store a plan shape that verified. Returns True if newly added.
 
-        Only ever called for answers that passed the numeric verifier — an
+        Only ever called for answers that passed the numeric verifier - an
         unverified plan is not evidence of anything.
         """
         norm = normalise(question)
@@ -390,7 +390,7 @@ class ExemplarStore:
 
         The exemplar supplies the analysis; the current question supplies the
         entities. A plan that fails validation is discarded rather than repaired
-        — the router simply escalates, which is the correct behaviour for a tier
+        - the router simply escalates, which is the correct behaviour for a tier
         whose whole promise is that it is cheap.
         """
         self.lookups += 1
@@ -450,7 +450,7 @@ class ExemplarStore:
     def export_training_pairs(self) -> list[dict[str, Any]]:
         """Supervised pairs for Phase 9b.
 
-        The exemplar store is not only a fast tier — it is the corpus a planner
+        The exemplar store is not only a fast tier - it is the corpus a planner
         LoRA would be distilled from, already filtered to plans that verified.
         """
         return [

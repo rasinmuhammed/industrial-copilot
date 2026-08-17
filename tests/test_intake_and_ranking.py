@@ -2,7 +2,7 @@
 
 Two classes of failure that a CSV can never surface:
 
-  * what arrives is not what was measured — duplicates, reordering, gaps,
+  * what arrives is not what was measured - duplicates, reordering, gaps,
     clocks that disagree
   * a ranked list of assets that is pure chance, printed as though it were a
     finding, because ranking N groups always produces an extreme
@@ -85,7 +85,7 @@ class TestOrdering:
 
 class TestClocks:
     def test_an_event_from_the_future_is_refused(self, intake):
-        """A future timestamp poisons any watermark that trusts it — every
+        """A future timestamp poisons any watermark that trusts it - every
         honest message after it then looks late."""
         t = _steady(intake)
         env = intake.offer({"machine_id": "M1", "ts": t + 9999, "seq": 3}, now=t)

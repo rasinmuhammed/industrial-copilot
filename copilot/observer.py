@@ -7,7 +7,7 @@ WHY THIS EXISTS
 ---------------
 `stream.score()` used to open with six `float()` calls on a raw dict. Downstream
 sat signed margins, interval arithmetic, three-state verdicts and a fail-closed
-renderer — rigorous arithmetic performed on unexamined inputs. That inverts the
+renderer - rigorous arithmetic performed on unexamined inputs. That inverts the
 value of the rigour: the more careful the downstream, the more confidently the
 system asserts a conclusion drawn from a dead sensor.
 
@@ -22,7 +22,7 @@ WHAT IT DOES
 Per channel, per machine, every tick:
 
   1. A scalar Kalman filter (local level model) predicts the next value and
-     produces an *innovation* — the surprise. Under a healthy sensor the
+     produces an *innovation* - the surprise. Under a healthy sensor the
      normalised innovation is N(0, 1). This is observer-based FDI, the same
      construction used for GNSS/INS integrity monitoring.
   2. A chi-square test on realised variance detects a *stuck* channel. Stuck
@@ -46,7 +46,7 @@ Every constant is derived from a declared error budget:
 
   * the stuck threshold is a chi-square quantile at a stated false-positive rate
   * the CUSUM threshold is inverted from a target average run length via
-    Siegmund's approximation — you specify "one false alarm per N cycles" and
+    Siegmund's approximation - you specify "one false alarm per N cycles" and
     the threshold follows
   * the innovation gate is a normal quantile
   * the thermal parity sigma is measured from data (1.001 K), not assumed
@@ -56,7 +56,7 @@ physics or from the error budget, never from the author's taste.
 
 WHAT IT BUYS
 ------------
-The residuals separate *instrument* faults from *process* faults — the
+The residuals separate *instrument* faults from *process* faults - the
 distinction that decides whether an operator ever trusts the system again.
 Conflating the two is the origin of alarm fatigue. Splitting them lets the
 copilot say "machine 7's torque channel is dead, dispatch to the sensor, and I
@@ -117,14 +117,14 @@ AVAILABILITY_FAILED = 0.80
 WARMUP = 60                  # samples to identify the noise model
 TOOL_CHANGE_RESET_MIN = 1.0  # wear at or below this after a drop = tool change
 # P(k consecutive healthy readings all beyond the gate) = INNOVATION_ALPHA**k.
-# At alpha = 1e-3, three in a row is 1e-9 — not chance.
+# At alpha = 1e-3, three in a row is 1e-9 - not chance.
 GATED_RUN_LIMIT = 3
 CALIBRATION = 40             # further samples to measure innovation energy
 
 # The channels this observer tracks. Note what is NOT here: any noise constant.
 #
 # An earlier version declared a process and measurement sigma per channel,
-# with a comment claiming they were measured. They were not — they were
+# with a comment claiming they were measured. They were not - they were
 # invented, and the temperature figures were about six times too large, which
 # made healthy innovations tiny and flagged 94% of good cycles as frozen
 # sensors. A constant described as derived but actually chosen is the exact
@@ -135,7 +135,7 @@ CALIBRATION = 40             # further samples to measure innovation energy
 # Channels do carry a *kind*, because not every signal is the same sort of
 # object and applying one validity test to all of them is a category error.
 # A LEVEL is a physical quantity observed through noise: it should always be
-# moving, so stillness is a fault. A COUNTER is a monotone accumulator —
+# moving, so stillness is a fault. A COUNTER is a monotone accumulator -
 # tool wear, run hours, a flow totaliser: it may legitimately sit unchanged for
 # hours while a machine is idle, so the stuck test is meaningless on it and its
 # validity comes from kinematics instead (it must never run backwards).
@@ -292,7 +292,7 @@ class ParityResidual:
 # knows. A local level filter ADAPTS to a bias step, because for a genuine
 # process a level change is exactly what it should track. So "the sensor shifted
 # by 25 N.m" and "the process shifted by 25 N.m" produce identical innovations
-# and are formally indistinguishable from that channel alone — a standard
+# and are formally indistinguishable from that channel alone - a standard
 # identifiability result in FDI, not an implementation shortcoming.
 #
 # Only redundancy breaks the tie. A channel that participates in a parity
@@ -334,7 +334,7 @@ class TrustReport:
 
         These are different states and conflating them is a design error. A
         fault means stop and dispatch. Calibration means proceed, but with the
-        wide bounds that reflect not yet knowing the instrument — which the
+        wide bounds that reflect not yet knowing the instrument - which the
         interval machinery already knows how to turn into ABSTAIN where it
         matters and SAFE where the margin is comfortable regardless.
 
@@ -387,7 +387,7 @@ class TrustReport:
 class _Channel:
     """Scalar local-level Kalman filter plus its fault statistics.
 
-    The local level model — random walk state, additive measurement noise — is
+    The local level model - random walk state, additive measurement noise - is
     the standard estimator for "a slowly varying true value observed through a
     noisy instrument". It is chosen over a full multivariate filter deliberately:
     the cross-channel information here is algebraic (the parity relations), and
@@ -404,7 +404,7 @@ class _Channel:
     as the noise identification. Normalising innovations by their *theoretical*
     variance leaves any model error in the statistic. Normalising by the energy
     the channel actually produces makes the chi-square exact whether or not the
-    local level model was the right one — which matters, because for real
+    local level model was the right one - which matters, because for real
     signals it often is not.
     """
 
@@ -450,7 +450,7 @@ class _Channel:
 
         so both variances follow from two sample moments. This is the standard
         structural-time-series identification, and it means no channel needs a
-        hand-set noise figure — which is the point, because the ones that were
+        hand-set noise figure - which is the point, because the ones that were
         hand-set here were wrong by a factor of six.
 
         Validated on this dataset: it recovers torque's documented sd of
@@ -475,8 +475,8 @@ class _Channel:
             # more noise and therefore yields wider intervals.
             r, q = g0 / 2.0, 0.0
 
-        # q = 0 is a legitimate boundary solution — white noise about a constant
-        # level is exactly what this dataset's torque and speed are — but a
+        # q = 0 is a legitimate boundary solution - white noise about a constant
+        # level is exactly what this dataset's torque and speed are - but a
         # filter with literally zero process noise stops adapting forever. Floor
         # it so the estimate can still track a genuine slow shift.
         self.r = max(r, 1e-12)
@@ -709,7 +709,7 @@ class MachineObserver:
 
     REGIME AWARENESS. A machine that changes recipe changes every channel at
     once. Without knowing that, the observer sees a simultaneous step on all of
-    them and reports a fleet of sensor faults for a planned event — the fastest
+    them and reports a fleet of sensor faults for a planned event - the fastest
     way to lose a control room.
 
     The tracker (copilot/regime.py) supplies the mode. On a changeover the
@@ -747,7 +747,7 @@ class MachineObserver:
             why = (
                 f"Operating mode changed from {regime.changed_from} to "
                 f"{regime.label}. Every channel moves at once because the "
-                f"setpoints moved — this is a changeover, not a fault. "
+                f"setpoints moved - this is a changeover, not a fault. "
                 f"Baselines are re-establishing for the new mode."
             )
         elif regime is not None and not regime.usable:
@@ -839,7 +839,7 @@ class MachineObserver:
         # An observer that has not finished calibrating does not get to say it
         # trusts anything. This was a real bug: _classify escalated only on
         # FAILURE, so during cold start every channel sat at FUNCTION_CHECK and
-        # the report still came back trusted — an uncalibrated instrument layer
+        # the report still came back trusted - an uncalibrated instrument layer
         # vouching for its own inputs.
         warming: list[ChannelHealth] = []
         dead: list[ChannelHealth] = []
@@ -864,7 +864,7 @@ class MachineObserver:
             names = ", ".join(c.name for c in dead)
             return FaultKind.INSTRUMENT, (
                 f"{names} unusable ({dead[0].reason}). This is an instrument "
-                f"fault, not a process fault — dispatch to the sensor."
+                f"fault, not a process fault - dispatch to the sensor."
             )
 
         broken = [p for p in parity if p.violated]
@@ -889,7 +889,7 @@ class MachineObserver:
 
         This is where the instrument layer meets the arithmetic layer. A stale
         or suspect channel has a large posterior sd, which widens the margin
-        interval, which makes it straddle zero, which yields ABSTAIN — with no
+        interval, which makes it straddle zero, which yields ABSTAIN - with no
         special-casing anywhere. Doubt propagates as covariance.
         """
         def half(name: str) -> float:
@@ -905,11 +905,11 @@ class MachineObserver:
                 # Still learning. We have readings, we just do not yet know the
                 # instrument's accuracy, so bound by the dispersion actually
                 # observed. An earlier version used a fixed wide default here,
-                # which made 84% of a replay abstain — a system that abstains on
+                # which made 84% of a replay abstain - a system that abstains on
                 # everything is as useless as one that never does.
                 # From running moments. Recomputing this from the whole
                 # learning window each tick was quadratic across the warmup and
-                # cost the stream about 3% of its throughput — 268,570 calls to
+                # cost the stream about 3% of its throughput - 268,570 calls to
                 # one generator over a 3,000-cycle replay, for a number that
                 # changes by one sample at a time.
                 n = len(chan.learning)
@@ -936,15 +936,15 @@ class MachineObserver:
         )
 
 
-# Declared instrument accuracy, in native units — the half-width of the sensor's
+# Declared instrument accuracy, in native units - the half-width of the sensor's
 # own error, NOT the variability of the process it observes.
 #
 # This distinction cost a rewrite. The identification returns a torque
 # observation sd of ~10 N.m, and feeding that into the margin made 73% of a
 # replay abstain. But 10 N.m is how much the *process* genuinely varies cycle to
 # cycle; the transducer measuring it is accurate to a fraction of that. From a
-# single channel the two are not separable — the same identifiability wall that
-# makes bias undetectable — so the split has to come from outside the signal.
+# single channel the two are not separable - the same identifiability wall that
+# makes bias undetectable - so the split has to come from outside the signal.
 #
 # It comes from tag metadata, which is what a real historian carries and what
 # the Uncertainty docstring has always named as its first source. These are

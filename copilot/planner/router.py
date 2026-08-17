@@ -2,7 +2,7 @@
 
 Most plant questions come from a small vocabulary, so most of them should never
 reach a model. The router tries the cheapest path first and only escalates when
-the cheaper one declines — and declining is explicit, via a confidence score,
+the cheaper one declines - and declining is explicit, via a confidence score,
 rather than a silent guess.
 
     tier 0  plan cache        ~0 ms   repeat question shapes, shared across tenants
@@ -12,7 +12,7 @@ rather than a silent guess.
 
 Tier 2 is where the system gets better with use. Every verified answer deposits
 its plan shape, so a question the model had to solve once is answered from the
-cheap tier forever after — and the store doubles as the training corpus for a
+cheap tier forever after - and the store doubles as the training corpus for a
 distilled planner.
 
 With no provider configured the router still answers everything tiers 0 and 1
@@ -68,7 +68,7 @@ class Router:
     def learn(self, question: str, plan: AnalysisPlan, tier: str) -> bool:
         """Deposit a plan shape that verified. Called only on success.
 
-        Cache hits and exemplar reuses teach nothing new, so they are skipped —
+        Cache hits and exemplar reuses teach nothing new, so they are skipped -
         the store should grow with novelty, not with traffic.
         """
         if tier in {"cache", "exemplar"}:
@@ -142,8 +142,8 @@ def _refusal(reason: str) -> str:
         "I could not confidently interpret that question, and no planning model is "
         f"configured ({reason}). I can answer questions about operating conditions, "
         "failure rates, root causes, trends, drivers, safe operating windows, "
-        "time-to-crossing forecasts, and data quality. Naming a metric — torque, "
-        "rotational speed, tool wear, temperature differential, power — or a cycle "
+        "time-to-crossing forecasts, and data quality. Naming a metric - torque, "
+        "rotational speed, tool wear, temperature differential, power - or a cycle "
         "number usually resolves it. Set COPILOT_PROVIDER to enable model-backed "
         "planning for open-ended questions."
     )

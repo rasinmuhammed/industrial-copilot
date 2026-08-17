@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Export verified (question, plan) pairs for SLM fine-tuning.
 
-Output format: OpenAI JSONL — one JSON object per line, each a full
+Output format: OpenAI JSONL - one JSON object per line, each a full
 chat-format conversation.  Compatible with Unsloth, Axolotl, LLaMA-Factory,
 and Hugging Face TRL SFTTrainer.
 
@@ -12,7 +12,7 @@ Every row in the output:
   - Has its plan serialised with Pydantic model_dump_json
 
 Unverified plans are DISCARDED.  The fine-tuning signal is only from
-questions whose full pipeline succeeded — planning, execution, and
+questions whose full pipeline succeeded - planning, execution, and
 verification.  A plan that produced an unverified answer teaches the SLM
 nothing useful and may teach it something wrong.
 
@@ -67,7 +67,7 @@ GOLDEN  = Path(__file__).resolve().parent.parent / "evals" / "golden.yaml"
 OUT_DEFAULT = Path(__file__).resolve().parent.parent / "data" / "sft_train.jsonl"
 
 # ---------------------------------------------------------------------------
-# Extra phrasings — surface-form diversity beyond the golden set.
+# Extra phrasings - surface-form diversity beyond the golden set.
 # These are still executed for real; nothing is assumed or fabricated.
 # ---------------------------------------------------------------------------
 EXTRA_QUESTIONS = [
@@ -123,7 +123,7 @@ AUGMENTATIONS = [
     "Can you tell me {q}",
     "I need to understand {q}",
     "Please help with: {q}",
-    "{q} — can you look into this?",
+    "{q} - can you look into this?",
     "Quick question: {q}",
 ]
 
@@ -181,7 +181,7 @@ def main() -> None:
             if a2.verified and a2.plan is not None and not a2.refused:
                 rows.append(_to_sft_row(variant, a2.plan.model_dump_json(exclude_none=True), sys_p))
 
-    print(f"Generated {len(rows)} SFT rows  ({skipped} skipped — unverified or refused)",
+    print(f"Generated {len(rows)} SFT rows  ({skipped} skipped - unverified or refused)",
           file=sys.stderr)
 
     out_lines = [json.dumps(r, ensure_ascii=False) for r in rows]

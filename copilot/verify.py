@@ -96,7 +96,7 @@ def verify(
 ) -> VerificationResult:
     """Resolve slot references and reject any unsourced numeral.
 
-    `question` is used only to whitelist numbers the user themselves supplied —
+    `question` is used only to whitelist numbers the user themselves supplied -
     echoing "you asked about 1380 rpm" is not a claim about the data.
     """
     if not draft or not draft.strip():
@@ -156,7 +156,7 @@ def verify(
 #
 # The template narrator never does this, but the model narrator is exactly the
 # component the gate exists to contain, and language models spell numbers out
-# routinely — "about three quarters", "roughly forty". Found by adversarial
+# routinely - "about three quarters", "roughly forty". Found by adversarial
 # probing, not by review, because every test fed the verifier digits.
 _NUMBER_WORDS = frozenset({
     "zero", "one", "two", "three", "four", "five", "six", "seven", "eight",

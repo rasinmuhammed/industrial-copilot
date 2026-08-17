@@ -1,8 +1,8 @@
-"""`forecast` — when will this cross, not whether it crossed.
+"""`forecast` - when will this cross, not whether it crossed.
 
 Predicting *whether* a cycle failed is arithmetic; we already do it exactly.
 Predicting *when* a machine will cross a boundary is a genuine estimation
-problem, and it is the one the plant actually cares about — Operon's framing is
+problem, and it is the one the plant actually cares about - Operon's framing is
 that by the time you find the anomaly the batch is already compromised.
 
 Strain is wear x torque. Wear accrues at a documented per-variant rate (2/3/5
@@ -16,7 +16,7 @@ first-passage problem with a closed-form **inverse-Gaussian** solution:
     lambda      = margin^2 / (wear_rate x sigma_torque)^2
     sd[cycles]  = sqrt(E^3 / lambda)
 
-No training, no inference, no model artifact — a full predictive distribution
+No training, no inference, no model artifact - a full predictive distribution
 from arithmetic. This is the standard PHM formulation (Wiener degradation ->
 inverse-Gaussian remaining useful life), applied where it genuinely fits.
 
@@ -181,8 +181,8 @@ def _wear_hazard(con):
     """Fit the wear hazard once per connection and keep it.
 
     Fitting scans the wear column, which is far too much to repeat per question
-    and trivial to do once. Keyed on the connection so a different database —
-    another plant, or a test fixture — gets its own curve rather than the first
+    and trivial to do once. Keyed on the connection so a different database -
+    another plant, or a test fixture - gets its own curve rather than the first
     one that happened to be fitted.
     """
     if con is None:
@@ -214,7 +214,7 @@ def _twf_hazard(
     if wear >= start:
         remaining = (end - wear) / wear_rate
         # The hazard is NOT flat across the window. Measured, it climbs from
-        # 0.2% below 200 min to 14% above 230 — so a single in-window rate tells
+        # 0.2% below 200 min to 14% above 230 - so a single in-window rate tells
         # an operator at 235 minutes exactly what it tells one at 195, which is
         # the difference between a warning and a shrug.
         #
@@ -259,7 +259,7 @@ def _resolve(
 ) -> tuple[OperatingPoint | None, float]:
     """Operating point from explicit params, or from the filtered cohort mean.
 
-    Also returns the torque dispersion, which sets the width of the interval —
+    Also returns the torque dispersion, which sets the width of the interval -
     a forecast whose uncertainty came from nowhere is not a forecast.
     """
     params = plan.params or {}

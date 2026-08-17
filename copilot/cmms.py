@@ -1,11 +1,11 @@
 """CMMS (Computerised Maintenance Management System) integration.
 
-Architecture note
+Architecture Overview
 -----------------
 The ``WorkOrder`` schema here is intentionally identical to what SAP PM,
 IBM Maximo, or a bespoke CMMS sends via REST or OData. Connecting a real
 CMMS is replacing the ``_synthetic_source`` generator with an HTTP/Kafka
-adapter — the feedback learning loop (``feedback.py``) is unchanged.
+adapter - the feedback learning loop (``feedback.py``) is unchanged.
 
 The synthetic generator is labelled ``SYNTHETIC`` everywhere it appears.
 It drives from actual failure labels in the AI4I replay so the distribution
@@ -16,10 +16,10 @@ Storage
 Work orders live in their own SQLite database (``data/cmms.db``), NOT in the
 DuckDB warehouse. Two tables are created on first use:
 
-    cmms_work_orders   — one row per raised alert
-    cmms_kb_log        — one row per KB weight update driven by an outcome
+    cmms_work_orders   - one row per raised alert
+    cmms_kb_log        - one row per KB weight update driven by an outcome
 
-The engine choice is the whole point, so it is worth stating plainly. The
+The engine choice is the whole point, so it is important to note. The
 warehouse is an analytical archive: ten thousand rows scanned per question,
 rebuilt from the CSV by ``make build``, opened read-only, one writer ever.
 DuckDB is exactly right for that and exactly wrong for this. The ledger is
@@ -27,9 +27,9 @@ transactional: single-row appends, single-row updates, and it must survive the
 rebuild that regenerates the archive.
 
 It must also tolerate more than one process. DuckDB takes an exclusive file
-lock, so a second uvicorn worker — or a deploy whose new process starts before
+lock, so a second uvicorn worker - or a deploy whose new process starts before
 the old one exits, which is the normal case on a platform that restarts on
-push — dies at startup with "Conflicting lock is held". SQLite in WAL mode
+push - dies at startup with "Conflicting lock is held". SQLite in WAL mode
 gives concurrent readers alongside one writer, needs no server, and ships in
 the standard library. For a ledger that takes a handful of writes an hour, the
 correct database is the boring one.
@@ -150,7 +150,7 @@ class CMMSStore:
         # Work orders live in their OWN database, not the analytical warehouse.
         #
         # Two reasons, and the first is a bug this fixes: the warehouse is
-        # opened read-only — correctly, since every query path only reads it —
+        # opened read-only - correctly, since every query path only reads it -
         # so CREATE TABLE raised "Cannot execute statement of type CREATE on
         # database attached in read-only mode" and every CMMS endpoint returned
         # a 500.
@@ -237,7 +237,7 @@ class CMMSStore:
         # SUM() over zero rows returns NULL, not 0, so a fresh install with no
         # work orders raised "unsupported operand type(s) for +: NoneType and
         # NoneType" and every CMMS endpoint 500'd. Coalesce before arithmetic,
-        # not after — the old code guarded the RESULT and then did the addition
+        # not after - the old code guarded the RESULT and then did the addition
         # inside the guard.
         total, open_, conf, fa, wm, inc = (int(v or 0) for v in row)
         judged = conf + fa
@@ -277,7 +277,7 @@ class CMMSStore:
 
 
 # --------------------------------------------------------------------------
-# Synthetic generator (SYNTHETIC — labelled on every emitted order)
+# Synthetic generator (SYNTHETIC - labelled on every emitted order)
 # --------------------------------------------------------------------------
 
 
@@ -300,7 +300,7 @@ def generate_from_replay(
     rng = random.Random(42)
 
     # This read used to call an undefined `connect()` against a table named
-    # `ai4i` with columns named `hdf_failure`, none of which exist — the table
+    # `ai4i` with columns named `hdf_failure`, none of which exist - the table
     # is `observations` and the flags are `hdf`, `pwf`, `osf`, `twf`. So
     # /cmms/seed raised NameError on its first line and had never once run.
     # Nothing caught it because seeding is the one path no test exercised.
@@ -342,7 +342,7 @@ def generate_from_replay(
                     outcome  = AlertOutcome.CONFIRMED
                     conf_mode = mode
                 else:
-                    # Deterministic modes have 0 FP — but synthetic noise: 3%
+                    # Deterministic modes have 0 FP - but synthetic noise: 3%
                     if rng.random() < 0.03:
                         outcome   = AlertOutcome.FALSE_ALARM
                         conf_mode = None

@@ -1,4 +1,4 @@
-"""Trajectory RUL — Remaining Useful Life with calibrated confidence intervals.
+"""Trajectory RUL - Remaining Useful Life with calibrated confidence intervals.
 
 Model
 -----
@@ -21,7 +21,7 @@ distribution:
     σ[T]²  = E[T]³ / λ   (IG variance)
 
 This is the standard PHM formulation (Doksum 1992; Si et al. 2011).  No
-training, no inference artifact — a full predictive distribution from
+training, no inference artifact - a full predictive distribution from
 physics parameters measured from the fleet.
 
 Conformal intervals
@@ -138,7 +138,7 @@ def _conformal_correction() -> float:
     _CALIBRATED = True
     # This queried `wear_min` and `osf_failure` from a table called `ai4i`. The
     # columns are `tool_wear_min` and `osf`, and the table is `observations`, so
-    # it raised on its first statement — and the bare `except Exception` below
+    # it raised on its first statement - and the bare `except Exception` below
     # turned that into a correction of exactly 0.0.
     #
     # A correction of zero is indistinguishable from a correction that was
@@ -168,7 +168,7 @@ def _conformal_correction() -> float:
         margin_at_alert = threshold - float(wear) * float(torque)
         # Actual RUL at the observed crossing is 0 cycles, by definition of a
         # crossing. The residual is therefore how many cycles the model still
-        # expected at the moment the boundary was actually crossed — the
+        # expected at the moment the boundary was actually crossed - the
         # overshoot, in the units the interval is reported in.
         expected_at_crossing, _ = _ig_moments(
             abs(margin_at_alert) + 1.0, str(variant), float(torque)
@@ -197,7 +197,7 @@ def _machines() -> tuple[tuple[str, str], ...]:
 
     This was a hardcoded list of eight machines. The warehouse holds fifteen, so
     the roster and the data had drifted apart and the seven that were missing
-    returned 404 from /rul — "machine 'L-04' not found", about a machine sitting
+    returned 404 from /rul - "machine 'L-04' not found", about a machine sitting
     in the fleet rail with live margins beside it.
 
     A roster is a fact about the plant, and the plant's record of itself is the
@@ -222,7 +222,7 @@ def machine_rul(machine_id: str) -> dict[str, Any] | None:
 
     # The table is `observations`. This said `ai4i`, and the bare
     # `except Exception: return None` below swallowed the resulting
-    # CatalogException — so /rul returned {"machines": [], "total": 0} and an
+    # CatalogException - so /rul returned {"machines": [], "total": 0} and an
     # operator reading that screen would conclude NO MACHINE IS AT RISK.
     #
     # An empty result that means "the query is broken" and an empty result that

@@ -331,7 +331,7 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print(render(results, metrics))
         if failures:
-            print("\n  BUILD FAILED — hard gate violations:")
+            print("\n  BUILD FAILED - hard gate violations:")
             for failure in failures:
                 print(f"    · {failure}")
             print()

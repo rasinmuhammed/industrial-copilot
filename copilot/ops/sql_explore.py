@@ -1,7 +1,7 @@
-"""`sql_explore` — the guarded escape hatch.
+"""`sql_explore` - the guarded escape hatch.
 
 A closed operator registry has a coverage ceiling. Rather than pretend
-otherwise, this op exists for questions no structured operator fits — but it is
+otherwise, this op exists for questions no structured operator fits - but it is
 fenced so that using it cannot weaken the guarantees on the hot path:
 
   * the connection is already read-only, and destructive keywords were rejected

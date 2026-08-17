@@ -96,13 +96,13 @@ def main() -> int:
     raw, dim = feature_sets(d)
 
     print("=" * 78)
-    print("RULE DISCOVERY — documented thresholds hidden from the pipeline")
+    print("RULE DISCOVERY - documented thresholds hidden from the pipeline")
     print("=" * 78)
     print("\nStep 1: dimensional construction (from units alone, no labels)")
     for name in ("dT_K", "omega_rads", "power_W", "strain_minNm"):
         print(f"   + {name}")
 
-    print("\nStep 2: boundary estimation — raw sensors vs dimensional quantities\n")
+    print("\nStep 2: boundary estimation - raw sensors vs dimensional quantities\n")
     print(f"   {'mode':<6} {'F1 raw':>8} {'F1 dimensional':>16}   discovered boundaries")
     print("   " + "-" * 72)
 
@@ -121,7 +121,7 @@ def main() -> int:
     print("\nStep 3: scoring recovery against the documented values")
     print("   " + "-" * 72)
 
-    # PWF — power band
+    # PWF - power band
     pw = [v for n, v in discovered["PWF"] if n == "power_W"]
     if len(pw) >= 2:
         lo, hi = min(pw), max(pw)
@@ -130,7 +130,7 @@ def main() -> int:
         print(f"   PWF high : {hi:>10.2f} W      documented {DOCUMENTED['PWF']['high_w']:>6}      "
               f"error {err(hi, DOCUMENTED['PWF']['high_w']):.3f}%")
 
-    # HDF — temperature and speed
+    # HDF - temperature and speed
     for feat, doc_key, unit in (("dT_K", "temp_delta_k", "K"), ("omega_rads", "rpm", "rpm")):
         vals = [v for n, v in discovered["HDF"] if n == feat]
         if not vals:
@@ -143,9 +143,9 @@ def main() -> int:
         print(f"   {label}: {shown:>10.2f} {unit:<4}   documented {doc:>6}      "
               f"error {err(shown, doc):.3f}%{note}")
 
-    # OSF — per-variant bracketing (interval estimate, not a point)
+    # OSF - per-variant bracketing (interval estimate, not a point)
     strain = d["wear"] * d["torque"]
-    print("\n   OSF per variant — bracketed as [max negative, min positive]:")
+    print("\n   OSF per variant - bracketed as [max negative, min positive]:")
     print(f"   {'variant':>8} {'bracket':>22} {'midpoint':>10} {'documented':>11} {'error':>8} {'n':>6}")
     for v in ("L", "M", "H"):
         m = d["type"] == v

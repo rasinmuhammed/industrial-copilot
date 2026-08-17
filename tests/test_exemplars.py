@@ -1,7 +1,7 @@
 """Phase 9a: the verified-exemplar store.
 
 Continual learning with no training step. Every answered question emits
-(question, plan, did_it_verify?) and that label is free and objective — the plan
+(question, plan, did_it_verify?) and that label is free and objective - the plan
 either passed the numeric verifier or it did not.
 """
 
@@ -162,7 +162,7 @@ class TestCacheEntityBinding:
     """The cache key erases entities, so the stored value must not contain them.
 
     Before this was fixed, "why did cycle 2750 fail" returned cycle 4045's
-    answer — the key collapsed to one entry and the cached plan had a concrete
+    answer - the key collapsed to one entry and the cached plan had a concrete
     udi baked in.
     """
 

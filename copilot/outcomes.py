@@ -4,7 +4,7 @@ THE GAP THIS CLOSES
 -------------------
 Nothing in this system ever found out. It raised an alert, the alert scrolled
 off the screen, and no part of the code ever learned whether a failure followed.
-Every other quality here is measured — coverage, soundness, false-alarm rate —
+Every other quality here is measured - coverage, soundness, false-alarm rate -
 except the one an operator actually judges the product on: **when it said
 something was about to break, was it?**
 
@@ -21,11 +21,11 @@ they got there.
 
 So the ledger takes outcomes from any source:
 
-  * **labels** — a replay over historical data, where the failure flag is known.
+  * **labels** - a replay over historical data, where the failure flag is known.
     This is how the loop is validated here.
-  * **work orders** — a CMMS feed in production. The same interface; a
+  * **work orders** - a CMMS feed in production. The same interface; a
     different `Outcome.source`.
-  * **operator confirmation** — someone pressing "yes, that was real".
+  * **operator confirmation** - someone pressing "yes, that was real".
 
 WHAT IT MEASURES, AND WHY THESE THREE
 -------------------------------------
@@ -67,7 +67,7 @@ __all__ = [
 #: Declared, not tuned: it states what the product means by a useful warning.
 DEFAULT_HORIZON = 60          # cycles
 #: A warning that arrives with less notice than this is a hit on paper and of no
-#: operational use — there is no time to act on it.
+#: operational use - there is no time to act on it.
 ACTIONABLE_LEAD = 5           # cycles
 
 
@@ -192,7 +192,7 @@ class AlertLedger:
     """Records alerts, matches them to outcomes, and scores the result.
 
     Bounded on purpose. An unresolved alert older than the horizon can never be
-    matched, so it is retired rather than accumulated — a ledger that grows
+    matched, so it is retired rather than accumulated - a ledger that grows
     without limit is the same defect as the session store that once retained
     5,001 states.
     """
@@ -290,7 +290,7 @@ def work_orders_from_csv(path: str | Any) -> list[WorkOrder]:
     """Read a CMMS export.
 
     Column names follow the common Maximo/SAP-PM shape, lowercased. A plant with
-    different headers supplies a mapping rather than editing this — the same
+    different headers supplies a mapping rather than editing this - the same
     discipline the tag map uses, and for the same reason: guessing which column
     means "corrective" is how a system silently scores itself against the wrong
     ground truth.

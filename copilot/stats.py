@@ -129,7 +129,7 @@ def is_reportable(estimate: float, ci: Interval, n: int) -> tuple[bool, str]:
 
 @dataclass(frozen=True, slots=True)
 class Summary:
-    """Distribution summary. `n` is always carried — non-negotiable for trust."""
+    """Distribution summary. `n` is always carried - non-negotiable for trust."""
 
     n: int
     mean: float
@@ -166,7 +166,7 @@ def summarise(values: list[float]) -> Summary:
 
 
 def _quantile(ordered: list[float], q: float) -> float:
-    """Linear interpolation between order statistics — matches DuckDB quantile_cont."""
+    """Linear interpolation between order statistics - matches DuckDB quantile_cont."""
     if not ordered:
         return 0.0
     if len(ordered) == 1:
@@ -188,7 +188,7 @@ def spread_vs_chance(
     """Is the spread between these groups more than randomness would produce?
 
     A ranked list of assets is the most actionable artifact a maintenance
-    copilot emits — it sends a technician somewhere. It is also the one most
+    copilot emits - it sends a technician somewhere. It is also the one most
     likely to be pure noise, because ranking N groups and naming the worst
     guarantees an extreme even when every group is identical. With 15 machines
     at a 3% base rate, the worst looks roughly 2.6x the best from chance alone.
@@ -199,12 +199,12 @@ def spread_vs_chance(
     The null is exchangeability: if the grouping label carried no information,
     reassigning labels at random would produce spreads like the observed one.
     No distributional assumption, no correction table, and it stays correct for
-    unequal group sizes — which is what makes the naive comparison misleading in
+    unequal group sizes - which is what makes the naive comparison misleading in
     the first place.
 
     IMPLEMENTATION NOTE. The obvious version shuffles a pool of every row and
     slices it per group, which is O(permutations x rows) and took the test suite
-    from 4.6s to 102s — a 22x regression on the axis this project is built to
+    from 4.6s to 102s - a 22x regression on the axis this project is built to
     win. Sampling the per-group failure counts directly from the multivariate
     hypergeometric distribution is the same null, exactly, at O(permutations x
     groups): 2,000 x 15 draws instead of 2,000 x 10,000 shuffles. Memoised on
@@ -242,7 +242,7 @@ def spread_vs_chance(
 
 
 def pearson(xs: list[float], ys: list[float]) -> float:
-    """Pearson correlation. Powers the collinearity warnings — r(rpm, torque)
+    """Pearson correlation. Powers the collinearity warnings - r(rpm, torque)
     is -0.875 in this dataset, so every rpm analysis is confounded by torque."""
     n = len(xs)
     if n < 2 or n != len(ys):

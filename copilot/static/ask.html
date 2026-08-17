@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Copilot · Argus</title>
-<meta name="description" content="Industrial copilot — every answer is computed and verified, never generated.">
+<meta name="description" content="Industrial copilot - every answer is computed and verified, never generated.">
 <link rel="stylesheet" href="/static/app.css">
 <style>
 /* ── page layout ─────────────────────────────────────────────────────── */
@@ -21,8 +21,8 @@ body { grid-template-rows: 48px 1fr; overflow: hidden; }
 }
 
 /* Once an answer is on screen the rails have done their job. The pipeline
-   explainer is identical on every response — it teaches a newcomer once and is
-   furniture thereafter — and the session counters are engineering telemetry,
+   explainer is identical on every response - it teaches a newcomer once and is
+   furniture thereafter - and the session counters are engineering telemetry,
    not something an engineer asked for. Both step back so the answer owns the
    width, and `Detail` brings them back for anyone who wants them. */
 .layout.reading {
@@ -873,13 +873,13 @@ table.ev-table tr.abstain td.slot-val { color: var(--warn); }
             <span class="regime-k regime-irr">Unknowable</span>
             <span class="regime-v">1</span>
             <span class="regime-d">no relationship to any measured parameter.
-              Not hard to predict — impossible, and it says so.</span>
+              Not hard to predict - impossible, and it says so.</span>
           </div>
         </div>
 
         <p class="hero-proof">
           <span class="proof-n">F1 0.917</span> against Random Forest 0.882 and
-          XGBoost 0.901 — at <em>precision 1.000</em>, with no training. Every
+          XGBoost 0.901 - at <em>precision 1.000</em>, with no training. Every
           figure traced, or refused.
         </p>
 
@@ -918,19 +918,19 @@ table.ev-table tr.abstain td.slot-val { color: var(--warn); }
       <div class="stat-group-title">This session</div>
       <div class="stat-item">
         <span class="stat-item-label">Answers</span>
-        <span class="stat-item-value" id="s-n">—</span>
+        <span class="stat-item-value" id="s-n">-</span>
       </div>
       <div class="stat-item">
         <span class="stat-item-label">Verified</span>
-        <span class="stat-item-value" id="s-v">—</span>
+        <span class="stat-item-value" id="s-v">-</span>
       </div>
       <div class="stat-item">
         <span class="stat-item-label">Median latency</span>
-        <span class="stat-item-value" id="s-lat">—</span>
+        <span class="stat-item-value" id="s-lat">-</span>
       </div>
       <div class="stat-item">
         <span class="stat-item-label">Below model tier</span>
-        <span class="stat-item-value" id="s-cheap">—</span>
+        <span class="stat-item-value" id="s-cheap">-</span>
       </div>
       <div class="tier-bar" id="tier-bar">
         <div class="tier-bar-seg grammar" id="bar-grammar" style="width:0"></div>
@@ -1261,7 +1261,7 @@ async function ask() {
     placeholder.replaceWith(block);
     thread.scrollTop = thread.scrollHeight;
 
-    // Update session ctx — scope_line() always returns a string
+    // Update session ctx - scope_line() always returns a string
     const scopeEl = $('session-ctx');
     const scope = d.scope || 'all cycles';
     scopeEl.textContent = scope;
