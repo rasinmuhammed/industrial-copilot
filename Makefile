@@ -69,7 +69,13 @@ docker:  ## Build the deployment image
 serve-docker:  ## Run the copilot in a container on :8000
 	docker compose up --build
 
-coverage:  ## Risk-coverage: how much do we answer, and how sound is it
+outcomes:  ## Score the streaming alerts against what actually happened
+	$(PY) scripts/score_outcomes.py
+
+coverage:  ## Risk-outcomes:  ## Score the streaming alerts against what actually happened
+	$(PY) scripts/score_outcomes.py
+
+coverage: how much do we answer, and how sound is it
 	$(PY) evals/coverage.py
 
 onboard:  ## Discover a process definition from a dataset, and audit it

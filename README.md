@@ -380,9 +380,36 @@ arithmetic.
 | Operating Envelope Explorer | ✅ |
 | Fleet control room (one ranking across all machines) | ✅ |
 | Reliability console — Gates 2 and 3, interactive | ✅ |
-| Verified-exemplar store (learns with no training) | ✅ |
-| Planner LoRA distilled from the store | roadmap |
+| Planner LoRA — built, measured, **not shipped** (see below) | ✅ measured |
 | Edge agent, multi-tenancy, rollup tiles | roadmap ([11-SCALE](docs/11-SCALE.md)) |
+
+### The fine-tuning bonus, and why it is not in the product
+
+The brief invites fine-tuning as a bonus, so we did it properly: Qwen3-1.7B
+distilled on 1,079 question→plan pairs with Unsloth, exported to GGUF, and
+benchmarked **locally on the deployment hardware** rather than on the training
+GPU — `scripts/bench_planner_local.py` re-derives the identical held-out split
+and runs the exported model through Ollama.
+
+It lost, and not narrowly:
+
+| | Distilled 1.7B | Grammar tier |
+|---|---:|---:|
+| Coverage / exact match | **14.2%** | **98.4%** |
+| Latency p50 | 719 ms | **3 ms** |
+
+The cause is diagnosable rather than mysterious: the compact plan notation is
+positional (`op\|cohorts\|metrics\|…`), so the model has to count pipe
+separators, which is close to the worst thing to ask of a transformer. Its
+errors were almost all right-content-wrong-slot. Grammar-constrained decoding
+would likely fix it — and would be days of work to improve a component the
+system does not need, since 93% of questions never reach a model tier at all.
+
+**So the finding ships and the model does not.** The brief says there is no
+credit for using the best LLM and asks for a focus on latency and hallucination;
+this is what that looks like when you measure instead of assume. The notebook
+runs end to end (`make notebook`) so the result is reproducible, and the
+benchmark stays in the repo so the claim is checkable.
 
 ## Documentation
 
