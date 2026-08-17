@@ -307,28 +307,49 @@ class OpenAICompatibleProvider:
                                 msg["role"] = "developer"
                                 modified = True
 
+                    # Auto-heal schema / response_format incompatibility
+                    if ("schema" in low or "response_format" in low or "additionalproperties" in low) and "response_format" in payload:
+                        payload["response_format"] = {"type": "json_object"}
+                        modified = True
+
                     if not modified or attempt == 2:
                         raise RuntimeError(
                             f"{self.name} API error ({err.response.status_code}): {detail}"
                         ) from err
 
     def complete_json(self, system: str, user: str, schema: dict[str, Any]) -> str:
-        data = self._post(
-            {
-                "model": self.model,
-                "max_tokens": settings().planner_max_tokens,
-                "temperature": 0,
-                "messages": [
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": user},
-                ],
-                "response_format": {
-                    "type": "json_schema",
-                    "json_schema": {"name": "analysis_plan", "strict": True, "schema": schema},
-                },
-            }
-        )
-        return data["choices"][0]["message"]["content"]
+        sanitized_schema = _ensure_strict_json_schema(schema)
+        try:
+            data = self._post(
+                {
+                    "model": self.model,
+                    "max_tokens": settings().planner_max_tokens,
+                    "temperature": 0,
+                    "messages": [
+                        {"role": "system", "content": system},
+                        {"role": "user", "content": user},
+                    ],
+                    "response_format": {
+                        "type": "json_schema",
+                        "json_schema": {"name": "analysis_plan", "strict": True, "schema": sanitized_schema},
+                    },
+                }
+            )
+            return data["choices"][0]["message"]["content"]
+        except Exception:
+            data = self._post(
+                {
+                    "model": self.model,
+                    "max_tokens": settings().planner_max_tokens,
+                    "temperature": 0,
+                    "messages": [
+                        {"role": "system", "content": system + f"\n\nOutput only valid JSON conforming to:\n{json.dumps(schema)}"},
+                        {"role": "user", "content": user},
+                    ],
+                    "response_format": {"type": "json_object"},
+                }
+            )
+            return data["choices"][0]["message"]["content"]
 
     def complete_text(self, system: str, user: str, max_tokens: int) -> str:
         data = self._post(
@@ -343,6 +364,20 @@ class OpenAICompatibleProvider:
             }
         )
         return data["choices"][0]["message"]["content"]
+
+
+def _ensure_strict_json_schema(node: Any) -> Any:
+    """Recursively enforce OpenAI Structured Outputs strict JSON Schema requirements."""
+    if isinstance(node, dict):
+        out = {}
+        for k, v in node.items():
+            out[k] = _ensure_strict_json_schema(v)
+        if out.get("type") == "object" or "properties" in out:
+            out["additionalProperties"] = False
+        return out
+    if isinstance(node, list):
+        return [_ensure_strict_json_schema(item) for item in node]
+    return node
 
 
 def available_provider() -> Provider | None:
