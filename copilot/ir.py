@@ -505,6 +505,19 @@ def validate_plan(plan: AnalysisPlan) -> AnalysisPlan:
     return plan
 
 
+def _canonical_field(name: str) -> str:
+    metrics = metric_index()
+    if name in metrics:
+        return name
+    for mname, spec in metrics.items():
+        if spec.get("column") == name:
+            return mname
+        for syn in spec.get("synonyms", []):
+            if syn.lower().replace(" ", "_") == name.lower().replace(" ", "_"):
+                return mname
+    return name
+
+
 def _normalize_plan_dict(payload: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(payload, dict):
         return payload
@@ -525,17 +538,39 @@ def _normalize_plan_dict(payload: dict[str, Any]) -> dict[str, Any]:
         elif isinstance(val, (str, int, float, bool)):
             data[list_field] = [val] if val else []
 
+    # Canonicalize metrics, dimensions, group_by
+    if "metrics" in data and isinstance(data["metrics"], list):
+        data["metrics"] = [_canonical_field(m) if isinstance(m, str) else m for m in data["metrics"]]
+    if "dimensions" in data and isinstance(data["dimensions"], list):
+        data["dimensions"] = [_canonical_field(d) if isinstance(d, str) else d for d in data["dimensions"]]
+    if "group_by" in data and isinstance(data["group_by"], list):
+        data["group_by"] = [_canonical_field(g) if isinstance(g, str) else g for g in data["group_by"]]
+
+    # Canonicalize filters
+    if "filters" in data and isinstance(data["filters"], list):
+        for f in data["filters"]:
+            if isinstance(f, dict) and "field" in f and isinstance(f["field"], str):
+                f["field"] = _canonical_field(f["field"])
+
     # 2. Normalize bin
     if "bin" in data:
         b = data["bin"]
         if not b or not isinstance(b, dict) or "field" not in b:
             data.pop("bin", None)
+        elif isinstance(b.get("field"), str):
+            b["field"] = _canonical_field(b["field"])
 
-    # 3. Normalize params
+    # 3. Normalize params & counterfactual changes
     if "params" in data:
         p = data["params"]
         if not isinstance(p, dict):
             data["params"] = {}
+        elif "changes" in p and isinstance(p["changes"], dict):
+            new_changes = {}
+            for k, v in p["changes"].items():
+                canon_k = _canonical_field(k) if isinstance(k, str) else k
+                new_changes[canon_k] = v
+            p["changes"] = new_changes
 
     return data
 
