@@ -52,12 +52,15 @@ operating point.  This is used by the fleet view to animate wear-out curves.
 
 from __future__ import annotations
 
+from functools import lru_cache
+
 import math
 import statistics
 from dataclasses import dataclass
 from typing import Any
 
 from copilot.ingest import connect
+from copilot.ops.registry import TABLE
 from copilot.physics import (
     OSF_THRESHOLD,
     WEAR_RATE_PER_CYCLE,
@@ -133,38 +136,53 @@ def _conformal_correction() -> float:
     if _CALIBRATED:
         return _CONFORMAL_CORRECTION or 0.0
     _CALIBRATED = True
-    try:
-        conn = connect()
-        # OSF failures: get the wear and torque at the crossing cycle
-        rows = conn.execute("""
-            SELECT wear_min, torque_nm, product_type
-            FROM   ai4i
-            WHERE  osf_failure = 1
-            LIMIT  200
-        """).fetchall()
+    # This queried `wear_min` and `osf_failure` from a table called `ai4i`. The
+    # columns are `tool_wear_min` and `osf`, and the table is `observations`, so
+    # it raised on its first statement — and the bare `except Exception` below
+    # turned that into a correction of exactly 0.0.
+    #
+    # A correction of zero is indistinguishable from a correction that was
+    # computed and came out small. So the API advertised a "90% conformal
+    # interval", the docstring described split conformal prediction over ~98 OSF
+    # events, the module was named for it, and every interval shipped was the
+    # raw inverse-Gaussian quantile with no calibration whatsoever. The failure
+    # mode of a swallowed exception is not a missing feature; it is a false
+    # claim that looks like a working one.
+    conn = connect()
+    rows = conn.execute(
+        f"""SELECT tool_wear_min, torque_nm, product_type
+            FROM   {TABLE}
+            WHERE  osf = 1
+            LIMIT  200"""  # noqa: S608
+    ).fetchall()
 
-        if not rows:
-            _CONFORMAL_CORRECTION = 0.0
-            return 0.0
-
-        residuals: list[float] = []
-        for wear, torque, variant in rows:
-            threshold = OSF_THRESHOLD.get(variant, 11_000)
-            margin_at_alert = threshold - wear * torque
-            # Actual RUL at crossing = 0 cycles (it failed)
-            actual_T = 0.0
-            E_T, _ = _ig_moments(abs(margin_at_alert) + 1.0, variant, torque)
-            residuals.append(abs(actual_T - E_T))
-
-        if len(residuals) < 5:
-            _CONFORMAL_CORRECTION = 0.0
-            return 0.0
-
-        residuals.sort()
-        q90_idx = int(math.ceil(0.90 * len(residuals))) - 1
-        _CONFORMAL_CORRECTION = residuals[min(q90_idx, len(residuals) - 1)]
-    except Exception:
+    if len(rows) < 5:
+        # Too few crossings to calibrate against. Say so by leaving the interval
+        # nominal, rather than by returning a zero that reads as "calibrated".
         _CONFORMAL_CORRECTION = 0.0
+        return 0.0
+
+    residuals: list[float] = []
+    for wear, torque, variant in rows:
+        threshold = OSF_THRESHOLD.get(variant, 11_000)
+        margin_at_alert = threshold - float(wear) * float(torque)
+        # Actual RUL at the observed crossing is 0 cycles, by definition of a
+        # crossing. The residual is therefore how many cycles the model still
+        # expected at the moment the boundary was actually crossed — the
+        # overshoot, in the units the interval is reported in.
+        expected_at_crossing, _ = _ig_moments(
+            abs(margin_at_alert) + 1.0, str(variant), float(torque)
+        )
+        if math.isfinite(expected_at_crossing):
+            residuals.append(abs(0.0 - expected_at_crossing))
+
+    if len(residuals) < 5:
+        _CONFORMAL_CORRECTION = 0.0
+        return 0.0
+
+    residuals.sort()
+    q90_idx = int(math.ceil(0.90 * len(residuals))) - 1
+    _CONFORMAL_CORRECTION = residuals[min(q90_idx, len(residuals) - 1)]
     return _CONFORMAL_CORRECTION
 
 
@@ -173,33 +191,54 @@ def _conformal_correction() -> float:
 # --------------------------------------------------------------------------
 
 
-# Virtual machine assignments (same mapping used in stream.py)
-_MACHINES: list[tuple[str, str]] = [
-    ("L-01", "L"), ("L-02", "L"), ("L-03", "L"),
-    ("M-01", "M"), ("M-02", "M"), ("M-03", "M"),
-    ("H-01", "H"), ("H-02", "H"),
-]
+@lru_cache(maxsize=1)
+def _machines() -> tuple[tuple[str, str], ...]:
+    """The fleet roster, read from the warehouse.
+
+    This was a hardcoded list of eight machines. The warehouse holds fifteen, so
+    the roster and the data had drifted apart and the seven that were missing
+    returned 404 from /rul — "machine 'L-04' not found", about a machine sitting
+    in the fleet rail with live margins beside it.
+
+    A roster is a fact about the plant, and the plant's record of itself is the
+    warehouse. Deriving it means adding a machine to the line cannot leave a
+    module behind, which is the failure this one had.
+    """
+    from copilot.engine import Engine
+
+    rows = Engine.build().ctx.con.execute(
+        f"SELECT DISTINCT machine_id, any_value(product_type) FROM {TABLE} "  # noqa: S608
+        "GROUP BY machine_id ORDER BY machine_id"
+    ).fetchall()
+    return tuple((str(m), str(v)) for m, v in rows)
 
 
 def machine_rul(machine_id: str) -> dict[str, Any] | None:
     """Inverse-Gaussian RUL for one machine, with 90% conformal interval."""
-    mapping = {m: v for m, v in _MACHINES}
+    mapping = dict(_machines())
     variant = mapping.get(machine_id.upper())
     if variant is None:
         return None
 
-    try:
-        conn = connect()
-        # Latest operating point for this virtual machine
-        row = conn.execute("""
-            SELECT tool_wear_min, torque_nm, rotational_speed_rpm
-            FROM   ai4i
-            WHERE  product_type = ?
-            ORDER BY udi DESC
-            LIMIT  1
-        """, [variant]).fetchone()
-    except Exception:
-        return None
+    # The table is `observations`. This said `ai4i`, and the bare
+    # `except Exception: return None` below swallowed the resulting
+    # CatalogException — so /rul returned {"machines": [], "total": 0} and an
+    # operator reading that screen would conclude NO MACHINE IS AT RISK.
+    #
+    # An empty result that means "the query is broken" and an empty result that
+    # means "nothing is wrong" are indistinguishable to the reader, which makes
+    # a swallowed exception here worse than a crash.
+    conn = connect()
+    row = conn.execute(
+        f"""
+        SELECT tool_wear_min, torque_nm, rotational_speed_rpm
+        FROM   {TABLE}
+        WHERE  product_type = ?
+        ORDER BY udi DESC
+        LIMIT  1
+        """,
+        [variant],
+    ).fetchone()
 
     if row is None:
         return None
@@ -208,12 +247,28 @@ def machine_rul(machine_id: str) -> dict[str, Any] | None:
     threshold = OSF_THRESHOLD[variant]
     margin    = threshold - wear * torque
 
+    # temp_delta is DERIVED from the two thermocouples, so it cannot be passed
+    # in. Read the real pair rather than substituting a nominal 10 K: this
+    # machine's HDF margin depends on it, and inventing the value would make
+    # the one figure the operator acts on a constant.
+    air, process = conn.execute(
+        f"""
+        SELECT air_temperature_k, process_temperature_k
+        FROM   {TABLE}
+        WHERE  product_type = ?
+        ORDER BY udi DESC
+        LIMIT  1
+        """,
+        [variant],
+    ).fetchone()
+
     point = OperatingPoint(
+        air_temp_k           = air,
+        process_temp_k       = process,
         rotational_speed_rpm = rpm,
         torque_nm            = torque,
         tool_wear_min        = wear,
         product_type         = variant,
-        temp_delta_k         = 10.0,   # nominal
     )
     margins = evaluate(point)
 
@@ -253,7 +308,7 @@ def machine_rul(machine_id: str) -> dict[str, Any] | None:
 def fleet_rul() -> dict[str, Any]:
     """RUL estimates for all virtual machines, sorted worst-first."""
     estimates = []
-    for machine_id, _ in _MACHINES:
+    for machine_id, _ in _machines():
         r = machine_rul(machine_id)
         if r:
             estimates.append(r)

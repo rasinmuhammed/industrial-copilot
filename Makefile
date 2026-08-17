@@ -55,7 +55,11 @@ demo:  ## Scripted walkthrough of all four acceptance criteria
 	$(PY) -m copilot.cli demo
 
 serve:  ## API, console and envelope explorer on :8000
-	.venv/bin/uvicorn copilot.api:app --reload --port 8000
+# A held-open SSE stream blocks uvicorn's graceful shutdown indefinitely —
+# the reloader sits at "Waiting for connections to close" until the replay
+# finishes, which is 13 minutes with one browser tab open. The same wait
+# stalls a redeploy in production, so shutdown is bounded, not patient.
+	.venv/bin/uvicorn copilot.api:app --reload --port 8000 --timeout-graceful-shutdown 3
 
 stream:  ## Replay the fleet as an event stream with live alerts
 	$(PY) -c "from copilot.stream import replay, StreamScorer; s=StreamScorer(); \

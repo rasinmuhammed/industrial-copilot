@@ -9,7 +9,8 @@
     GET  /fleet                 every machine ranked on one axis of risk
     GET  /fleet/view            the fleet control room
     GET  /health                readiness, versions, gate status
-    GET  /                      the ask console, with evidence drill-down
+    GET  /                      the operations console: fleet, margins, actions
+    GET  /ask                   the analysis surface, with evidence drill-down
     GET  /reliability           Gates 2 and 3, live and interactive
 
 Thin by design. Every endpoint delegates to the same engine the CLI uses, so
@@ -25,6 +26,7 @@ from collections import OrderedDict
 import asyncio
 import json
 from collections.abc import AsyncIterator
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -200,31 +202,55 @@ def telemetry_view():
         return f.read()
 
 
+#: Sortable columns, checked against the real schema at import so a rename
+#: upstream fails loudly here instead of silently falling back to `udi`.
+_TELEMETRY_COLUMNS = (
+    "udi", "ts", "machine_id", "product_id", "product_type", "shift",
+    "air_temperature_k", "process_temperature_k", "temp_delta_k",
+    "rotational_speed_rpm", "torque_nm", "tool_wear_min", "power_w",
+    "worst_normalised_margin", "machine_failure",
+    "twf", "hdf", "pwf", "osf", "rnf",
+)
+
+
 @app.get("/api/telemetry")
-def api_telemetry(limit: int = 100, offset: int = 0, sort: str = "udi", order: str = "desc"):
-    valid_cols = [
-        "udi", "product_id", "type", "air_temperature_k", "process_temperature_k",
-        "rotational_speed_rpm", "torque_nm", "tool_wear_min", "machine_failure", "timestamp"
-    ]
-    if sort not in valid_cols:
+def api_telemetry(
+    limit: int = Query(100, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    sort: str = "udi",
+    order: str = "desc",
+) -> dict[str, Any]:
+    """The raw sensor record, paged.
+
+    Every other view in the product is derived — margins, states, horizons.
+    This is the one place an engineer can read what the instruments actually
+    said, which is what makes the derived numbers auditable rather than
+    asserted.
+    """
+    if sort not in _TELEMETRY_COLUMNS:
         sort = "udi"
-    order = "DESC" if order.lower() == "desc" else "ASC"
-    
+    direction = "DESC" if order.lower() == "desc" else "ASC"
+
     con = engine().ctx.con
-    try:
-        total = con.sql("SELECT COUNT(*) FROM ai4i").fetchone()[0]
-        df = con.sql(f"""
-            SELECT 
-                TIMESTAMP '2026-01-01 00:00:00' + INTERVAL (udi * 5) MINUTE AS timestamp,
-                *
-            FROM ai4i
-            ORDER BY {sort} {order}
-            LIMIT {limit} OFFSET {offset}
-        """).df()
-        df['timestamp'] = df['timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S')
-        return {"total": total, "rows": df.to_dict(orient="records")}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    total = con.execute(f"SELECT count(*) FROM {TABLE}").fetchone()[0]  # noqa: S608
+    columns = ", ".join(_TELEMETRY_COLUMNS)
+    rows = con.execute(
+        f"SELECT {columns} FROM {TABLE} ORDER BY {sort} {direction} LIMIT ? OFFSET ?",  # noqa: S608
+        [limit, offset],
+    ).fetchall()
+
+    return {
+        "total": total,
+        "columns": list(_TELEMETRY_COLUMNS),
+        "rows": [
+            {
+                name: (value.isoformat(sep=" ", timespec="seconds")
+                       if isinstance(value, datetime) else value)
+                for name, value in zip(_TELEMETRY_COLUMNS, raw)
+            }
+            for raw in rows
+        ],
+    }
 
 
 # --------------------------------------------------------------------------
@@ -707,6 +733,22 @@ def health() -> dict[str, Any]:
 
 @app.get("/", response_class=HTMLResponse)
 def console() -> str:
+    """The operations console.
+
+    The home page used to be the ask box. That made the product a chat client
+    with an industrial dataset behind it: it opened on a headline and waited to
+    be asked something, when the operator's first question is always the same
+    and the system already knows the answer to it. The console answers it
+    unprompted — every machine, worst first, with the binding constraint and
+    the setpoint that restores margin — and keeps language as a docked tool for
+    the questions the panels do not already answer.
+    """
+    return _static("console.html")
+
+
+@app.get("/ask", response_class=HTMLResponse)
+def ask_view() -> str:
+    """The analysis surface: open-ended questions with evidence drill-down."""
     return _static("ask.html")
 
 

@@ -5,8 +5,8 @@
   "refusal_precision": 0.9167,
   "silent_failures": 0,
   "missed": 1,
-  "latency_ms_p50": 3.61,
-  "latency_ms_p95": 68.61,
+  "latency_ms_p50": 3.07,
+  "latency_ms_p95": 66.65,
   "degraded": 0,
   "tiers": {
     "grammar": 59,

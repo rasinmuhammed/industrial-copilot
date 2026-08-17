@@ -1,0 +1,1019 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Argus · Operations</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="/static/app.css">
+<style>
+/* ===========================================================================
+   The operations console.
+
+   The old home page was a chat box with a headline above it. That is a demo of
+   a language model, not an instrument: it opens on a value proposition and
+   waits to be asked something. An operator arriving at a screen has a question
+   already — WHAT IS WRONG RIGHT NOW — and a console answers it before being
+   asked.
+
+   So the layout inverts. State is ambient and permanent (left rail, always the
+   whole fleet, always worst-first). The selected machine occupies the centre
+   with the three things an operator acts on: how much margin is left, which
+   constraint is taking it, and what to change. Language is a tool docked at the
+   bottom, scoped to whatever is selected, for the questions the panels do not
+   already answer.
+
+   ISA-101 discipline throughout: the screen is grey until something is wrong.
+   Colour is a signal, so it is spent only on abnormal state and the selection.
+   =========================================================================== */
+
+html, body { height: 100%; overflow: hidden; }
+
+.console {
+  display: grid;
+  grid-template-rows: 48px 1fr;
+  grid-template-columns: 296px minmax(0, 1fr) 320px;
+  grid-template-areas: "bar bar bar" "fleet stage activity";
+  height: 100vh;
+}
+
+/* ── top bar ─────────────────────────────────────────────────────────────── */
+.bar {
+  grid-area: bar;
+  display: flex; align-items: center; gap: 20px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.mark { display: flex; align-items: baseline; gap: 9px; }
+.mark b { font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
+.mark span { font-size: 11px; color: var(--text-3); letter-spacing: .06em; text-transform: uppercase; }
+
+.bar nav { display: flex; gap: 2px; margin-left: 6px; }
+.bar nav a {
+  font-size: 12.5px; color: var(--text-2); text-decoration: none;
+  padding: 5px 10px; border-radius: var(--r-sm);
+}
+.bar nav a:hover { color: var(--text); background: var(--raised); }
+.bar nav a[aria-current] { color: var(--text); background: var(--raised); }
+
+.bar-spacer { flex: 1; }
+
+/* Fleet state, as counts. The single most-read element on the screen. */
+.tally { display: flex; align-items: center; gap: 14px; }
+.tally-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-2); }
+.tally-item b { font-family: var(--mono); font-size: 13px; color: var(--text); font-weight: 500; }
+.tally-item.alert b { color: var(--crit); }
+.tally-item.watch b { color: var(--warn); }
+
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); flex: none; }
+.dot.normal { background: var(--live); }
+.dot.watch  { background: var(--warn); }
+.dot.alert  { background: var(--crit); }
+.dot.abstain{ background: var(--info); }
+
+.transport { display: flex; align-items: center; gap: 8px; }
+.transport button {
+  font: inherit; font-size: 12px;
+  background: var(--raised); color: var(--text-2);
+  border: 1px solid var(--line-med); border-radius: var(--r-sm);
+  padding: 4px 11px; cursor: pointer;
+}
+.transport button:hover { color: var(--text); border-color: var(--line-strong); }
+.transport button[data-live="true"] { color: var(--live-sat); border-color: var(--live-line); background: var(--live-soft); }
+.playhead { font-family: var(--mono); font-size: 11.5px; color: var(--text-3); min-width: 92px; }
+.transport select {
+  font: inherit; font-size: 11.5px;
+  background: var(--raised); color: var(--text-2);
+  border: 1px solid var(--line-med); border-radius: var(--r-sm);
+  padding: 4px 6px;
+}
+
+/* ── fleet rail ──────────────────────────────────────────────────────────── */
+.rail {
+  display: flex; flex-direction: column; min-height: 0;
+  border-right: 1px solid var(--line);
+  background: var(--surface);
+}
+.rail.right { grid-area: activity; border-right: 0; border-left: 1px solid var(--line); }
+.fleet { grid-area: fleet; }
+
+.rail-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 14px 9px;
+  border-bottom: 1px solid var(--line);
+}
+.rail-title { font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--text-3); }
+.rail-note { font-size: 11px; color: var(--text-3); }
+.rail-body { flex: 1; min-height: 0; overflow-y: auto; }
+
+.machine {
+  display: grid;
+  grid-template-columns: 9px 1fr auto;
+  gap: 10px; align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  border-left: 2px solid transparent;
+}
+.machine:hover { background: var(--raised); }
+.machine[aria-selected="true"] { background: var(--raised); border-left-color: var(--live-sat); }
+.machine-id { font-family: var(--mono); font-size: 13px; }
+.machine-sub { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.machine-right { text-align: right; }
+.machine-margin { font-family: var(--mono); font-size: 13px; }
+.machine[data-state="alert"] .machine-margin { color: var(--crit); }
+.machine[data-state="watch"] .machine-margin { color: var(--warn); }
+.machine[data-forecast="true"] .machine-sub { color: var(--warn); }
+.machine[data-forecast="true"] .dot { box-shadow: 0 0 0 3px var(--warn-soft); }
+.spark { display: block; margin-top: 3px; }
+
+/* ── stage ───────────────────────────────────────────────────────────────── */
+.stage {
+  grid-area: stage;
+  display: grid; grid-template-rows: auto 1fr auto;
+  min-height: 0; min-width: 0;
+}
+
+.stage-head {
+  padding: 16px 22px 14px;
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: flex-start; gap: 22px;
+}
+.subject h1 { font-size: 21px; font-weight: 600; letter-spacing: -.015em; }
+.subject p { font-size: 12.5px; color: var(--text-2); margin-top: 3px; }
+
+.headline { margin-left: auto; display: flex; gap: 26px; }
+.figure-label { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--text-3); }
+.figure-value { font-family: var(--mono); font-size: 22px; margin-top: 4px; letter-spacing: -.02em; }
+.figure-value.crit { color: var(--crit); }
+.figure-value.warn { color: var(--warn); }
+.figure-value.live { color: var(--live); }
+.figure-unit { font-size: 12px; color: var(--text-3); margin-left: 3px; }
+
+.stage-body { min-height: 0; overflow-y: auto; padding: 18px 22px 22px; }
+
+/* The prescription. The one element that turns a monitor into a copilot:
+   not "risk is elevated" but "reduce torque to 46.6 N·m". */
+.prescription {
+  border: 1px solid var(--line-med); border-left: 2px solid var(--text-3);
+  border-radius: var(--r); background: var(--raised);
+  padding: 13px 16px; margin-bottom: 18px;
+}
+.prescription[data-state="alert"] { border-left-color: var(--crit); background: var(--crit-soft); }
+.prescription[data-state="watch"] { border-left-color: var(--warn); background: var(--warn-soft); }
+.prescription-label { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--text-3); }
+.prescription-text { font-size: 14px; margin-top: 6px; line-height: 1.5; }
+.prescription-why { font-size: 12px; color: var(--text-2); margin-top: 7px; line-height: 1.55; }
+.prescription-act { margin-top: 12px; display: flex; gap: 8px; }
+
+button.act {
+  font: inherit; font-size: 12px;
+  background: var(--field); color: var(--text);
+  border: 1px solid var(--line-strong); border-radius: var(--r-sm);
+  padding: 6px 12px; cursor: pointer;
+}
+button.act:hover { border-color: var(--live-line); color: var(--live-sat); }
+button.act:disabled { opacity: .45; cursor: default; }
+
+.panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.panel { border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
+.panel-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  padding: 10px 14px; border-bottom: 1px solid var(--line);
+}
+.panel-title { font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--text-3); }
+.panel-note { font-size: 11px; color: var(--text-3); }
+.panel-body { padding: 13px 14px; }
+
+.readout { display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; font-size: 12.5px; }
+.readout + .readout { border-top: 1px solid var(--line); }
+.readout span { color: var(--text-2); }
+.readout b { font-family: var(--mono); font-weight: 500; font-size: 12.5px; }
+.readout b.crit { color: var(--crit); }
+.readout b.warn { color: var(--warn); }
+
+/* Constraint bars: which of the four limits is closest, at a glance. */
+.constraint { padding: 7px 0; }
+.constraint + .constraint { border-top: 1px solid var(--line); }
+.constraint-row { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; }
+.constraint-name { font-family: var(--mono); }
+.constraint-name.binding { color: var(--text); }
+.constraint-name:not(.binding) { color: var(--text-2); }
+.constraint-val { font-family: var(--mono); font-size: 12px; color: var(--text-2); }
+.track { height: 3px; border-radius: 2px; background: var(--field); margin-top: 5px; overflow: hidden; }
+.track i { display: block; height: 100%; background: var(--live); }
+.track i.warn { background: var(--warn); }
+.track i.crit { background: var(--crit); }
+
+/* ── copilot dock ────────────────────────────────────────────────────────── */
+.dock { border-top: 1px solid var(--line); background: var(--surface); }
+.dock-answer {
+  max-height: 210px; overflow-y: auto;
+  padding: 13px 22px; border-bottom: 1px solid var(--line);
+  font-size: 13.5px; line-height: 1.6;
+}
+.dock-answer:empty { display: none; }
+.dock-meta { display: flex; gap: 12px; align-items: center; margin-top: 9px; font-size: 11px; color: var(--text-3); }
+.badge {
+  font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 3px;
+  border: 1px solid var(--line-med); color: var(--text-2);
+}
+.badge.verified { color: var(--live); border-color: var(--live-line); background: var(--live-soft); }
+.badge.refused  { color: var(--warn); border-color: var(--warn-line); background: var(--warn-soft); }
+
+.composer { display: flex; align-items: center; gap: 10px; padding: 11px 22px; }
+.scope-chip {
+  font-family: var(--mono); font-size: 11.5px; color: var(--text-2);
+  border: 1px solid var(--line-med); border-radius: var(--r-sm);
+  padding: 5px 9px; white-space: nowrap;
+}
+.composer input {
+  flex: 1; font: inherit; font-size: 13.5px;
+  background: var(--field); color: var(--text);
+  border: 1px solid var(--line-med); border-radius: var(--r);
+  padding: 9px 13px;
+}
+.composer input:focus { outline: none; border-color: var(--line-strong); }
+.composer input::placeholder { color: var(--text-3); }
+
+.prompts { display: flex; gap: 6px; padding: 0 22px 11px; flex-wrap: wrap; }
+.prompt {
+  font: inherit; font-size: 11.5px; color: var(--text-2);
+  background: transparent; border: 1px solid var(--line); border-radius: 999px;
+  padding: 4px 11px; cursor: pointer;
+}
+.prompt:hover { color: var(--text); border-color: var(--line-strong); }
+
+/* ── activity rail ───────────────────────────────────────────────────────── */
+.event {
+  padding: 10px 14px; border-bottom: 1px solid var(--line);
+  border-left: 2px solid transparent; cursor: pointer;
+}
+.event:hover { background: var(--raised); }
+.event[data-kind="crossed"]   { border-left-color: var(--crit); }
+.event[data-kind="predicted"] { border-left-color: var(--warn); }
+.event[data-kind="approaching"] { border-left-color: var(--warn); }
+.event[data-kind="sensor"]    { border-left-color: var(--info); }
+.event[data-kind="abstained"] { border-left-color: var(--info); }
+.event-top { display: flex; justify-content: space-between; align-items: baseline; }
+.event-machine { font-family: var(--mono); font-size: 12px; }
+.event-when { font-family: var(--mono); font-size: 10.5px; color: var(--text-3); }
+.event-msg { font-size: 12px; color: var(--text-2); margin-top: 3px; line-height: 1.45; }
+.event-fix { font-size: 11.5px; color: var(--text-3); margin-top: 4px; }
+
+.empty { padding: 22px 16px; font-size: 12px; color: var(--text-3); line-height: 1.6; }
+
+.wo { padding: 9px 14px; border-bottom: 1px solid var(--line); font-size: 12px; }
+.wo-top { display: flex; justify-content: space-between; }
+.wo-id { font-family: var(--mono); color: var(--text-2); }
+.wo-outcome { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+/* Narrow screens: the rails stack away rather than crushing the stage, and the
+   top bar sheds what is not load-bearing. The counts that survive are the two
+   an operator acts on — crossed and forecast; "nominal" is the absence of a
+   problem and can be inferred. Without this the bar overflowed the viewport at
+   768px and the transport controls sat off-screen. */
+@media (max-width: 1180px) {
+  .console { grid-template-columns: 250px minmax(0, 1fr); grid-template-areas: "bar bar" "fleet stage"; }
+  .rail.right { display: none; }
+  .bar { gap: 12px; padding: 0 12px; }
+  .mark span { display: none; }
+  .tally { gap: 10px; }
+  .tally-item.nominal, .tally-item:not(.alert):not(.watch) { display: none; }
+  .playhead { min-width: 0; }
+}
+@media (max-width: 900px) {
+  .bar nav a:not([aria-current]) { display: none; }
+}
+</style>
+
+<div class="console">
+
+  <header class="bar">
+    <div class="mark"><b>Argus</b><span>Operations</span></div>
+    <nav>
+      <a href="/" aria-current="page">Console</a>
+      <a href="/explorer">Envelope</a>
+      <a href="/telemetry">Telemetry</a>
+      <a href="/reliability">Reliability</a>
+      <a href="/ask">Analysis</a>
+    </nav>
+    <div class="bar-spacer"></div>
+    <div class="tally">
+      <div class="tally-item alert"><span class="dot alert"></span><b id="n-alert">—</b> crossed</div>
+      <div class="tally-item watch"><span class="dot watch"></span><b id="n-forecast">—</b> forecast</div>
+      <div class="tally-item watch"><span class="dot watch"></span><b id="n-watch">—</b> watch</div>
+      <div class="tally-item nominal"><span class="dot normal"></span><b id="n-normal">—</b> nominal</div>
+    </div>
+    <div class="transport">
+      <span class="playhead" id="playhead">—</span>
+      <select id="takt" aria-label="Replay speed">
+        <option value="3000">25 cycles/s</option>
+        <option value="600">5 cycles/s</option>
+        <option value="120">1 cycle/s</option>
+      </select>
+      <button id="stream-btn" data-live="false" type="button">Go live</button>
+    </div>
+  </header>
+
+  <!-- Fleet: every machine, one axis, worst first. -->
+  <aside class="rail fleet">
+    <div class="rail-head">
+      <span class="rail-title">Fleet</span>
+      <span class="rail-note" id="fleet-note">ranked by margin</span>
+    </div>
+    <div class="rail-body" id="fleet-list"></div>
+  </aside>
+
+  <!-- Stage: the selected machine. -->
+  <main class="stage">
+    <div class="stage-head">
+      <div class="subject">
+        <h1 id="subject-id">—</h1>
+        <p id="subject-sub">Select a machine</p>
+      </div>
+      <div class="headline">
+        <div>
+          <div class="figure-label">Margin</div>
+          <div class="figure-value" id="fig-margin">—</div>
+        </div>
+        <div>
+          <div class="figure-label">Binding limit</div>
+          <div class="figure-value" id="fig-binding">—</div>
+        </div>
+        <div>
+          <div class="figure-label">Cycles to crossing</div>
+          <div class="figure-value" id="fig-rul">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage-body">
+      <div class="prescription" id="prescription">
+        <div class="prescription-label">Recommended action</div>
+        <div class="prescription-text" id="rx-text">—</div>
+        <div class="prescription-why" id="rx-why"></div>
+        <div class="prescription-act">
+          <button class="act" id="rx-wo" type="button" disabled>Raise work order</button>
+          <button class="act" id="rx-explain" type="button" disabled>Explain this</button>
+        </div>
+      </div>
+
+      <div class="panels">
+        <section class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Distance to each limit</span>
+            <span class="panel-note">normalised</span>
+          </div>
+          <div class="panel-body" id="constraints"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Live readings</span>
+            <span class="panel-note" id="readings-note">—</span>
+          </div>
+          <div class="panel-body" id="readings"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Wear trajectory</span>
+            <span class="panel-note" id="rul-note">—</span>
+          </div>
+          <div class="panel-body" id="trajectory"></div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Language, docked and scoped. A tool on the console, not the console. -->
+    <div class="dock">
+      <div class="dock-answer" id="answer"></div>
+      <div class="composer">
+        <span class="scope-chip" id="scope">fleet</span>
+        <input id="q" placeholder="Ask about this machine…" autocomplete="off">
+      </div>
+      <div class="prompts" id="prompts"></div>
+    </div>
+  </main>
+
+  <!-- Activity: what the stream raised, and what was done about it. -->
+  <aside class="rail right">
+    <div class="rail-head">
+      <span class="rail-title">Activity</span>
+      <span class="rail-note" id="activity-note">idle</span>
+    </div>
+    <div class="rail-body" id="events">
+      <div class="empty">No alerts. Press <b>Go live</b> to replay the line and watch margins move.</div>
+    </div>
+    <div class="rail-head" style="border-top:1px solid var(--line)">
+      <span class="rail-title">Work orders</span>
+      <span class="rail-note" id="wo-note">—</span>
+    </div>
+    <div class="rail-body" id="work-orders" style="flex:0 0 190px"></div>
+  </aside>
+</div>
+
+<script>
+"use strict";
+
+/* ---------------------------------------------------------------------------
+   State. One selected machine; everything on the stage is a projection of it.
+   --------------------------------------------------------------------------- */
+const state = {
+  machines: [],           // latest /fleet snapshot, worst-first
+  selected: null,         // machine id
+  rul: {},                // machine id -> horizon estimate
+  alerts: [],             // machine alerts, newest first, bounded
+  instruments: new Map(), // instrument faults + abstentions, collapsed by channel
+  source: null,           // EventSource while live
+  session: "console-" + Math.random().toString(36).slice(2, 10),
+};
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmt = (v, d = 3) => (v === null || v === undefined || Number.isNaN(v)) ? "—" : Number(v).toFixed(d);
+
+/* Margins are normalised: 0 is the boundary, 1 is a full threshold away.
+   The bands match the server's own classification so the screen and the API
+   never disagree about what "watch" means. */
+function bandOf(margin) {
+  if (margin === null || margin === undefined) return "abstain";
+  if (margin < 0)    return "alert";
+  if (margin < 0.05) return "watch";
+  return "normal";
+}
+
+/* ---------------------------------------------------------------------------
+   Fleet rail
+   --------------------------------------------------------------------------- */
+function sparkline(history, band) {
+  if (!history || history.length < 2) return "";
+  const w = 62, h = 16;
+  const lo = Math.min(...history, 0), hi = Math.max(...history, 0.02);
+  const span = (hi - lo) || 1;
+  const pts = history.map((v, i) => {
+    const x = (i / (history.length - 1)) * w;
+    const y = h - ((v - lo) / span) * h;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  const stroke = band === "alert" ? "var(--crit)" : band === "watch" ? "var(--warn)" : "var(--text-3)";
+  // The zero line is the boundary itself, so it is drawn, not implied.
+  const zeroY = h - ((0 - lo) / span) * h;
+  return `<svg class="spark" width="${w}" height="${h}" aria-hidden="true">
+    <line x1="0" y1="${zeroY.toFixed(1)}" x2="${w}" y2="${zeroY.toFixed(1)}"
+          stroke="var(--line-med)" stroke-width="1" stroke-dasharray="2 2"/>
+    <polyline points="${pts}" fill="none" stroke="${stroke}" stroke-width="1.25"
+              stroke-linejoin="round" stroke-linecap="round"/>
+  </svg>`;
+}
+
+/* Machines with an open forecast alert. A margin that is still positive is
+   still "nominal" by band, which is exactly right for the state colour and
+   exactly wrong for the summary line: the fleet showed 0 alert / 15 nominal
+   while fifteen projected crossings sat unread in the activity rail. Lead time
+   is the reason this product exists, so it gets counted at the top. */
+function forecastSet() {
+  return new Set(
+    state.alerts
+      .filter((a) => a.kind === "predicted" || a.kind === "approaching")
+      .map((a) => a.machine)
+  );
+}
+
+function renderFleet() {
+  const counts = { alert: 0, watch: 0, normal: 0, abstain: 0 };
+  const forecast = forecastSet();
+  const html = state.machines.map((m) => {
+    const band = m.state || bandOf(m.worst_margin);
+    counts[band] = (counts[band] || 0) + 1;
+    const selected = m.machine === state.selected;
+    const rul = state.rul[m.machine];
+    const projected = forecast.has(m.machine);
+    const sub = projected
+      ? `${esc(m.binding)} · crossing projected`
+      : rul && rul.expected_cycles !== null
+        ? `${esc(m.binding)} · ${rul.expected_cycles} cycles left`
+        : `${esc(m.variant)} · ${esc(m.binding || "—")}`;
+    return `<div class="machine" role="option" data-state="${band}"
+                 data-forecast="${projected}"
+                 aria-selected="${selected}" data-machine="${esc(m.machine)}">
+      <span class="dot ${band}"></span>
+      <div>
+        <div class="machine-id">${esc(m.machine)}</div>
+        <div class="machine-sub">${sub}</div>
+      </div>
+      <div class="machine-right">
+        <div class="machine-margin">${fmt(m.worst_margin)}</div>
+        ${sparkline(m.history, band)}
+      </div>
+    </div>`;
+  }).join("");
+
+  $("fleet-list").innerHTML = html;
+  $("n-alert").textContent = counts.alert;
+  $("n-forecast").textContent = forecast.size;
+  $("n-watch").textContent = counts.watch;
+  $("n-normal").textContent = counts.normal;
+}
+
+$("fleet-list").addEventListener("click", (e) => {
+  const row = e.target.closest("[data-machine]");
+  if (row) select(row.dataset.machine);
+});
+
+/* ---------------------------------------------------------------------------
+   Stage
+   --------------------------------------------------------------------------- */
+const LIMIT_NAMES = { HDF: "Heat dissipation", PWF: "Power", OSF: "Overstrain", TWF: "Tool wear" };
+
+function renderStage() {
+  const m = state.machines.find((x) => x.machine === state.selected);
+  if (!m) return;
+  const band = m.state || bandOf(m.worst_margin);
+  const rul = state.rul[m.machine];
+
+  $("subject-id").textContent = m.machine;
+  $("subject-sub").textContent =
+    `Variant ${m.variant} · cycle ${m.udi} · ${band === "normal" ? "within envelope" : band}`;
+  $("scope").textContent = m.machine;
+  $("q").placeholder = `Ask about ${m.machine}…`;
+
+  const fig = $("fig-margin");
+  fig.textContent = fmt(m.worst_margin);
+  fig.className = "figure-value " + (band === "alert" ? "crit" : band === "watch" ? "warn" : "live");
+  $("fig-binding").textContent = m.binding || "—";
+  $("fig-binding").className = "figure-value";
+
+  // Two horizons can exist at once: the live forecast, from the observer's
+  // slope on the cycle now streaming, and the snapshot estimate fetched at
+  // load. When they disagree the live one is right, and showing "—" beside an
+  // activity entry reading "Overstrain projected in 19.3 cycles" is the screen
+  // contradicting itself in the operator's field of view.
+  // The SOONEST forecast, and it carries its own mode. The constraint binding
+  // now and the constraint projected to cross first are different questions
+  // with different answers — a machine can be closest to its power limit while
+  // wear drives it toward overstrain. Reading "binding limit PWF" beside an
+  // unlabelled "23" invites the operator to act on the wrong one.
+  const live = state.alerts
+    .filter((a) => a.machine === m.machine && a.lead_time_cycles != null)
+    .sort((a, b) => a.lead_time_cycles - b.lead_time_cycles)[0];
+  const rulFig = $("fig-rul");
+  if (live) {
+    rulFig.innerHTML =
+      `${live.lead_time_cycles.toFixed(0)}<span class="figure-unit">to ${esc(live.mode)}</span>`;
+    rulFig.className = "figure-value " + (live.lead_time_cycles < 25 ? "crit" : "warn");
+  } else if (rul && rul.expected_cycles !== null && rul.expected_cycles !== undefined) {
+    // The CONFORMAL interval, not the model's own sd. The inverse-Gaussian sd
+    // is ±5 cycles where the calibrated interval is ±30, because the model was
+    // measurably overconfident at the observed crossings. Showing the narrower
+    // of two numbers we hold is choosing the flattering one.
+    rulFig.innerHTML =
+      `${rul.expected_cycles}<span class="figure-unit">${rul.ci_lo}–${rul.ci_hi}</span>`;
+    rulFig.className = "figure-value " + (rul.expected_cycles < 25 ? "crit" : rul.expected_cycles < 60 ? "warn" : "");
+  } else {
+    rulFig.textContent = "—";
+    rulFig.className = "figure-value";
+  }
+
+  renderPrescription(m, rul, band, live);
+  renderConstraints(m);
+  renderReadings(m);
+  renderTrajectory(rul, live);
+  renderPrompts(m);
+}
+
+/* The prescription is INVERTED from the margin, not authored: the binding
+   constraint is a documented inequality, so the setpoint that restores margin
+   is arithmetic on the same expression the alert came from. */
+function renderPrescription(m, rul, band, live) {
+  // The SAME alert the horizon is drawn from. Picking the newest alert with a
+  // fix while the horizon picked the soonest put "projected in 22.8 cycles" in
+  // the recommendation and "projected in 11.4 cycles" in the panel beneath it,
+  // for the same machine on the same cycle. Whichever an operator believed,
+  // half the screen was telling them something else.
+  const alert = (live && live.fix)
+    ? live
+    : state.alerts.find((a) => a.machine === m.machine && a.fix);
+  const box = $("prescription");
+  box.dataset.state = band;
+
+  let text, why;
+  if (alert && alert.fix) {
+    text = alert.fix;
+    why = alert.message;
+  } else if (band === "alert") {
+    text = `${LIMIT_NAMES[m.binding] || m.binding} limit is crossed — stop and inspect before the next cycle.`;
+    why = `Normalised margin ${fmt(m.worst_margin)}; a negative margin means the operating point is outside the documented envelope.`;
+  } else if (rul && rul.expected_cycles !== null && rul.expected_cycles < 60) {
+    text = `Schedule a tool change within ${rul.expected_cycles} cycles (95% interval ${rul.ci_lo}–${rul.ci_hi}).`;
+    why = `Wear accumulates monotonically, so overstrain is the constraint that closes first at ${fmt(m.torque, 1)} N·m.`;
+  } else {
+    text = "No action required. Operating point is inside the envelope on every constraint.";
+    why = `Closest limit is ${LIMIT_NAMES[m.binding] || m.binding}, ${fmt(m.worst_margin)} of a threshold away.`;
+  }
+  $("rx-text").textContent = text;
+  $("rx-why").textContent = why;
+  // Enabled whenever there is something to act on — which includes a machine
+  // whose margin is healthy right now but whose crossing is 11 cycles away.
+  // Gating on the current band alone disabled the button in exactly the
+  // situation the product exists to create: acting BEFORE the boundary. The
+  // forecast was on screen, the fix was written out beneath it, and the button
+  // to turn it into work was greyed out.
+  $("rx-wo").disabled = band === "normal" && !live;
+  $("rx-explain").disabled = false;
+}
+
+function renderConstraints(m) {
+  const d = m.distances || {};
+  $("constraints").innerHTML = Object.entries(d).map(([code, value]) => {
+    const band = bandOf(value);
+    const pct = Math.max(0, Math.min(100, value * 100 / 0.5));
+    return `<div class="constraint">
+      <div class="constraint-row">
+        <span class="constraint-name ${code === m.binding ? "binding" : ""}">${esc(code)}
+          <span style="color:var(--text-3);font-family:var(--sans);font-size:11px"> ${LIMIT_NAMES[code] || ""}</span>
+        </span>
+        <span class="constraint-val">${fmt(value)}</span>
+      </div>
+      <div class="track"><i class="${band === "alert" ? "crit" : band === "watch" ? "warn" : ""}"
+         style="width:${value < 0 ? 100 : pct.toFixed(1)}%"></i></div>
+    </div>`;
+  }).join("");
+}
+
+function renderReadings(m) {
+  $("readings-note").textContent = `cycle ${m.udi}`;
+  const rows = [
+    ["Torque", m.torque, "N·m"],
+    ["Rotational speed", m.rpm, "rpm"],
+    ["Tool wear", m.wear, "min"],
+    ["Power", m.power, "W"],
+  ];
+  $("readings").innerHTML = rows.map(([label, value, unit]) =>
+    `<div class="readout"><span>${label}</span><b>${fmt(value, 1)}
+      <span style="color:var(--text-3);font-size:11px"> ${unit}</span></b></div>`
+  ).join("");
+}
+
+/* Margin against future wear. The curve is the model: it is not fitted, it is
+   the documented boundary evaluated forward at this machine's operating point,
+   which is why a crossing has a cycle number rather than a probability. */
+function renderTrajectory(rul, live) {
+  const box = $("trajectory");
+  if (!rul || !rul.trajectory || rul.trajectory.length < 2) {
+    box.innerHTML = live
+      ? `<div style="font-size:12px;color:var(--text-2);line-height:1.6">
+          ${esc(live.mode)} projected in <b>${live.lead_time_cycles.toFixed(1)}</b> cycles,
+          from the margin's slope over the live window.
+          <div style="color:var(--text-3);margin-top:7px">A wear curve is drawn only when
+          wear is the binding constraint; this crossing is driven by the current setpoint.</div>
+        </div>`
+      : `<div style="font-size:12px;color:var(--text-3);line-height:1.6">
+          No wear trajectory: this machine's binding constraint is not wear-driven,
+          so there is no monotone path to a crossing.</div>`;
+    $("rul-note").textContent = live ? "live forecast" : "—";
+    return;
+  }
+  $("rul-note").textContent = `${rul.status.replace(/_/g, " ")}`;
+
+  const w = 100, h = 46, t = rul.trajectory;
+  const margins = t.map((p) => p.margin);
+  const lo = Math.min(...margins, 0), hi = Math.max(...margins, 0);
+  const span = (hi - lo) || 1;
+  const x = (i) => (i / (t.length - 1)) * w;
+  const y = (v) => h - ((v - lo) / span) * h;
+  const pts = t.map((p, i) => `${x(i).toFixed(2)},${y(p.margin).toFixed(2)}`).join(" ");
+  const zeroY = y(0);
+
+  box.innerHTML = `
+    <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="width:100%;height:74px;display:block">
+      <line x1="0" y1="${zeroY.toFixed(2)}" x2="${w}" y2="${zeroY.toFixed(2)}"
+            stroke="var(--crit)" stroke-width=".5" stroke-dasharray="1.5 1.5" opacity=".7"/>
+      <polyline points="${pts}" fill="none" stroke="var(--warn)" stroke-width="1"
+                vector-effect="non-scaling-stroke"/>
+    </svg>
+    <div class="readout" style="margin-top:9px"><span>Crossing at</span>
+      <b class="${rul.expected_cycles < 25 ? "crit" : "warn"}">cycle +${rul.expected_cycles}</b></div>
+    <div class="readout"><span>95% interval</span><b>${rul.ci_lo}–${rul.ci_hi}</b></div>
+    <div class="readout"><span>Wear now</span><b>${fmt(rul.current_wear_min, 0)} min</b></div>`;
+}
+
+/* Follow-ups are generated from what is on screen, so they are always about
+   the selected machine.
+
+   Every template here is asserted answerable by tests/test_console_prompts.py,
+   which runs each one through the real engine. The first version of this list
+   was written from intuition and two of the four chips came back "I could not
+   confidently interpret that question" — a console that suggests a question and
+   then declines it is worse than one that suggests nothing, because it teaches
+   the operator the system is unreliable before they have asked anything of
+   their own. Phrasings the grammar supports are a fact about the code, so they
+   are pinned by a test rather than by memory. */
+const FOLLOW_UPS = [
+  "What are the main failure modes on {machine}?",
+  "How often does {machine} fail?",
+  "What torque should I run at {wear} minutes of wear?",
+  "What drives overstrain failures?",
+];
+
+function renderPrompts(m) {
+  const wear = Math.max(1, Math.round(m.wear));
+  $("prompts").innerHTML = FOLLOW_UPS
+    .map((t) => t.replace("{machine}", m.machine).replace("{wear}", wear))
+    .map((q) => `<button class="prompt" type="button" data-q="${esc(q)}">${esc(q)}</button>`)
+    .join("");
+}
+
+$("prompts").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-q]");
+  if (b) { $("q").value = b.dataset.q; askNow(); }
+});
+
+function select(id) {
+  state.selected = id;
+  renderFleet();
+  renderStage();
+  loadRul(id);
+}
+
+/* ---------------------------------------------------------------------------
+   Activity
+   --------------------------------------------------------------------------- */
+const MAX_EVENTS = 60;
+
+const MACHINE_KINDS = new Set(["crossed", "predicted", "approaching"]);
+
+function pushAlert(a) {
+  // An abstention is the system declining to judge, and a sensor fault is a
+  // fact about the instrument. Neither is a machine in trouble. Interleaved,
+  // ten "cannot be evaluated" entries during observer warm-up push the one
+  // real crossing off the top of the rail — the alert fatigue this product
+  // exists to avoid, reproduced in its own UI.
+  if (!MACHINE_KINDS.has(a.kind)) { pushInstrument(a); return; }
+  state.alerts.unshift(a);
+  if (state.alerts.length > MAX_EVENTS) state.alerts.length = MAX_EVENTS;
+  renderEvents();
+  renderFleet();
+  if (a.machine === state.selected) renderStage();
+}
+
+/* Instrument events collapse to a count per machine+channel, expandable. */
+function pushInstrument(a) {
+  const key = a.machine + "/" + a.mode;
+  const seen = state.instruments.get(key);
+  if (seen) { seen.n += 1; seen.udi = a.udi; }
+  else state.instruments.set(key, { ...a, n: 1 });
+  renderEvents();
+}
+
+function renderEvents() {
+  const box = $("events");
+  const instruments = [...state.instruments.values()];
+  if (!state.alerts.length && !instruments.length) return;
+
+  // One line, not a list. Enumerating every machine+channel pair produced a
+  // 96-entry wall of text that pushed the real alerts below the fold — the
+  // same crowding-out this collapse was introduced to prevent, in a new shape.
+  // The operator needs to know instruments are noisy and which machines are
+  // worst; the full inventory belongs on the reliability page.
+  const total = instruments.reduce((n, i) => n + i.n, 0);
+  const worst = [...instruments].sort((a, b) => b.n - a.n).slice(0, 3);
+  const instrumentHtml = instruments.length ? `
+    <div class="event" data-kind="sensor" style="cursor:default">
+      <div class="event-top">
+        <span class="event-machine">Instrument health</span>
+        <span class="event-when">${total}</span>
+      </div>
+      <div class="event-msg">${instruments.length} channel${instruments.length === 1 ? "" : "s"}
+        withheld a margin. Most affected: ${worst.map((i) =>
+          `${esc(i.machine)}&nbsp;${esc(i.mode)}`).join(", ")}.</div>
+      <div class="event-fix">Margins are withheld while a channel is untrusted, not estimated.</div>
+    </div>` : "";
+
+  box.innerHTML = instrumentHtml + state.alerts.map((a) => `
+    <div class="event" data-kind="${esc(a.kind)}" data-machine="${esc(a.machine)}">
+      <div class="event-top">
+        <span class="event-machine">${esc(a.machine)} · ${esc(a.mode)}</span>
+        <span class="event-when">${esc(a.udi)}</span>
+      </div>
+      <div class="event-msg">${esc(a.message)}</div>
+      ${a.fix ? `<div class="event-fix">→ ${esc(a.fix)}</div>` : ""}
+      ${a.lead_time_cycles !== null && a.lead_time_cycles !== undefined
+        ? `<div class="event-fix">${a.lead_time_cycles} cycles of lead time</div>` : ""}
+    </div>`).join("");
+  $("activity-note").textContent = state.alerts.length
+    ? `${state.alerts.length} alert${state.alerts.length === 1 ? "" : "s"}`
+    : "instrument only";
+}
+
+$("events").addEventListener("click", (e) => {
+  const row = e.target.closest("[data-machine]");
+  if (row) select(row.dataset.machine);
+});
+
+/* ---------------------------------------------------------------------------
+   The stream. Ticks carry margins AND their alerts, so one connection keeps
+   the fleet rail, the stage and the activity rail all current — rather than
+   three pollers disagreeing about what cycle it is.
+   --------------------------------------------------------------------------- */
+function toggleStream() {
+  if (state.source) { stopStream(); return; }
+
+  // Takt. The first machine alert in this replay lands at cycle 892, so at one
+  // cycle a second the console shows six minutes of instrument warm-up before
+  // anything happens. The stream is a replay of recorded cycles, not wall
+  // clock, so its rate is a display choice and belongs to the operator.
+  const speed = $("takt").value;
+  const source = new EventSource(`/stream/margins?speed=${speed}&limit=2000`);
+  state.source = source;
+  $("stream-btn").dataset.live = "true";
+  $("stream-btn").textContent = "Pause";
+
+  source.addEventListener("tick", (e) => {
+    const t = JSON.parse(e.data);
+    $("playhead").textContent = "cycle " + t.udi;
+
+    const m = state.machines.find((x) => x.machine === t.machine);
+    if (m) {
+      m.udi = t.udi;
+      m.worst_margin = t.worst_margin;
+      m.state = bandOf(t.worst_margin);
+      m.torque = t.torque_nm; m.rpm = t.rpm; m.wear = t.wear_min; m.power = t.power_w;
+      // Distances arrive with the tick that produced the margin. Before they
+      // did, the headline was live and the constraint bars were from load
+      // time — one screen showing two different cycles as if they were one.
+      if (t.distances && Object.keys(t.distances).length) {
+        m.distances = t.distances;
+        m.binding = Object.keys(t.distances).reduce((a, b) => t.distances[a] <= t.distances[b] ? a : b);
+      }
+      m.history = [...(m.history || []).slice(-23), t.worst_margin];
+      // Worst-first is the invariant of this rail, so re-sort on every tick.
+      state.machines.sort((a, b) => a.worst_margin - b.worst_margin);
+      renderFleet();
+      if (m.machine === state.selected) renderStage();
+    }
+    (t.alerts || []).forEach(pushAlert);
+  });
+
+  source.addEventListener("summary", (e) => {
+    const s = JSON.parse(e.data);
+    $("activity-note").textContent = `${s.alerts} raised · ${s.suppressed} suppressed`;
+    stopStream();
+  });
+
+  source.onerror = () => stopStream();
+}
+
+function stopStream() {
+  if (state.source) { state.source.close(); state.source = null; }
+  $("stream-btn").dataset.live = "false";
+  $("stream-btn").textContent = "Go live";
+}
+
+$("stream-btn").addEventListener("click", toggleStream);
+$("takt").addEventListener("change", () => {
+  if (state.source) { stopStream(); toggleStream(); }   // re-open at the new rate
+});
+
+// A closed tab should not keep a replay running. Without this the server holds
+// the connection for the rest of the 2,000-cycle replay, which also blocks its
+// own graceful shutdown on the next deploy.
+window.addEventListener("pagehide", stopStream);
+
+/* ---------------------------------------------------------------------------
+   Data
+   --------------------------------------------------------------------------- */
+async function loadFleet() {
+  const r = await fetch("/fleet");
+  const d = await r.json();
+  state.machines = d.machines;
+  $("playhead").textContent = "cycle " + d.playhead;
+  $("fleet-note").textContent = `${d.machines.length} machines`;
+  renderFleet();
+  if (!state.selected && d.machines.length) select(d.machines[0].machine);
+  else renderStage();
+}
+
+async function loadRul(machineId) {
+  try {
+    const r = await fetch("/rul/" + encodeURIComponent(machineId));
+    if (!r.ok) return;
+    state.rul[machineId] = await r.json();
+    renderFleet();
+    renderStage();
+  } catch { /* a missing horizon is a blank panel, not a broken screen */ }
+}
+
+async function loadAllRul() {
+  const r = await fetch("/rul");
+  const d = await r.json();
+  d.machines.forEach((m) => { state.rul[m.machine_id] = m; });
+  renderFleet();
+  renderStage();
+}
+
+async function loadWorkOrders() {
+  const r = await fetch("/cmms/work_orders?limit=8");
+  const d = await r.json();
+  const s = d.summary || {};
+  $("wo-note").textContent = s.precision !== null && s.precision !== undefined
+    ? `${s.open ?? 0} open · ${(s.precision * 100).toFixed(0)}% precision`
+    : `${s.open ?? 0} open`;
+  const orders = d.work_orders || [];
+  $("work-orders").innerHTML = orders.length
+    ? orders.map((w) => `<div class="wo">
+        <div class="wo-top"><span>${esc(w.machine_id)} · ${esc(w.alert_mode)}</span>
+          <span class="wo-id">#${esc(w.id)}</span></div>
+        <div class="wo-outcome">${esc(w.outcome || w.status || "open")}</div>
+      </div>`).join("")
+    : `<div class="empty">No work orders. Raising one from an alert records the
+        outcome, and outcomes are what tune the thresholds.</div>`;
+}
+
+/* Raising a work order closes the loop: the alert becomes a task, and when the
+   technician closes it the outcome feeds threshold learning. */
+$("rx-wo").addEventListener("click", async () => {
+  const m = state.machines.find((x) => x.machine === state.selected);
+  if (!m) return;
+  const btn = $("rx-wo");
+  btn.disabled = true; btn.textContent = "Raising…";
+  try {
+    await fetch("/cmms/work_orders", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        machine_id: m.machine, udi: m.udi, alert_mode: m.binding, raised_by: "console",
+      }),
+    });
+    btn.textContent = "Raised";
+    await loadWorkOrders();
+  } catch {
+    btn.textContent = "Failed"; btn.disabled = false;
+  }
+  setTimeout(() => { btn.textContent = "Raise work order"; btn.disabled = false; }, 2500);
+});
+
+$("rx-explain").addEventListener("click", () => {
+  const m = state.machines.find((x) => x.machine === state.selected);
+  if (!m) return;
+  $("q").value = `What are the main failure modes on ${m.machine}?`;
+  askNow();
+});
+
+/* ---------------------------------------------------------------------------
+   Ask. Scoped to the selection, rendered in the dock, with the verification
+   badge attached — the answer is never separated from whether it was checked.
+   --------------------------------------------------------------------------- */
+async function askNow() {
+  const question = $("q").value.trim();
+  if (!question) return;
+  const box = $("answer");
+  box.innerHTML = `<span style="color:var(--text-3)">Planning…</span>`;
+
+  const started = performance.now();
+  try {
+    const r = await fetch("/ask", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, session_id: state.session }),
+    });
+    const d = await r.json();
+    const badge = d.refused ? `<span class="badge refused">declined</span>`
+                : d.verified ? `<span class="badge verified">verified</span>`
+                : `<span class="badge">unverified</span>`;
+    const warnings = (d.warnings || [])
+      .map((w) => `<div style="color:var(--warn);font-size:12px;margin-top:6px">${esc(w.message)}</div>`)
+      .join("");
+    box.innerHTML = `<div>${esc(d.narration || d.answer)}</div>${warnings}
+      <div class="dock-meta">${badge}
+        <span>${esc(d.op || "—")}</span>
+        <span>${esc(d.tier)}</span>
+        <span>${Math.round(performance.now() - started)} ms round trip</span>
+        <span>${d.elapsed_ms} ms engine</span>
+      </div>`;
+  } catch (err) {
+    box.innerHTML = `<span style="color:var(--crit)">The engine did not answer: ${esc(err.message)}</span>`;
+  }
+  $("q").value = "";
+}
+
+$("q").addEventListener("keydown", (e) => { if (e.key === "Enter") askNow(); });
+
+/* Keyboard: an operator's hands stay on the keyboard, so selection moves with
+   the arrows and the stream toggles with a key. */
+document.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "INPUT") return;
+  const idx = state.machines.findIndex((m) => m.machine === state.selected);
+  if (e.key === "ArrowDown" && idx < state.machines.length - 1) select(state.machines[idx + 1].machine);
+  if (e.key === "ArrowUp" && idx > 0) select(state.machines[idx - 1].machine);
+  if (e.key === " ") { e.preventDefault(); toggleStream(); }
+  if (e.key === "/") { e.preventDefault(); $("q").focus(); }
+});
+
+/* ---------------------------------------------------------------------------
+   Boot
+   --------------------------------------------------------------------------- */
+(async function boot() {
+  await loadFleet();
+  await Promise.all([loadAllRul(), loadWorkOrders()]);
+})();
+</script>

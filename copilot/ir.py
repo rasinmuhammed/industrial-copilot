@@ -68,6 +68,7 @@ class OpName(StrEnum):
     RECORDS = "records"
     DATA_QUALITY = "data_quality"
     SQL_EXPLORE = "sql_explore"
+    DRIFT = "drift"
 
 
 class FilterOp(StrEnum):

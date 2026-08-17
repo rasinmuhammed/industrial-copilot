@@ -132,6 +132,13 @@ class Tick:
     fired: list[str]
     alerts: list[Alert]
     elapsed_us: float
+    #: Normalised distance to each documented limit, from the SAME cycle as
+    #: `worst_margin`. The console shows both, and when only the minimum
+    #: streamed it had to pair a live headline with distances fetched at load —
+    #: two numbers on one screen, computed 9,990 cycles apart, that a reader
+    #: would reasonably assume were the same reading. Carrying all three costs
+    #: nothing: they are already computed to take the minimum.
+    distances: dict[str, float] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -143,6 +150,7 @@ class Tick:
             "wear_min": round(self.point.tool_wear_min, 1),
             "power_w": round(self.point.power_w, 1),
             "worst_margin": round(self.worst_margin, 4),
+            "distances": {k: round(v, 4) for k, v in self.distances.items()},
             "verdict": self.verdict.value,
             "fired": self.fired,
             "alerts": [a.as_dict() for a in self.alerts],
@@ -290,11 +298,12 @@ class StreamScorer:
             firing = robust_margins.fired_modes()
             abstaining = []
             verdict = Verdict.ALERT if firing else Verdict.SAFE
-        worst = min(
-            margins.hdf_distance,
-            margins.pwf_distance,
-            margins.osf_distance(point.osf_threshold),
-        )
+        distances = {
+            "HDF": margins.hdf_distance,
+            "PWF": margins.pwf_distance,
+            "OSF": margins.osf_distance(point.osf_threshold),
+        }
+        worst = min(distances.values())
         slope = state.slope(worst)
 
         if trust is not None and not trust.trusted and not trust.calibrating:
@@ -324,6 +333,7 @@ class StreamScorer:
                 udi=int(row["udi"]), machine_id=machine,
                 product_type=point.product_type, point=point, worst_margin=worst,
                 verdict=Verdict.ABSTAIN, fired=[], alerts=alerts,
+                distances=distances,
                 elapsed_us=(time.perf_counter() - started) * 1e6,
             )
 
@@ -348,6 +358,7 @@ class StreamScorer:
             verdict=verdict,
             fired=fired,
             alerts=alerts,
+            distances=distances,
             elapsed_us=(time.perf_counter() - started) * 1e6,
         )
 

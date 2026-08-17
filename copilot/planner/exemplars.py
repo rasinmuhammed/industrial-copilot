@@ -194,11 +194,35 @@ def rebind(
     exactly the failure that made "why did cycle 2750 fail" return cycle 4045.
     """
     from copilot.ir import OpName
-    from copilot.planner.grammar import _extract_filters
+    from copilot.planner.grammar import (
+        _categorical_premise,
+        _extract_changes,
+        _extract_filters,
+        _extract_operating_point,
+    )
 
     payload = dict(shape)
+
+    # Entities come from the question being asked NOW — params exactly as much
+    # as filters. `plan_shape` stores only the configuration half, so anything
+    # naming a wear, a torque, a variant or a claim is re-derived here. A key
+    # the current question does not mention is simply absent, and the op falls
+    # back to its own default rather than inheriting a stranger's operating
+    # point.
+    lowered = question.lower()
+    params = dict(payload.get("params") or {})
+    params.update(_extract_operating_point(lowered))
+    if (changes := _extract_changes(lowered)):
+        params["changes"] = changes
+    if payload.get("verify_premise") and (claim := _categorical_premise(lowered)):
+        params["premise"] = claim
+    if params:
+        payload["params"] = params
+    else:
+        payload.pop("params", None)
+
     try:
-        filters = _extract_filters(question.lower(), state, OpName(payload["op"]))
+        filters = _extract_filters(lowered, state, OpName(payload["op"]))
         # A premise claim needs the cross-group comparison, so a filter on the
         # claimed field would defeat the very test being run — you cannot ask
         # "is H the worst" while looking only at H. Scoped breakdowns like
@@ -218,14 +242,43 @@ def rebind(
         return None
 
 
+#: Params that name a specific operating point or quantity from the question,
+#: rather than configuring the analysis. These are ENTITIES, and the cache key
+#: erases entities: `normalise()` turns every number into `<n>`, so "at 8
+#: minutes of wear" and "at 200 minutes of wear" are one key. Storing their
+#: values in the shape therefore answers the second question with the first
+#: question's operating point.
+#:
+#: That is what happened. Every phrasing of the envelope question returned the
+#: torque window for whichever wear was asked about FIRST in the process — a
+#: verified, exact, correctly-computed safe operating range for a machine in a
+#: different condition than the one the engineer described. It is the
+#: prescriptive capability, which is the part of this product an operator would
+#: actually act on, and the plan cache made it answer from stale wear.
+#:
+#: `sql` was already excluded here for exactly this reason. The reasoning simply
+#: had not been carried to the rest of the entity-bearing keys.
+_ENTITY_PARAMS = frozenset({
+    "sql",
+    "udi", "product_type",
+    "air_temp_k", "process_temp_k",
+    "rotational_speed_rpm", "torque_nm", "tool_wear_min",
+    "changes", "premise",
+})
+
+
 def plan_shape(plan: AnalysisPlan) -> dict[str, Any]:
-    """The reusable part of a plan: what analysis, not which rows."""
+    """The reusable part of a plan: what analysis, not which rows.
+
+    Entity-bearing params are dropped, not stored. `rebind` re-derives them from
+    the question being asked now, the same way it re-derives filters.
+    """
     dumped = plan.model_dump(mode="json")
     shape = {k: dumped[k] for k in _SHAPE_FIELDS if k in dumped}
-    # params carry op configuration (ordering, changes) which IS reusable, but
-    # a raw SQL string is not — it is entity-specific by construction.
-    params = dict(dumped.get("params") or {})
-    params.pop("sql", None)
+    params = {
+        k: v for k, v in (dumped.get("params") or {}).items()
+        if k not in _ENTITY_PARAMS
+    }
     if params:
         shape["params"] = params
     return shape

@@ -1322,6 +1322,15 @@ sendBtn.disabled = true;
     btn.addEventListener('click', () => { detailPinned = !detailPinned; sync(); });
     sync();
   })();
+
+  // Handle URL query injection from Telemetry
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialQ = urlParams.get('q');
+  if (initialQ) {
+    qEl.value = initialQ;
+    window.history.replaceState({}, document.title, "/");
+    ask(initialQ);
+  }
 </script>
 </body>
 </html>

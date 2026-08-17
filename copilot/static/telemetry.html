@@ -58,23 +58,24 @@ table.grid td.ts { color: var(--text-2); font-family: var(--mono); font-size: 11
     <div class="hdr-row">
       <h1>Data Explorer</h1>
       <div class="controls">
-        <span style="font-size:12px;color:var(--text-3)">Raw device telemetry with synthetic timestamps</span>
+        <span style="font-size:12px;color:var(--text-3)">Raw instrument record, straight from the warehouse — every derived figure traces back here</span>
       </div>
     </div>
     <div class="table-wrap">
       <table class="grid">
         <thead>
           <tr id="th-row">
-            <th data-col="timestamp">Timestamp</th>
+            <th data-col="ts">Timestamp</th>
             <th data-col="udi">UDI</th>
             <th data-col="product_id">Product</th>
-            <th data-col="type">Type</th>
+            <th data-col="product_type">Type</th>
             <th data-col="air_temperature_k">Air Temp (K)</th>
             <th data-col="process_temperature_k">Proc Temp (K)</th>
             <th data-col="rotational_speed_rpm">Speed (rpm)</th>
             <th data-col="torque_nm">Torque (Nm)</th>
             <th data-col="tool_wear_min">Wear (min)</th>
             <th data-col="machine_failure">Status</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody id="tbody">
@@ -97,7 +98,7 @@ table.grid td.ts { color: var(--text-2); font-family: var(--mono); font-size: 11
 
 let limit = 100;
 let offset = 0;
-let sort = "timestamp";
+let sort = "ts";
 let order = "desc";
 let totalRows = 0;
 
@@ -131,24 +132,27 @@ function renderTable(rows) {
     if (r.hdf) failureModes.push("HDF");
     if (r.pwf) failureModes.push("PWF");
     if (r.osf) failureModes.push("OSF");
-    if (r.rn) failureModes.push("RN");
+    if (r.rnf) failureModes.push("RNF");
     
     let statusHTML = r.machine_failure 
       ? `<span class="tag no">FAILED</span> ${failureModes.map(f => `<span class="tag no" style="background:transparent">${f}</span>`).join('')}`
       : `<span class="tag ok">OK</span>`;
+    let q = r.machine_failure ? `Why did cycle ${r.udi} fail?` : `Is cycle ${r.udi} safe?`;
+    let btnHTML = `<a href="/?q=${encodeURIComponent(q)}" class="btn-small" style="text-decoration:none; display:inline-block; border-radius: 4px; padding: 2px 8px; font-size:10px;">Ask Copilot</a>`;
       
     return `
       <tr>
-        <td class="ts">${r.timestamp}</td>
+        <td class="ts">${r.ts}</td>
         <td class="num">${r.udi}</td>
         <td class="num" style="color:var(--text-2)">${r.product_id}</td>
-        <td class="num">${r.type}</td>
+        <td class="num">${r.product_type}</td>
         <td class="num">${r.air_temperature_k.toFixed(1)}</td>
         <td class="num">${r.process_temperature_k.toFixed(1)}</td>
         <td class="num">${r.rotational_speed_rpm}</td>
         <td class="num">${r.torque_nm.toFixed(1)}</td>
         <td class="num">${r.tool_wear_min}</td>
         <td>${statusHTML}</td>
+        <td>${btnHTML}</td>
       </tr>
     `;
   }).join('');

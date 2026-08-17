@@ -271,25 +271,22 @@ def _resolve_point(
         if k in params
     }
 
-    if len(explicit) >= 3:
-        ptype = str(params.get("product_type", "L")).upper()
-        if ptype not in OSF_THRESHOLD:
-            bundle.warn(
-                "data_quality",
-                f"Unknown product variant {ptype!r}; defaulting to L (the strictest "
-                "overstrain limit).",
-                severity=Severity.INFO,
-            )
-            ptype = "L"
-        air = float(explicit.get("air_temp_k", 300.0))
-        return OperatingPoint(
-            air_temp_k=air,
-            process_temp_k=float(explicit.get("process_temp_k", air + 10.0)),
-            rotational_speed_rpm=float(explicit.get("rotational_speed_rpm", 1500.0)),
-            torque_nm=float(explicit.get("torque_nm", 40.0)),
-            tool_wear_min=float(explicit.get("tool_wear_min", 0.0)),
-            product_type=ptype,  # type: ignore[arg-type]
-        )
+    # A named quantity OVERRIDES the cohort; it does not have to replace it.
+    #
+    # This used to require three of the five before it honoured any of them, so
+    # "what torque should I run at 200 minutes of wear" — one named quantity,
+    # and the entire subject of the question — fell through to the branch below
+    # and reported the envelope at the cohort's MEAN wear of 108 minutes. The
+    # answer stated its own operating point, so it was not lying; it simply
+    # answered about a machine in average condition when the engineer asked
+    # about a worn one. Wear is monotone and the overstrain limit is a product
+    # of wear and torque, so the safe torque ceiling at 200 minutes is roughly
+    # half what it is at 108. Reporting the wrong one is a prescription to run a
+    # tool at twice its limit.
+    #
+    # The right composition is: take the observed cohort as the baseline for
+    # everything unspecified, then overlay what was actually asked.
+    ptype_given = "product_type" in params
 
     where, filter_params = cohort_where(plan, None)
     row = ctx.cursor.execute(
@@ -299,7 +296,9 @@ def _resolve_point(
         filter_params,
     ).fetchone()
 
-    if not row or not row[6]:
+    matched = int(row[6]) if row and row[6] else 0
+
+    if not matched and not explicit:
         bundle.put("current.safe", None, quality=Quality.ABSTAIN)
         bundle.warn(
             "abstained",
@@ -309,21 +308,67 @@ def _resolve_point(
         )
         return None
 
-    if int(row[6]) > 1:
+    # Baseline: observed conditions where there are any, nominal where there are
+    # not. A fully hypothetical setpoint is a legitimate question — an engineer
+    # may ask about a configuration that has never been run.
+    if matched:
+        air = float(row[0])
+        baseline = {
+            "air_temp_k": air,
+            "process_temp_k": float(row[1]),
+            "rotational_speed_rpm": float(row[2]),
+            "torque_nm": float(row[3]),
+            "tool_wear_min": float(row[4]),
+        }
+        ptype = row[5]
+    else:
+        baseline = {
+            "air_temp_k": 300.0,
+            "process_temp_k": 310.0,
+            "rotational_speed_rpm": 1500.0,
+            "torque_nm": 40.0,
+            "tool_wear_min": 0.0,
+        }
+        ptype = "L"
+
+    if ptype_given:
+        ptype = str(params["product_type"]).upper()
+        if ptype not in OSF_THRESHOLD:
+            bundle.warn(
+                "data_quality",
+                f"Unknown product variant {ptype!r}; defaulting to L (the strictest "
+                "overstrain limit).",
+                severity=Severity.INFO,
+            )
+            ptype = "L"
+
+    point = {**baseline, **{k: float(v) for k, v in explicit.items()}}
+    # Process temperature tracks ambient, so an explicit air temperature with no
+    # stated process temperature would otherwise pair a new ambient with an old
+    # absolute process reading — and the HDF margin is their difference.
+    if "air_temp_k" in explicit and "process_temp_k" not in explicit:
+        point["process_temp_k"] = point["air_temp_k"] + (
+            baseline["process_temp_k"] - baseline["air_temp_k"]
+        )
+
+    assumed = [k for k in baseline if k not in explicit]
+    if matched > 1 and assumed:
+        readable = ", ".join(k.replace("_", " ") for k in assumed)
         bundle.warn(
             "data_quality",
-            f"No explicit setpoint given, so the envelope is reported at the MEAN "
-            f"conditions of {int(row[6])} matching cycles. Individual cycles vary "
-            "around this point.",
+            f"Reported at the MEAN {readable} of {matched:,} matching cycles; "
+            f"{'only ' + ', '.join(explicit) + ' was' if explicit else 'nothing was'} "
+            "specified. Individual cycles vary around this point.",
             severity=Severity.INFO,
         )
+
     return OperatingPoint(
-        air_temp_k=float(row[0]),
-        process_temp_k=float(row[1]),
-        rotational_speed_rpm=float(row[2]),
-        torque_nm=float(row[3]),
-        tool_wear_min=float(row[4]),
-        product_type=row[5],
+        air_temp_k=point["air_temp_k"],
+        process_temp_k=point["process_temp_k"],
+        rotational_speed_rpm=point["rotational_speed_rpm"],
+        torque_nm=point["torque_nm"],
+        tool_wear_min=point["tool_wear_min"],
+        product_type=ptype,  # type: ignore[arg-type]
     )
 
 

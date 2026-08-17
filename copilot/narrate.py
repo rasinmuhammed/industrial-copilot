@@ -358,6 +358,9 @@ def _sql_explore(plan: AnalysisPlan, bundle: EvidenceBundle) -> str:
     )
 
 
+def _drift(plan: AnalysisPlan, bundle: EvidenceBundle) -> str:
+    return _ref("drift.explanation")
+
 def _generic(plan: AnalysisPlan, bundle: EvidenceBundle) -> str:
     keys = list(bundle.slots)[:8]
     return "\n".join(f"- {k}: {_ref(k)}" for k in keys) or "No evidence produced."
@@ -376,6 +379,7 @@ _BY_OP = {
     OpName.RECORDS: _records,
     OpName.DATA_QUALITY: _data_quality,
     OpName.SQL_EXPLORE: _sql_explore,
+    OpName.DRIFT: _drift,
 }
 
 

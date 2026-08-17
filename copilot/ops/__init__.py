@@ -8,6 +8,7 @@ from copilot.ops import compare as _compare  # noqa: F401
 from copilot.ops import counterfactual as _counterfactual  # noqa: F401
 from copilot.ops import data_quality as _data_quality  # noqa: F401
 from copilot.ops import describe as _describe  # noqa: F401
+from copilot.ops import drift as _drift  # noqa: F401
 from copilot.ops import drivers as _drivers  # noqa: F401
 from copilot.ops import envelope as _envelope  # noqa: F401
 from copilot.ops import forecast as _forecast  # noqa: F401

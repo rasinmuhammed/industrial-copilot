@@ -32,6 +32,8 @@ HEALTHY_COHORT = Cohort(name="healthy", filters=[Filter(field="failure", op="=",
 # Intent signals, most specific first. Order matters: "why did X fail" must beat
 # the generic "fail" signal that would otherwise route to `rate`.
 _INTENT_PATTERNS: list[tuple[OpName, float, re.Pattern[str]]] = [
+    (OpName.DRIFT, 0.99, re.compile(
+        r"\b(drift detection|diagnostics|run drift|check (for )?drift|check model drift)\b")),
     (OpName.DATA_QUALITY, 0.95, re.compile(
         r"\b(can i trust|data quality|quality of (the )?data"
         r"|(any|are there( any)?) (issues|problems) (with|in)"
@@ -103,7 +105,21 @@ _DRILL_DOWN = re.compile(
 _VARIANT = re.compile(r"\b([LMH])\b(?:\s*(?:variant|type|quality|grade))?")
 _VARIANT_WORD = re.compile(r"\b(low|medium|high)[- ]?(?:quality|grade|variant|type)\b", re.I)
 _UDI = re.compile(r"\b(?:udi|cycle|row|record)\s*#?\s*(\d{1,5})\b", re.IGNORECASE)
-_MACHINE = re.compile(r"\b(?:machine|asset|unit)\s*#?\s*([LMH]-\d{2})\b", re.IGNORECASE)
+# A machine id is self-identifying — `L-03` is not a phrase that occurs by
+# accident — so the noun in front of it is optional.
+#
+# Requiring it was a silent-substitution bug of the worst kind. "How often does
+# L-03 fail?" did not match, the machine filter was never added, and the answer
+# came back "3.39% (339 of 10,000)": the WHOLE FLEET, verified, exact, and about
+# a different subject than the question. On the operations console, where every
+# docked question is scoped to the selected machine, that is the default case
+# rather than an edge case.
+#
+# The trailing `(?![\w-])` stops `L-03` matching inside a longer token, so a
+# product id like `L47181` or a part number never reads as an asset.
+_MACHINE = re.compile(
+    r"\b(?:machine|asset|unit)?\s*#?\s*([LMH]-\d{2})(?![\w-])", re.IGNORECASE
+)
 _TIME_GRAIN = re.compile(r"\bby (hour|day|shift)\b|\bper (hour|day|shift)\b", re.IGNORECASE)
 _NUMBER_WITH_UNIT = re.compile(
     r"([-+]?\d+(?:\.\d+)?)\s*(nm|n·m|rpm|k|w|min|minutes?|%)\b", re.IGNORECASE
@@ -277,13 +293,20 @@ def _extract_filters(text: str, state: SessionState | None, op: OpName) -> list[
 
     if (m := _UDI.search(text)) is not None:
         filters.append(Filter(field="udi", op="=", value=int(m.group(1))))
+    # The machine id is consumed from the text before variants are read. The
+    # letter in `L-03` is a word-boundary match for the bare-variant pattern, so
+    # without this "failure rate for L-03 variants" would scope to BOTH machine
+    # L-03 and every L-variant machine in the plant — an intersection nobody
+    # asked for, and one that silently changes the denominator.
+    remaining = text
     if (m := _MACHINE.search(text)) is not None:
         filters.append(Filter(field="machine_id", op="=", value=m.group(1).upper()))
+        remaining = text[: m.start(1)] + text[m.end(1):]
 
     variant = None
-    if (m := _VARIANT_WORD.search(text)) is not None:
+    if (m := _VARIANT_WORD.search(remaining)) is not None:
         variant = _VARIANT_WORDS[m.group(1).lower()]
-    elif (m := _VARIANT.search(text.upper())) is not None:
+    elif (m := _VARIANT.search(remaining.upper())) is not None:
         # Only trust a bare letter when the sentence is talking about variants.
         if re.search(r"\b(variants?|types?|quality|grades?)\b", text):
             variant = m.group(1)
