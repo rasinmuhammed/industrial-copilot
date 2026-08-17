@@ -620,10 +620,25 @@ function forecastSet() {
 function renderFleet() {
   const counts = { alert: 0, watch: 0, normal: 0, abstain: 0 };
   const forecast = forecastSet();
+  const isFleet = !state.selected || state.selected === "fleet";
+
+  const fleetHeader = `<div class="machine" role="option" data-state="normal"
+               aria-selected="${isFleet}" data-machine="fleet"
+               style="border-bottom: 1px solid var(--line-med); margin-bottom: 6px; padding-bottom: 8px;">
+    <span class="dot normal"></span>
+    <div>
+      <div class="machine-id">🏢 All Fleet</div>
+      <div class="machine-sub">15 machines · cross-fleet scope</div>
+    </div>
+    <div class="machine-right">
+      <div class="machine-margin" style="font-size:11px;color:var(--text-2)">15 units</div>
+    </div>
+  </div>`;
+
   const html = state.machines.map((m) => {
     const band = m.state || bandOf(m.worst_margin);
     counts[band] = (counts[band] || 0) + 1;
-    const selected = m.machine === state.selected;
+    const selected = !isFleet && m.machine === state.selected;
     const rul = state.rul[m.machine];
     const projected = forecast.has(m.machine);
     const sub = projected
@@ -646,7 +661,7 @@ function renderFleet() {
     </div>`;
   }).join("");
 
-  $("fleet-list").innerHTML = html;
+  $("fleet-list").innerHTML = fleetHeader + html;
   $("n-alert").textContent = counts.alert;
   $("n-forecast").textContent = forecast.size;
   $("n-watch").textContent = counts.watch;
@@ -664,6 +679,24 @@ $("fleet-list").addEventListener("click", (e) => {
 const LIMIT_NAMES = { HDF: "Heat dissipation", PWF: "Power", OSF: "Overstrain", TWF: "Tool wear" };
 
 function renderStage() {
+  const isFleet = !state.selected || state.selected === "fleet";
+  if (isFleet) {
+    $("subject-id").textContent = "All Fleet";
+    $("subject-sub").textContent = "15 machines · cross-fleet aggregate analysis & simulation";
+    updateScopeIndicator();
+    const qInput = $("q");
+    if (qInput) qInput.placeholder = "Ask any question across all 15 machines (e.g. simulation, comparison, drivers)…";
+    const minMargin = state.machines.length ? Math.min(...state.machines.map((x) => x.worst_margin ?? 1.0)) : 0.116;
+    $("fig-margin").textContent = fmt(minMargin);
+    $("fig-margin").className = "figure-value warn";
+    $("fig-binding").textContent = "HDF (worst)";
+    $("fig-binding").className = "figure-value";
+    $("fig-rul").innerHTML = `15<span class="figure-unit">monitored</span>`;
+    $("fig-rul").className = "figure-value";
+    renderFleetPrompts();
+    return;
+  }
+
   const m = state.machines.find((x) => x.machine === state.selected);
   if (!m) return;
   const band = m.state || bandOf(m.worst_margin);
@@ -854,7 +887,24 @@ const FOLLOW_UPS = [
   "What drives overstrain failures?",
 ];
 
+const FLEET_PROMPTS = [
+  "Suppose cooling degrades by 3K, which machines cross thermal limit first?",
+  "Compare failure rates between L, M, and H variants",
+  "What are the main drivers of failure across the fleet?",
+  "What if we reduce torque by 5 Nm fleet-wide?",
+];
+
+function renderFleetPrompts() {
+  $("prompts").innerHTML = FLEET_PROMPTS
+    .map((q) => `<button class="prompt" type="button" data-q="${esc(q)}">${esc(q)}</button>`)
+    .join("");
+}
+
 function renderPrompts(m) {
+  if (!m || state.selected === "fleet") {
+    renderFleetPrompts();
+    return;
+  }
   const wear = Math.max(1, Math.round(m.wear));
   $("prompts").innerHTML = FOLLOW_UPS
     .map((t) => t.replace("{machine}", m.machine).replace("{wear}", wear))
@@ -872,7 +922,7 @@ function select(id) {
   updateScopeIndicator();
   renderFleet();
   renderStage();
-  loadRul(id);
+  if (id && id !== "fleet") loadRul(id);
 }
 
 /* ---------------------------------------------------------------------------
@@ -1109,10 +1159,10 @@ state.chatHistory = [];
 
 function updateScopeIndicator() {
   const chip = $("scope-chip");
-  const current = state.selected || "fleet";
+  const isFleet = !state.selected || state.selected === "fleet";
+  const current = isFleet ? "fleet" : state.selected;
   if (chip) chip.textContent = current;
 
-  const m = state.machines.find((x) => x.machine === state.selected);
   const ambMachine = $("amb-machine");
   const ambVariant = $("amb-variant");
   const ambStatus = $("amb-status");
@@ -1122,6 +1172,20 @@ function updateScopeIndicator() {
   const ambTorque = $("amb-torque");
   const ambDot = $("amb-dot");
 
+  if (isFleet) {
+    if (ambMachine) ambMachine.textContent = "All Fleet";
+    if (ambVariant) ambVariant.textContent = "15 Units";
+    if (ambStatus) ambStatus.textContent = "Cross-fleet Scope";
+    const minMargin = state.machines.length ? Math.min(...state.machines.map((x) => x.worst_margin ?? 1.0)) : 0.116;
+    if (ambMargin) ambMargin.textContent = fmt(minMargin);
+    if (ambBinding) ambBinding.textContent = "HDF (min)";
+    if (ambWear) ambWear.textContent = "Fleet";
+    if (ambTorque) ambTorque.textContent = "Fleet";
+    if (ambDot) ambDot.className = "ambient-dot live";
+    return;
+  }
+
+  const m = state.machines.find((x) => x.machine === state.selected);
   if (m && ambMachine) {
     ambMachine.textContent = m.machine;
     if (ambVariant) ambVariant.textContent = `Variant ${m.variant}`;

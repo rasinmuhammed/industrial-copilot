@@ -505,6 +505,41 @@ def validate_plan(plan: AnalysisPlan) -> AnalysisPlan:
     return plan
 
 
+def _normalize_plan_dict(payload: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        return payload
+    data = dict(payload)
+
+    # 1. Normalize list fields where LLMs sometimes emit {} or single values
+    for list_field in ("filters", "metrics", "dimensions", "group_by", "cohorts"):
+        val = data.get(list_field)
+        if val is None or val == "":
+            data[list_field] = []
+        elif isinstance(val, dict):
+            if not val:
+                data[list_field] = []
+            elif list_field == "filters" and "field" in val:
+                data[list_field] = [val]
+            else:
+                data[list_field] = []
+        elif isinstance(val, (str, int, float, bool)):
+            data[list_field] = [val] if val else []
+
+    # 2. Normalize bin
+    if "bin" in data:
+        b = data["bin"]
+        if not b or not isinstance(b, dict) or "field" not in b:
+            data.pop("bin", None)
+
+    # 3. Normalize params
+    if "params" in data:
+        p = data["params"]
+        if not isinstance(p, dict):
+            data["params"] = {}
+
+    return data
+
+
 def parse_plan(payload: dict[str, Any] | str) -> AnalysisPlan:
     """Parse and fully validate. The single entry point for planner output."""
     import json
@@ -517,7 +552,10 @@ def parse_plan(payload: dict[str, Any] | str) -> AnalysisPlan:
                 ValidationStage.STRUCTURAL, f"not valid JSON: {exc}"
             ) from exc
     try:
-        plan = AnalysisPlan.model_validate(payload)
+        normalized = _normalize_plan_dict(payload)
+        plan = AnalysisPlan.model_validate(normalized)
+    except PlanError:
+        raise
     except Exception as exc:  # pydantic ValidationError
         raise PlanError(ValidationStage.STRUCTURAL, str(exc)) from exc
     return validate_plan(plan)
