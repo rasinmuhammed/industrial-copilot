@@ -1,7 +1,7 @@
 [project]
 name = "industrial-copilot"
 version = "0.1.0"
-description = "Margin Engine — an industrial copilot that computes distance to the failure boundary"
+description = "Argus — an Argus platform that computes distance to the failure boundary"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 

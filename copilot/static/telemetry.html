@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Telemetry · Argus</title>
+<link rel="stylesheet" href="/static/app.css">
+<style>
+main { padding: 24px 26px 40px; overflow-y: auto; height: 100%; display: flex; flex-direction: column; }
+.wrap { max-width: 1200px; margin: 0 auto; flex: 1; display: flex; flex-direction: column; width: 100%; }
+.hdr-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 20px; }
+.hdr-row h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.015em; }
+.hdr-row .controls { display: flex; gap: 12px; align-items: center; }
+.table-wrap { border: 1px solid var(--line-strong); border-radius: 9px; background: var(--surface); overflow-x: auto; flex: 1; display: flex; flex-direction: column; }
+table.grid { width: 100%; border-collapse: collapse; font-size: 12.5px; text-align: left; }
+table.grid thead { position: sticky; top: 0; background: var(--raised); z-index: 10; box-shadow: 0 1px 0 var(--line-strong); }
+table.grid th { padding: 12px 14px; color: var(--text-3); font-weight: 500; font-size: 11px; cursor: pointer; user-select: none; transition: background 0.1s; }
+table.grid th:hover { background: var(--overlay); color: var(--text); }
+table.grid th.active { color: var(--text); }
+table.grid th.active::after { content: attr(data-dir); margin-left: 4px; font-family: var(--mono); }
+table.grid td { padding: 10px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.grid tbody tr:hover { background: var(--field); }
+table.grid td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+table.grid td.ts { color: var(--text-2); font-family: var(--mono); font-size: 11.5px; }
+
+.tag { display: inline-flex; align-items: center; justify-content: center; padding: 2px 6px; border-radius: 4px; font-size: 10.5px; font-weight: 600; font-family: var(--mono); margin-right: 4px; }
+.tag.ok { background: var(--live-soft); color: var(--live); border: 1px solid var(--live-line); }
+.tag.no { background: var(--crit-soft); color: var(--crit); border: 1px solid rgba(236,106,76,0.3); }
+
+.pagination { display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; border-top: 1px solid var(--line-strong); background: var(--surface); font-size: 12px; color: var(--text-2); margin-top: auto; }
+.pg-btns { display: flex; gap: 8px; }
+.btn-small { background: var(--raised); border: 1px solid var(--line-strong); border-radius: 6px; padding: 5px 12px; font-size: 12px; color: var(--text); cursor: pointer; transition: all 0.15s; }
+.btn-small:hover:not(:disabled) { background: var(--overlay); border-color: var(--line-med); }
+.btn-small:disabled { opacity: 0.5; cursor: not-allowed; }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="brand" href="/">
+    <span class="brand-mark">
+      <svg viewBox="0 0 20 20"><path d="M10 2L3 7v6l7 5 7-5V7L10 2zm0 2.5l5 3.5-5 3.5L5 8l5-3.5zm-6 5l6 4.3 6-4.3V13l-6 4.3L4 13v-3.5z"/></svg>
+    </span>
+    Argus
+  </a>
+  <nav class="topnav">
+    <a href="/fleet/view">Fleet</a>
+    <a href="/explorer">Envelope</a>
+    <a href="/">Copilot</a>
+    <a href="/reliability">Reliability</a>
+    <a href="/telemetry" aria-current="page">Telemetry</a>
+  </nav>
+  <div class="hdr-spacer"></div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="hdr-row">
+      <h1>Data Explorer</h1>
+      <div class="controls">
+        <span style="font-size:12px;color:var(--text-3)">Raw device telemetry with synthetic timestamps</span>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="grid">
+        <thead>
+          <tr id="th-row">
+            <th data-col="timestamp">Timestamp</th>
+            <th data-col="udi">UDI</th>
+            <th data-col="product_id">Product</th>
+            <th data-col="type">Type</th>
+            <th data-col="air_temperature_k">Air Temp (K)</th>
+            <th data-col="process_temperature_k">Proc Temp (K)</th>
+            <th data-col="rotational_speed_rpm">Speed (rpm)</th>
+            <th data-col="torque_nm">Torque (Nm)</th>
+            <th data-col="tool_wear_min">Wear (min)</th>
+            <th data-col="machine_failure">Status</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text-3)">Loading telemetry...</td></tr>
+        </tbody>
+      </table>
+      <div class="pagination">
+        <span id="pg-info">Showing 1-100 of 10,000</span>
+        <div class="pg-btns">
+          <button class="btn-small" id="btn-prev" disabled>Previous</button>
+          <button class="btn-small" id="btn-next">Next</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+"use strict";
+
+let limit = 100;
+let offset = 0;
+let sort = "timestamp";
+let order = "desc";
+let totalRows = 0;
+
+const tbody = document.getElementById("tbody");
+const pgInfo = document.getElementById("pg-info");
+const btnPrev = document.getElementById("btn-prev");
+const btnNext = document.getElementById("btn-next");
+const thRow = document.getElementById("th-row");
+
+async function loadData() {
+  tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text-3)">Loading telemetry...</td></tr>';
+  
+  const r = await fetch(`/api/telemetry?limit=${limit}&offset=${offset}&sort=${sort}&order=${order}`);
+  const data = await r.json();
+  totalRows = data.total;
+  
+  renderTable(data.rows);
+  renderPagination();
+  renderHeaders();
+}
+
+function renderTable(rows) {
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text-3)">No data found.</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = rows.map(r => {
+    let failureModes = [];
+    if (r.twf) failureModes.push("TWF");
+    if (r.hdf) failureModes.push("HDF");
+    if (r.pwf) failureModes.push("PWF");
+    if (r.osf) failureModes.push("OSF");
+    if (r.rn) failureModes.push("RN");
+    
+    let statusHTML = r.machine_failure 
+      ? `<span class="tag no">FAILED</span> ${failureModes.map(f => `<span class="tag no" style="background:transparent">${f}</span>`).join('')}`
+      : `<span class="tag ok">OK</span>`;
+      
+    return `
+      <tr>
+        <td class="ts">${r.timestamp}</td>
+        <td class="num">${r.udi}</td>
+        <td class="num" style="color:var(--text-2)">${r.product_id}</td>
+        <td class="num">${r.type}</td>
+        <td class="num">${r.air_temperature_k.toFixed(1)}</td>
+        <td class="num">${r.process_temperature_k.toFixed(1)}</td>
+        <td class="num">${r.rotational_speed_rpm}</td>
+        <td class="num">${r.torque_nm.toFixed(1)}</td>
+        <td class="num">${r.tool_wear_min}</td>
+        <td>${statusHTML}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderPagination() {
+  const end = Math.min(offset + limit, totalRows);
+  pgInfo.textContent = `Showing ${offset + 1}-${end} of ${totalRows.toLocaleString()}`;
+  btnPrev.disabled = offset === 0;
+  btnNext.disabled = end >= totalRows;
+}
+
+function renderHeaders() {
+  for (const th of thRow.children) {
+    if (th.dataset.col === sort) {
+      th.className = "active";
+      th.dataset.dir = order === "asc" ? "↓" : "↑";
+    } else {
+      th.className = "";
+      th.dataset.dir = "";
+    }
+  }
+}
+
+thRow.addEventListener("click", e => {
+  if (e.target.tagName !== "TH") return;
+  const col = e.target.dataset.col;
+  if (!col) return;
+  
+  if (sort === col) {
+    order = order === "asc" ? "desc" : "asc";
+  } else {
+    sort = col;
+    order = "desc";
+  }
+  offset = 0;
+  loadData();
+});
+
+btnPrev.addEventListener("click", () => {
+  if (offset >= limit) {
+    offset -= limit;
+    loadData();
+  }
+});
+
+btnNext.addEventListener("click", () => {
+  if (offset + limit < totalRows) {
+    offset += limit;
+    loadData();
+  }
+});
+
+loadData();
+</script>
+</body>
+</html>

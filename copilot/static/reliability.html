@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Reliability · Margin Engine</title>
+<title>Reliability · Argus</title>
 <link rel="stylesheet" href="/static/app.css">
 <style>
 main{overflow-y:auto;padding:24px 26px 40px}
@@ -22,7 +22,7 @@ main{overflow-y:auto;padding:24px 26px 40px}
 
 .verdict{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:var(--r);
   border:1px solid var(--line-strong);background:var(--raised);margin-bottom:14px}
-.verdict .lamp{width:8px;height:8px;border-radius:50%;background:var(--line-med);flex:none}
+.verdict .lamp{width:8px;height:8px;border-radius:50%;background:var(--line-strong);flex:none}
 .verdict .txt{font-size:13px;font-weight:600}
 .verdict.sensor{border-color:rgba(232,168,56,.45);background:var(--warn-soft)}
 .verdict.sensor .lamp,.verdict.sensor .txt{background:none;color:var(--warn)}
@@ -63,13 +63,14 @@ td.ok{color:var(--live)} td.no{color:var(--crit)} td.warnc{color:var(--warn)}
     <span class="brand-mark">
       <svg viewBox="0 0 20 20"><path d="M10 2L3 7v6l7 5 7-5V7L10 2zm0 2.5l5 3.5-5 3.5L5 8l5-3.5zm-6 5l6 4.3 6-4.3V13l-6 4.3L4 13v-3.5z"/></svg>
     </span>
-    Margin Engine
+    Argus
   </a>
   <nav class="topnav">
     <a href="/fleet/view">Fleet</a>
     <a href="/explorer">Envelope</a>
     <a href="/">Copilot</a>
     <a href="/reliability" aria-current="page">Reliability</a>
+    <a href="/telemetry">Telemetry</a>
   </nav>
   <div class="hdr-spacer"></div>
   <div class="status-pill"><span class="dot"></span>Self-diagnosis</div>
@@ -118,9 +119,9 @@ td.ok{color:var(--live)} td.no{color:var(--crit)} td.warnc{color:var(--warn)}
     </div>
     <div class="gate-b">
       <div class="field" style="max-width:420px">
-        <div class="field-top">
-          <label for="kb">Overstrain threshold error</label>
-          <span class="readout"><span class="num" id="v-kb">0.0</span><em>%</em></span></div>
+        <div class="field-header">
+          <label class="field-label" for="kb">Overstrain threshold error</label>
+          <span class="field-readout"><span class="num" id="v-kb">0.0</span><em>%</em></span></div>
         <input type="range" id="kb" min="-6" max="6" step="0.5" value="0">
       </div>
       <div class="split">
@@ -162,6 +163,37 @@ td.ok{color:var(--live)} td.no{color:var(--crit)} td.warnc{color:var(--warn)}
           <th style="text-align:right">estimate</th><th style="text-align:right">documented</th>
           <th style="text-align:right">error</th><th style="text-align:right">support</th></tr></thead>
         <tbody id="t-rows"></tbody></table>
+    </div>
+  </section>
+
+  <!-- ── Gate 5 (CMMS) ─────────────────────────────────────────────── -->
+  <section class="gate">
+    <div class="gate-h">
+      <span class="gate-n">GATE 5</span>
+      <h2>Closed-loop learning from the CMMS</h2>
+      <p>The copilot's confidence calibrates itself from real technician feedback.
+         When a work order is closed, the confirmed diagnosis updates the knowledge base weight
+         for that failure mode. False alarms gently relax the confidence bound; confirmed hits tighten it.
+         Below is the live work order queue and the resulting drift in KB weights.</p>
+    </div>
+    <div class="gate-b">
+      <div class="split">
+        <div>
+          <div class="detail-section-title" style="margin-bottom:8px">Recent Work Orders</div>
+          <table class="t">
+            <thead><tr><th>ID</th><th>Machine</th><th>Alert Mode</th><th>Outcome</th></tr></thead>
+            <tbody id="cmms-wos"></tbody>
+          </table>
+          <button class="scen" style="margin-top:14px" id="seed-cmms-btn">Seed synthetic outcomes</button>
+        </div>
+        <div>
+          <div class="detail-section-title" style="margin-bottom:8px">KB Weight Drift</div>
+          <table class="t">
+            <thead><tr><th>Mode</th><th>Variant</th><th style="text-align:right">Weight Δ</th><th style="text-align:right">Precision</th></tr></thead>
+            <tbody id="cmms-kb"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -296,7 +328,42 @@ async function loadThresholds(){
         <td class="n" style="color:var(--text-3)">${t.support}</td></tr>`).join("");
 }
 
-loadDrift(); loadKB(); loadThresholds(); sweep();
+/* ── Gate 5 (CMMS) ────────────────────────────────────────────────── */
+async function loadCMMS() {
+  const [woRes, fbRes] = await Promise.all([
+    fetch('/cmms/work_orders?limit=8'),
+    fetch('/cmms/feedback')
+  ]);
+  const wos = await woRes.json();
+  const fb = await fbRes.json();
+
+  $("cmms-wos").innerHTML = wos.work_orders.map(w => `
+    <tr><td class="n" style="font-size:10.5px">${esc(w.id.substring(3, 11))}</td>
+        <td class="n">${esc(w.machine_id)}</td>
+        <td>${esc(w.alert_mode)}</td>
+        <td class="${w.outcome === 'confirmed' ? 'ok' : w.outcome === 'false_alarm' ? 'warnc' : w.outcome ? 'no' : ''}">${esc(w.outcome || 'open').replace('_', ' ')}</td>
+    </tr>
+  `).join("") || '<tr><td colspan="4" style="text-align:center;color:var(--text-3)">No work orders</td></tr>';
+
+  $("cmms-kb").innerHTML = fb.weights.map(w => `
+    <tr><td>${esc(w.mode)}</td>
+        <td class="n">${esc(w.variant)}</td>
+        <td class="n ${w.weight_delta > 0 ? 'ok' : w.weight_delta < 0 ? 'warnc' : ''}">${w.weight_delta > 0 ? '+' : ''}${w.weight_delta.toFixed(4)}</td>
+        <td class="n">${w.precision !== null ? (w.precision * 100).toFixed(1) + '%' : '—'}</td>
+    </tr>
+  `).join("") || '<tr><td colspan="4" style="text-align:center;color:var(--text-3)">No KB adjustments yet</td></tr>';
+}
+
+$("seed-cmms-btn")?.addEventListener("click", async (e) => {
+  e.target.disabled = true;
+  e.target.textContent = "Seeding...";
+  await fetch('/cmms/seed?limit=15', {method: 'POST'});
+  await loadCMMS();
+  e.target.textContent = "Seed synthetic outcomes";
+  e.target.disabled = false;
+});
+
+loadDrift(); loadKB(); loadThresholds(); sweep(); loadCMMS();
 </script>
 </body>
 </html>

@@ -7,7 +7,7 @@
 
 ## 1. The problem as stated
 
-Build an industrial copilot over the AI4I 2020 Predictive Maintenance Dataset.
+Build an Argus platform over the AI4I 2020 Predictive Maintenance Dataset.
 An engineer asks questions in natural language; the system returns analysis that
 is *accurate, explainable, and useful*.
 

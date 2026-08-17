@@ -30,6 +30,9 @@ discover:  ## Re-derive the documented thresholds from data alone
 exemplars:  ## Seed data/exemplars.jsonl for the distillation notebook
 	$(PY) scripts/export_exemplars.py
 
+sft:  ## Export verified (question, plan) pairs for SLM fine-tuning
+	$(PY) scripts/export_sft_data.py > data/sft_train.jsonl
+
 notebook:  ## Dry-run the Kaggle training notebook on the CPU path
 	$(PY) scripts/check_notebook.py
 
@@ -38,6 +41,9 @@ calibrate:  ## Measure the exemplar-retrieval thresholds
 
 bench:  ## Margin evaluation throughput
 	$(PY) scripts/bench.py
+
+bench-slm:  ## Benchmark the SLM planner against the grammar tier
+	$(PY) scripts/bench_slm.py
 
 chat:  ## Interactive terminal copilot
 	$(PY) -m copilot.cli chat
@@ -72,10 +78,7 @@ serve-docker:  ## Run the copilot in a container on :8000
 outcomes:  ## Score the streaming alerts against what actually happened
 	$(PY) scripts/score_outcomes.py
 
-coverage:  ## Risk-outcomes:  ## Score the streaming alerts against what actually happened
-	$(PY) scripts/score_outcomes.py
-
-coverage: how much do we answer, and how sound is it
+coverage:  ## Risk-outcomes: how much do we answer, and how sound is it
 	$(PY) evals/coverage.py
 
 onboard:  ## Discover a process definition from a dataset, and audit it

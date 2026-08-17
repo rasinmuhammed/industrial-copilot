@@ -19,7 +19,7 @@ import textwrap
 from copilot.engine import Answer, Engine
 from copilot.session import SessionState
 
-BANNER = """Industrial Copilot — Margin Engine
+BANNER = """Argus
 Computes distance to the failure boundary. No number is authored by a model.
 Commands: /evidence  /plan  /state  /learned  /reset  /tier  /help  /quit"""
 

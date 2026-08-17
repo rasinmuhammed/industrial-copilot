@@ -118,7 +118,7 @@ def planner_system_prompt() -> str:
     intents = "\n".join(f"  {name} — {desc}" for name, desc in layer["intents"].items())
 
     return f"""You translate an engineer's question into an Analysis Plan for an \
-industrial copilot. You do NOT answer the question and you do NOT compute anything.
+Argus platform. You do NOT answer the question and you do NOT compute anything.
 
 Emit a single JSON object and nothing else.
 
@@ -323,7 +323,13 @@ def available_provider() -> Provider | None:
             model=os.environ.get("COPILOT_SLM_MODEL", "qwen2.5:7b-instruct"),
             name="ollama",
         )
+    if choice == "slm":
+        # Fine-tuned SLM via Ollama with JSON grammar constraints.
+        # Activate with:  COPILOT_PROVIDER=slm COPILOT_SLM_MODEL=margin-planner
+        from copilot.planner.slm import SLMPlanner
+        return SLMPlanner()  # type: ignore[return-value]
     return None
+
 
 
 # --------------------------------------------------------------------------

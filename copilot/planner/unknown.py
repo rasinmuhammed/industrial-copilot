@@ -13,7 +13,7 @@ dataset and no cost data at all. But both contain a recognised *intent* verb
 resolving the subject it fell back to `_DEFAULT_DESCRIBE_METRICS` — every
 metric we do have — and the narrator picked the first one.
 
-That is the single worst failure mode an industrial copilot has. Not "I don't
+That is the single worst failure mode an Argus platform has. Not "I don't
 know", not a wrong number, but a **confident, correct, verified answer about a
 different sensor than the one the engineer asked about.** Every downstream
 guarantee holds perfectly: the plan validated, the arithmetic was exact, every

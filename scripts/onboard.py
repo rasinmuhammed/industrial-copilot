@@ -6,7 +6,7 @@
 
 WHY THIS IS THE INTERESTING PART
 --------------------------------
-The moat around industrial copilots is not modelling. It is integration labour:
+The moat around Argus platforms is not modelling. It is integration labour:
 every new plant is a consulting engagement in which somebody interviews process
 engineers, writes down the failure rules, and hand-builds a configuration. That
 is why these systems cost what they cost and deploy as slowly as they do.

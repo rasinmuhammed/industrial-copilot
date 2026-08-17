@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Fleet · Margin Engine</title>
+<title>Fleet · Argus</title>
 <meta name="description" content="Fleet control room — every machine ranked on one axis of risk.">
 <link rel="stylesheet" href="/static/app.css">
 <style>
@@ -158,6 +158,13 @@ main {
 }
 .tile-constraint b { color: var(--text-2); font-weight: 500; }
 
+.tile-rul {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 4px;
+}
+.tile-rul b { color: var(--live-sat); font-weight: 600; font-family: var(--mono); }
+
 .spark {
   display: block;
   width: 100%;
@@ -304,7 +311,7 @@ main {
     <span class="brand-mark">
       <svg viewBox="0 0 20 20"><path d="M10 2L3 7v6l7 5 7-5V7L10 2zm0 2.5l5 3.5-5 3.5L5 8l5-3.5zm-6 5l6 4.3 6-4.3V13l-6 4.3L4 13v-3.5z"/></svg>
     </span>
-    Margin Engine
+    Argus
   </a>
 
   <nav class="topnav">
@@ -312,6 +319,7 @@ main {
     <a href="/explorer">Envelope</a>
     <a href="/">Copilot</a>
     <a href="/reliability">Reliability</a>
+    <a href="/telemetry">Telemetry</a>
   </nav>
 
   <div class="hdr-spacer"></div>
@@ -428,6 +436,7 @@ function paint() {
       </div>
       <div class="tile-margin">${m.worst_margin < 0 ? '−' : ''}${pct(Math.abs(m.worst_margin))}</div>
       <div class="tile-constraint">to <b>${MODE[m.binding]}</b></div>
+      ${m.rul && m.rul.status !== 'crossed' ? `<div class="tile-rul">RUL: <b>~${m.rul.expected_cycles}</b> cycles</div>` : ''}
       ${sparkline(m.history, m.state)}
     </button>`).join('');
 
@@ -490,6 +499,14 @@ function renderDetail() {
         <div class="kv"><dt>At cycle</dt><dd class="num">${m.udi.toLocaleString()}</dd></div>
       </dl>
     </div>
+    ${m.rul ? `
+    <div class="detail-section">
+      <div class="detail-section-title">Degradation forecast</div>
+      <dl>
+        <div class="kv"><dt>Expected RUL</dt><dd class="num">${m.rul.expected_cycles !== null ? m.rul.expected_cycles + ' cycles' : '—'}</dd></div>
+        <div class="kv"><dt>90% interval</dt><dd class="num">${m.rul.ci_lo !== null ? `[${m.rul.ci_lo}, ${m.rul.ci_hi}]` : '—'}</dd></div>
+      </dl>
+    </div>` : ''}
 
     <div class="detail-section">
       <a class="open-envelope-btn"
@@ -511,10 +528,19 @@ $('machine-grid').addEventListener('click', e => {
 
 /* ── scrubber ────────────────────────────────────────────────────── */
 async function load(udi) {
-  const r = await fetch(`/fleet?through_udi=${udi}`);
-  DATA = await r.json();
+  const [r1, r2] = await Promise.all([
+    fetch(`/fleet?through_udi=${udi}`),
+    fetch('/rul')
+  ]);
+  DATA = await r1.json();
+  const rulData = await r2.json();
+  for (const m of DATA.machines) {
+    const est = rulData.machines.find(x => x.machine_id === m.machine);
+    if (est) m.rul = est;
+  }
   paint();
 }
+
 
 const scrubber = $('scrubber');
 scrubber.addEventListener('input', () => $('scrub-lbl').textContent = (+scrubber.value).toLocaleString());

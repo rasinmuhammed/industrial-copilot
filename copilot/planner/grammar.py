@@ -91,7 +91,9 @@ _INTENT_PATTERNS: list[tuple[OpName, float, re.Pattern[str]]] = [
 
 # Follow-ups that mutate the previous plan rather than starting over.
 _FOLLOWUP = re.compile(
-    r"^\s*(and |but |ok |okay )?(what about|how about|and for|same for|now)\b", re.IGNORECASE
+    r"^\s*(and |but |ok |okay )?(what about|how about|and for|same for|now|for)\b"
+    r"|^\s*(and )?([LMH])(\s*(variants?|types?|quality|grades?))?\s*[?]?$",
+    re.IGNORECASE,
 )
 _DRILL_DOWN = re.compile(
     r"\b(show me (them|those|these)|those (rows|cycles)|the failures|drill|which ones)\b",
@@ -435,6 +437,7 @@ def _try_followup(text: str, state: SessionState) -> GrammarMatch | None:
 
     "What about the H variants?" should change one filter and nothing else — that
     keeps the comparison valid and usually keeps the question off the LLM tier.
+    Handles bare forms too: "And M?", "M variants?", "For L?".
     """
     assert state.last_plan is not None
     previous = state.last_plan
@@ -451,14 +454,27 @@ def _try_followup(text: str, state: SessionState) -> GrammarMatch | None:
             "drill-down into the previous result",
         )
 
-    if not _FOLLOWUP.match(text):
-        return None
-
+    # Extract variant from the text first — works for both long and bare forms.
     variant = None
     if (m := _VARIANT_WORD.search(text)) is not None:
         variant = _VARIANT_WORDS[m.group(1).lower()]
     elif (m := re.search(r"\b([LMH])\b", text.upper())) is not None:
         variant = m.group(1)
+
+    # Bare variant-only messages: "M", "And M?", "M variants?", "For H?"
+    # Match if the text is short and the only noun is a variant letter.
+    _BARE_VARIANT = re.compile(
+        r"^\s*(and\s+|for\s+)?([LMH])(\s*(variants?|types?|quality|grades?))?\s*[?]?\s*$",
+        re.IGNORECASE,
+    )
+    if _BARE_VARIANT.match(text) and variant:
+        kept = [f for f in previous.filters if f.field != "product_type"]
+        kept.append(Filter(field="product_type", op="=", value=variant))
+        mutated = previous.model_copy(update={"filters": kept})
+        return GrammarMatch(mutated, 0.9, f"bare variant follow-up: product_type = {variant}")
+
+    if not _FOLLOWUP.match(text):
+        return None
 
     if variant is None:
         return None

@@ -148,7 +148,7 @@ class TestAPI:
     def test_console_renders(self, client):
         response = client.get("/")
         assert response.status_code == 200
-        assert "Margin Engine" in response.text
+        assert "Argus" in response.text
 
 
 class TestEnvelopeProjection:

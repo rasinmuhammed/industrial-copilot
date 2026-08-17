@@ -1,0 +1,299 @@
+{
+  "metrics": {
+    "cases": 27,
+    "cases_passed": 27,
+    "case_pass_rate": 1.0,
+    "unsourced_numeral_rate": 0.0,
+    "numeric_exactness": 1.0,
+    "plan_validity_rate": 1.0,
+    "refusal_correctness": 1.0,
+    "premise_refutation": 1.0,
+    "verification_rate": 1.0,
+    "numeric_assertions": 29,
+    "latency_p50_ms": 8.45,
+    "latency_p95_ms": 23.52,
+    "plan_p50_ms": 0.321,
+    "plan_p95_ms": 0.564,
+    "tier_counts": {
+      "grammar": 23,
+      "cache": 2,
+      "refused": 2
+    },
+    "tier_below_llm": 0.9259259259259259,
+    "cache_hit_rate": 0.087,
+    "provider": "deterministic"
+  },
+  "gate_failures": [],
+  "cases": [
+    {
+      "id": "typical_conditions",
+      "category": "understand",
+      "criterion": 1,
+      "question": "What are the typical operating conditions?",
+      "passed": true,
+      "tier": "grammar",
+      "latency_ms": 11.47,
+      "failures": []
+    },
+    {
+      "id": "conditions_high_variant",
+      "category": "understand",
+      "criterion": 1,
+      "question": "What are the typical operating conditions for high quality variants?",
+      "passed": true,
+      "tier": "grammar",
+      "latency_ms": 10.99,
+      "failures": []
+    },
+    {
+      "id": "normal_torque_range",
+      "category": "understand",
+      "criterion": 1,
+      "question": "What is the average torque?",
+      "passed": true,
+      "tier": "grammar",
+      "latency_ms": 6.26,
+      "failures": []
+    },
+    {
+      "id": "overall_rate",
+      "category": "historical",
+      "criterion": 2,
+      "question": "What's the overall failure rate?",
+      "passed": true,
+      "tier": "grammar",
+      "latency_ms": 0.88,
+      "failures": []
+    },
+    {
+      "id": "rate_by_variant",
+      "category": "historical",
+      "criterion": 2,
+      "question": "What's the failure rate by product variant?",
+      "passed": true,
+      "tier": "grammar",
+      "latency_ms": 23.52,
+      "failures": []
+    },
+    {
+      "id": "wear_trend",
+      "category": "historical",
+      "criterion": 2,
+      "question": "How does failure rate vary with tool wear?",
+      "passed": true,
+      "tier": "grammar",
+      "latency_ms": 8.09,
+      "failures": []
+    },
+    {
+      "id": "rate_by_shift",
+      "category": "historical",
+      "criterion": 2,
+      "question": "Show failure rate by shift.",
+      "passed": true,
+      "tier": "grammar",
+      "latency_ms": 6.97,
+      "failures": []
+    },
+    {
+      "id": "compare_failed_healthy",
+      "category": "investigate",
+      "criterion": 3,
+      "question": "Compare the operating conditions of machines that failed versus those that did not.",
+      "passed": true,
+      "tier": "grammar",
+      "latency_ms": 11.22,
+      "failures": []
+    },
+    {
+      "id": "orphan_root_cause",
+      "category": "investigate",
+      "criterion": 3,
+      "question": "Why did cycle 9016 fail?",
+      "passed": true,
+      "tier": "grammar",
+      "latency_ms": 7.12,
+      "failures": []
+    },
+    {
+      "id": "cohort_root_cause",
+      "category": "investigate",
+      "criterion": 3,
+      "question": "What causes failures?",
+      "passed": true,
+      "tier": "grammar",
+      "latency_ms": 9.69,
+      "failures": []
+    },
+    {
+      "id": "what_drives_failures",
+      "category": "investigate",
+      "criterion": 3,
+      "question": "Which variables best separate failures from healthy operation?",
+      "passed": true,
+      "tier": "grammar",
+      "latency_ms": 12.34,
+      "failures": []
+    },
+    {
+      "id": "premise_high_rpm",
+      "category": "premise",
+      "criterion": 3,
+      "question": "Why are we seeing more failures at high rotational speeds?",
+      "passed": true,
+      "tier": "grammar",
+      "latency_ms": 10.54,
+      "failures": []
+    },
+    {
+      "id": "premise_categorical_false",
+      "category": "premise",
+      "criterion": 3,
+      "question": "Why do high quality variants fail more often?",
+      "passed": true,
+      "tier": "grammar",
+      "latency_ms": 7.69,
+      "failures": []
+    },
+    {
+      "id": "premise_categorical_true",
+      "category": "premise",
+      "criterion": 3,
+      "question": "Why do low quality variants fail more?",
+      "passed": true,
+      "tier": "grammar",
+      "latency_ms": 7.39,
+      "failures": []
+    },
+    {
+      "id": "premise_tool_wear_main_cause",
+      "category": "premise",
+      "criterion": 3,
+      "question": "Isn't tool wear the main cause of failure?",
+      "passed": true,
+      "tier": "grammar",
+      "latency_ms": 11.11,
+      "failures": []
+    },
+    {
+      "id": "followup_variant_switch#1",
+      "category": "followup",
+      "criterion": 4,
+      "question": "What's the failure rate for L variants?",
+      "passed": true,
+      "tier": "grammar",
+      "latency_ms": 8.45,
+      "failures": []
+    },
+    {
+      "id": "followup_variant_switch#2",
+      "category": "followup",
+      "criterion": 4,
+      "question": "What about H?",
+      "passed": true,
+      "tier": "grammar",
+      "latency_ms": 8.28,
+      "failures": []
+    },
+    {
+      "id": "followup_scope_does_not_leak#1",
+      "category": "followup",
+      "criterion": 4,
+      "question": "Why did cycle 9016 fail?",
+      "passed": true,
+      "tier": "cache",
+      "latency_ms": 1.57,
+      "failures": []
+    },
+    {
+      "id": "followup_scope_does_not_leak#2",
+      "category": "followup",
+      "criterion": 4,
+      "question": "How does failure rate vary with tool wear?",
+      "passed": true,
+      "tier": "grammar",
+      "latency_ms": 2.24,
+      "failures": []
+    },
+    {
+      "id": "followup_drill_down#1",
+      "category": "followup",
+      "criterion": 4,
+      "question": "What's the failure rate by product variant?",
+      "passed": true,
+      "tier": "cache",
+      "latency_ms": 0.8,
+      "failures": []
+    },
+    {
+      "id": "followup_drill_down#2",
+      "category": "followup",
+      "criterion": 4,
+      "question": "Show me those cycles.",
+      "passed": true,
+      "tier": "grammar",
+      "latency_ms": 8.75,
+      "failures": []
+    },
+    {
+      "id": "refuse_rnf_cause",
+      "category": "refusal",
+      "criterion": 3,
+      "question": "Why did the random failures happen?",
+      "passed": true,
+      "tier": "grammar",
+      "latency_ms": 10.64,
+      "failures": []
+    },
+    {
+      "id": "refuse_missing_sensor",
+      "category": "refusal",
+      "criterion": 1,
+      "question": "What is the vibration signature on this machine?",
+      "passed": true,
+      "tier": "refused",
+      "latency_ms": 0.01,
+      "failures": []
+    },
+    {
+      "id": "refuse_gibberish",
+      "category": "refusal",
+      "criterion": 1,
+      "question": "purple monkey dishwasher",
+      "passed": true,
+      "tier": "refused",
+      "latency_ms": 0.26,
+      "failures": []
+    },
+    {
+      "id": "counterfactual_torque",
+      "category": "prescribe",
+      "criterion": 3,
+      "question": "What if we reduce torque by 5 Nm?",
+      "passed": true,
+      "tier": "grammar",
+      "latency_ms": 73.09,
+      "failures": []
+    },
+    {
+      "id": "data_quality_report",
+      "category": "quality",
+      "criterion": 2,
+      "question": "Can I trust this data?",
+      "passed": true,
+      "tier": "grammar",
+      "latency_ms": 9.95,
+      "failures": []
+    },
+    {
+      "id": "closest_to_failing",
+      "category": "understand",
+      "criterion": 1,
+      "question": "Show me the cycles closest to failing.",
+      "passed": true,
+      "tier": "grammar",
+      "latency_ms": 8.49,
+      "failures": []
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 """Onboarding a process is an algorithm, not a consulting engagement.
 
-The moat around industrial copilots is integration labour: every new plant is a
+The moat around Argus platforms is integration labour: every new plant is a
 project in which somebody interviews engineers and hand-builds a config. These
 tests assert that the labour is automatable AND that the automation is honest
 about what it could not establish.

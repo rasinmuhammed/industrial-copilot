@@ -129,7 +129,7 @@ class Engine:
         # happily match an intent verb ("show me", "how much") and fall back to
         # a default metric, which produces a fully verified, entirely correct
         # answer about the wrong sensor — the worst outcome available to an
-        # industrial copilot, because every downstream guarantee still holds.
+        # Argus platform, because every downstream guarantee still holds.
         unknown = detect_unknown_quantity(question)
         if unknown is not None:
             return Answer(

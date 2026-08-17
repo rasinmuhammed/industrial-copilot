@@ -1,4 +1,4 @@
-"""The worst failure an industrial copilot can have.
+"""The worst failure an Argus platform can have.
 
 Not "I don't know". Not a wrong number. A **confident, verified, arithmetically
 exact answer about a different sensor than the one the engineer asked about.**

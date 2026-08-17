@@ -44,11 +44,14 @@ from copilot.reliability import (
 from copilot.session import SessionState
 from copilot.ops.registry import TABLE
 from copilot.stream import StreamScorer, replay
+from copilot.cmms import AlertOutcome, CMMSStore, WorkOrder, generate_from_replay
+from copilot.feedback import FeedbackLearner
+from copilot.rul import fleet_rul, machine_rul
 
 _HERE = Path(__file__).resolve().parent
 
 app = FastAPI(
-    title="Industrial Copilot — Margin Engine",
+    title="Argus",
     description="Computes distance to the failure boundary. No number is authored by a model.",
     version="0.1.0",
 )
@@ -99,6 +102,24 @@ def engine() -> Engine:
     if _engine is None:
         _engine = Engine.build()
     return _engine
+
+
+_cmms_store: CMMSStore | None = None
+_feedback_learner: FeedbackLearner | None = None
+
+
+def cmms_store() -> CMMSStore:
+    global _cmms_store
+    if _cmms_store is None:
+        _cmms_store = CMMSStore()
+    return _cmms_store
+
+
+def feedback_learner() -> FeedbackLearner:
+    global _feedback_learner
+    if _feedback_learner is None:
+        _feedback_learner = FeedbackLearner(cmms_store())
+    return _feedback_learner
 
 
 # --------------------------------------------------------------------------
@@ -171,6 +192,39 @@ def reset_session(session_id: str) -> dict[str, str]:
     with _sessions_lock:
         _sessions.pop(session_id, None)
     return {"status": "cleared", "session_id": session_id}
+
+
+@app.get("/telemetry", response_class=HTMLResponse)
+def telemetry_view():
+    with open(_HERE / "static" / "telemetry.html") as f:
+        return f.read()
+
+
+@app.get("/api/telemetry")
+def api_telemetry(limit: int = 100, offset: int = 0, sort: str = "udi", order: str = "desc"):
+    valid_cols = [
+        "udi", "product_id", "type", "air_temperature_k", "process_temperature_k",
+        "rotational_speed_rpm", "torque_nm", "tool_wear_min", "machine_failure", "timestamp"
+    ]
+    if sort not in valid_cols:
+        sort = "udi"
+    order = "DESC" if order.lower() == "desc" else "ASC"
+    
+    con = engine().ctx.con
+    try:
+        total = con.sql("SELECT COUNT(*) FROM ai4i").fetchone()[0]
+        df = con.sql(f"""
+            SELECT 
+                TIMESTAMP '2026-01-01 00:00:00' + INTERVAL (udi * 5) MINUTE AS timestamp,
+                *
+            FROM ai4i
+            ORDER BY {sort} {order}
+            LIMIT {limit} OFFSET {offset}
+        """).df()
+        df['timestamp'] = df['timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        return {"total": total, "rows": df.to_dict(orient="records")}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # --------------------------------------------------------------------------
@@ -654,3 +708,112 @@ def health() -> dict[str, Any]:
 @app.get("/", response_class=HTMLResponse)
 def console() -> str:
     return _static("ask.html")
+
+
+# --------------------------------------------------------------------------
+# CMMS — work order lifecycle
+# --------------------------------------------------------------------------
+
+
+class CloseRequest(BaseModel):
+    outcome: str  # confirmed | false_alarm | wrong_mode | inconclusive
+    confirmed_mode: str | None = None
+    technician_id: str | None = None
+    notes: str | None = None
+    variant: str = "L"  # product type, for KB weight keying
+
+
+@app.get("/cmms/work_orders")
+def list_work_orders(
+    open_only: bool = False,
+    limit: int = Query(50, le=200),
+) -> dict[str, Any]:
+    """List work orders, most-recent first."""
+    wos = cmms_store().list(limit=limit, open_only=open_only)
+    return {
+        "work_orders": [w.as_dict() for w in wos],
+        "summary": cmms_store().summary(),
+    }
+
+
+@app.post("/cmms/work_orders")
+def create_work_order(body: dict[str, Any]) -> dict[str, Any]:
+    """Create a work order. Set raised_by='SYNTHETIC' for demo orders."""
+    import uuid
+    from copilot.cmms import _utcnow
+    wo = WorkOrder(
+        id         = body.get("id") or f"WO-{uuid.uuid4().hex[:8].upper()}",
+        machine_id = body["machine_id"],
+        udi        = int(body["udi"]),
+        alert_mode = body["alert_mode"],
+        raised_at  = _utcnow(),
+        raised_by  = body.get("raised_by", "copilot-api"),
+    )
+    cmms_store().create(wo)
+    return wo.as_dict()
+
+
+@app.post("/cmms/work_orders/{wo_id}/close")
+def close_work_order(wo_id: str, body: CloseRequest) -> dict[str, Any]:
+    """Record a technician outcome and trigger KB weight update."""
+    try:
+        outcome = AlertOutcome(body.outcome)
+    except ValueError:
+        raise HTTPException(400, f"unknown outcome: {body.outcome}")
+
+    wo = cmms_store().close(
+        wo_id,
+        outcome,
+        confirmed_mode=body.confirmed_mode,
+        technician_id=body.technician_id,
+        notes=body.notes,
+    )
+    if wo is None:
+        raise HTTPException(404, "work order not found or already closed")
+
+    update = feedback_learner().apply(wo, variant=body.variant)
+    return {"work_order": wo.as_dict(), "kb_update": update}
+
+
+@app.post("/cmms/seed")
+def seed_cmms(limit: int = Query(20, le=100)) -> dict[str, Any]:
+    """Seed the CMMS with SYNTHETIC work orders from the AI4I replay."""
+    wos = generate_from_replay(cmms_store(), limit=limit)
+    # Replay all closed orders through the learner
+    learner = feedback_learner()
+    for wo in wos:
+        if not wo.is_open():
+            learner.apply(wo)
+    return {
+        "seeded": len(wos),
+        "summary": cmms_store().summary(),
+    }
+
+
+@app.get("/cmms/feedback")
+def feedback_report() -> dict[str, Any]:
+    """KB weight adjustments accumulated from work-order outcomes."""
+    return {
+        "weights": feedback_learner().report(),
+        "summary": cmms_store().summary(),
+    }
+
+
+# --------------------------------------------------------------------------
+# RUL — remaining useful life
+# --------------------------------------------------------------------------
+
+
+@app.get("/rul")
+def rul_fleet() -> dict[str, Any]:
+    """Inverse-Gaussian RUL estimates for every virtual machine."""
+    return fleet_rul()
+
+
+@app.get("/rul/{machine_id}")
+def rul_machine(machine_id: str) -> dict[str, Any]:
+    """Inverse-Gaussian RUL for one machine with 90% conformal interval."""
+    result = machine_rul(machine_id)
+    if result is None:
+        raise HTTPException(404, f"machine {machine_id!r} not found")
+    return result

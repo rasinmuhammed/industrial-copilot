@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Copilot · Margin Engine</title>
+<title>Copilot · Argus</title>
 <meta name="description" content="Industrial copilot — every answer is computed and verified, never generated.">
 <link rel="stylesheet" href="/static/app.css">
 <style>
@@ -806,7 +806,7 @@ table.ev-table tr.abstain td.slot-val { color: var(--warn); }
     <span class="brand-mark">
       <svg viewBox="0 0 20 20"><path d="M10 2L3 7v6l7 5 7-5V7L10 2zm0 2.5l5 3.5-5 3.5L5 8l5-3.5zm-6 5l6 4.3 6-4.3V13l-6 4.3L4 13v-3.5z"/></svg>
     </span>
-    Margin Engine
+    Argus
   </a>
 
   <nav class="topnav">
@@ -814,6 +814,7 @@ table.ev-table tr.abstain td.slot-val { color: var(--warn); }
     <a href="/explorer">Envelope</a>
     <a href="/" aria-current="page">Copilot</a>
     <a href="/reliability">Reliability</a>
+    <a href="/telemetry">Telemetry</a>
   </nav>
 
   <div class="hdr-spacer"></div>
@@ -846,7 +847,7 @@ table.ev-table tr.abstain td.slot-val { color: var(--warn); }
       <!-- empty state -->
       <div class="empty-state" id="empty">
 
-        <p class="hero-eyebrow">Margin Engine</p>
+        <p class="hero-eyebrow">Argus</p>
         <h1 class="hero-claim">How far is this machine from failing,<br>
           and can you trust that number?</h1>
         <p class="hero-sub">
@@ -1260,10 +1261,11 @@ async function ask() {
     placeholder.replaceWith(block);
     thread.scrollTop = thread.scrollHeight;
 
-    // Update session ctx
-    if (d.scope) {
-      $('session-ctx').textContent = d.scope || 'No active scope';
-    }
+    // Update session ctx — scope_line() always returns a string
+    const scopeEl = $('session-ctx');
+    const scope = d.scope || 'all cycles';
+    scopeEl.textContent = scope;
+    scopeEl.style.color = (scope === 'all cycles') ? 'var(--text-3)' : 'var(--text-2)';
 
     // Status pill
     if (d.refused) {

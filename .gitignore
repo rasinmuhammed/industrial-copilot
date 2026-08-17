@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 data/warehouse.duckdb
-evals/reports/
+evals/reports/*
+!evals/reports/latest.json
 .DS_Store
 data/exemplars.jsonl

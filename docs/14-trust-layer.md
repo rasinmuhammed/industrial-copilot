@@ -191,7 +191,7 @@ again.
 | **large** | either | **instrument fault** — a channel is lying | dispatch to the sensor |
 | large | — | model invalid for this regime | abstain and say why |
 
-Every industrial copilot on the market conflates rows two and three. That is the
+Every Argus platform on the market conflates rows two and three. That is the
 origin of alarm fatigue: operators stop trusting a system that cries wolf about
 machines whose sensors are broken. Splitting those two rows is worth more in a
 real plant than another point of AUC, and no product we surveyed does it.
