@@ -37,6 +37,7 @@ from copilot.ops.registry import (
     new_bundle,
     register,
 )
+from copilot.hazard import fit_hazard
 from copilot.physics import (
     OSF_THRESHOLD,
     TWF_WINDOW,
@@ -86,7 +87,7 @@ def forecast(plan: AnalysisPlan, ctx: ExecutionContext) -> EvidenceBundle:
             bundle, point, threshold, wear_rate, sigma_torque, plan.confidence
         )
 
-    _twf_hazard(bundle, point, wear_rate)
+    _twf_hazard(bundle, point, wear_rate, ctx)
 
     bundle.put("current.fired_modes", ", ".join(fired) if fired else "none", unit="")
     bundle.warn(
@@ -173,7 +174,35 @@ def _osf_first_passage(
         )
 
 
-def _twf_hazard(bundle: EvidenceBundle, point: OperatingPoint, wear_rate: float) -> None:
+_HAZARD_CACHE: dict[int, Any] = {}
+
+
+def _wear_hazard(con):
+    """Fit the wear hazard once per connection and keep it.
+
+    Fitting scans the wear column, which is far too much to repeat per question
+    and trivial to do once. Keyed on the connection so a different database —
+    another plant, or a test fixture — gets its own curve rather than the first
+    one that happened to be fitted.
+    """
+    if con is None:
+        return None
+    key = id(con)
+    if key not in _HAZARD_CACHE:
+        rows = con.execute(
+            f"SELECT tool_wear_min, TWF FROM {TABLE} WHERE tool_wear_min >= 180"
+        ).fetchall()
+        _HAZARD_CACHE[key] = fit_hazard(
+            [r[0] for r in rows], [bool(r[1]) for r in rows],
+            lower=180, upper=260,
+        ) if rows else None
+    return _HAZARD_CACHE[key]
+
+
+def _twf_hazard(
+    bundle: EvidenceBundle, point: OperatingPoint, wear_rate: float,
+    ctx: ExecutionContext,
+) -> None:
     """TWF is stochastic. Report a hazard and cycles-to-window, never a crossing."""
     wear = point.tool_wear_min
     start, end = TWF_WINDOW
@@ -184,10 +213,27 @@ def _twf_hazard(bundle: EvidenceBundle, point: OperatingPoint, wear_rate: float)
 
     if wear >= start:
         remaining = (end - wear) / wear_rate
-        # Complement of surviving every remaining in-window observation.
-        cumulative = 1.0 - (1.0 - TWF_IN_WINDOW_RATE) ** max(remaining, 0.0)
+        # The hazard is NOT flat across the window. Measured, it climbs from
+        # 0.2% below 200 min to 14% above 230 — so a single in-window rate tells
+        # an operator at 235 minutes exactly what it tells one at 195, which is
+        # the difference between a warning and a shrug.
+        #
+        # The curve is fitted under a monotonicity constraint, because a tool
+        # does not become safer by being used more. See copilot/hazard.py.
+        curve = _wear_hazard(ctx.cursor)
+        band = curve.at(wear) if curve else None
+        rate = band.fitted if band else TWF_IN_WINDOW_RATE
+        cumulative = 1.0 - (1.0 - rate) ** max(remaining, 0.0)
         bundle.put("twf.status", "inside the replacement window", unit="")
-        bundle.put("twf.per_cycle_probability", TWF_IN_WINDOW_RATE * 100.0, unit="%", sig_figs=2)
+        bundle.put("twf.per_cycle_probability", rate * 100.0, unit="%", sig_figs=2)
+        if band is not None:
+            bundle.put("twf.hazard_band_low", band.lower_edge, unit="min", sig_figs=4)
+            bundle.put("twf.hazard_band_high", band.upper_edge, unit="min", sig_figs=4)
+            bundle.put("twf.hazard_ci_low", band.ci_low * 100.0, unit="%", sig_figs=2)
+            bundle.put("twf.hazard_ci_high", band.ci_high * 100.0, unit="%", sig_figs=2)
+            bundle.put("twf.hazard_n", band.n, unit="count", sig_figs=8)
+            bundle.put("twf.flat_rate_would_be", TWF_IN_WINDOW_RATE * 100.0,
+                       unit="%", sig_figs=2)
         bundle.put("twf.cycles_left_in_window", remaining, unit="count", sig_figs=3)
         bundle.put("twf.cumulative_probability", cumulative * 100.0, unit="%", sig_figs=3)
         bundle.warn(
