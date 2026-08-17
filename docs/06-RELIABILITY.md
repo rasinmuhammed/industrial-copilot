@@ -109,11 +109,18 @@ I2 matches the documented generative process to three decimals.
 An invariant break means **instrumentation**. Invariants holding while margins
 shift means **operations**. Tested by injection:
 
+> The z-scores are corrected for serial correlation. An earlier version divided
+> by `sd/√n`, the standard error for *independent* samples; ΔT has a lag-1
+> autocorrelation of 0.997, so its effective sample size is 10 of 2,000 and the
+> naive statistic overstated the evidence roughly fourteenfold. The verdicts
+> never changed — what identifies a sensor fault is the contrast between
+> channels, not the absolute magnitude.
+
 | Scenario | HDF alerts | z(ΔT) | z(rpm) | Verdict |
 |---|---:|---:|---:|---|
 | baseline | 115 | 0.1 | 0.0 | ok |
-| air sensor drifts −0.4 K | **53 (46 %)** | **40.0** | 0.0 | **SENSOR** |
-| process genuinely slows | **188 (163 %)** | 0.1 | **−22.3** | **PROCESS** |
+| air sensor drifts −0.4 K | **53 (46 %)** | **+2.8** | −1.3 | **SENSOR** |
+| process genuinely slows | **188 (163 %)** | +4.1 | **−46.4** | **PROCESS** |
 
 Read the second row carefully.
 

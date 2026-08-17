@@ -190,8 +190,11 @@ question → resolver(session state) → ROUTER ─┬─ plan cache       ~0 ms
 
 A **0.4 K thermocouple drift makes heat-dissipation alerts drop 54%.** A
 conventional copilot reports "failures down 54% — good month" while the plant
-goes blind. Gate 2 separates sensor drift from process drift with z(ΔT)=40.0 vs
-z(rpm)=−22.3. → [docs/06-RELIABILITY.md](docs/06-RELIABILITY.md)
+goes blind. Gate 2 separates the two by CONTRAST rather than magnitude: a
+thermocouple drift moves ΔT (z=+2.8) and leaves speed alone (z=−1.3), while a
+genuine slowdown moves speed hard (z=−46.4). Both z-scores are corrected for
+serial correlation — the naive standard error assumes independent samples and
+overstates an autocorrelated channel about fourteenfold. → [docs/06-RELIABILITY.md](docs/06-RELIABILITY.md)
 
 ---
 

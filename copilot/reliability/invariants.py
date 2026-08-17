@@ -171,9 +171,12 @@ def diagnose_drift(
     stats = _window_stats(con, window_where, window_params or [], table)
     base = _window_stats(con, baseline_where, baseline_params or [], baseline_table or table)
 
-    z_dt = _z_of_mean(stats["dt_mean"], base["dt_mean"], base["dt_sd"], stats["n"])
-    z_rpm = _z_of_mean(stats["rpm_mean"], base["rpm_mean"], base["rpm_sd"], stats["n"])
-    z_tq = _z_of_mean(stats["tq_mean"], base["tq_mean"], base["tq_sd"], stats["n"])
+    z_dt = _z_of_mean(stats["dt_mean"], base["dt_mean"], base["dt_sd"],
+                      stats["n"], base["dt_rho"])
+    z_rpm = _z_of_mean(stats["rpm_mean"], base["rpm_mean"], base["rpm_sd"],
+                       stats["n"], base["rpm_rho"])
+    z_tq = _z_of_mean(stats["tq_mean"], base["tq_mean"], base["tq_sd"],
+                      stats["n"], base["tq_rho"])
 
     invariants = check_invariants(con, where=window_where, params=window_params or [], table=table)
     broken = [i for i in invariants if not i.holds]
@@ -222,8 +225,14 @@ def _window_stats(
     row = con.execute(
         f"""SELECT avg(temp_delta_k), stddev_samp(temp_delta_k),
                    avg(rotational_speed_rpm), stddev_samp(rotational_speed_rpm),
-                   avg(torque_nm), stddev_samp(torque_nm), count(*)
-            FROM {table} WHERE {where}""",  # noqa: S608
+                   avg(torque_nm), stddev_samp(torque_nm), count(*),
+                   corr(temp_delta_k, prev_dt), corr(rotational_speed_rpm, prev_rpm),
+                   corr(torque_nm, prev_tq)
+            FROM (SELECT *,
+                         lag(temp_delta_k) OVER (ORDER BY udi) AS prev_dt,
+                         lag(rotational_speed_rpm) OVER (ORDER BY udi) AS prev_rpm,
+                         lag(torque_nm) OVER (ORDER BY udi) AS prev_tq
+                  FROM {table} WHERE {where}) w""",  # noqa: S608
         params,
     ).fetchone()
     return {
@@ -234,11 +243,51 @@ def _window_stats(
         "tq_mean": float(row[4] or 0.0),
         "tq_sd": float(row[5] or 1.0),
         "n": int(row[6] or 0),
+        # Serial correlation, so the standard error can be corrected for it.
+        "dt_rho": float(row[7] or 0.0),
+        "rpm_rho": float(row[8] or 0.0),
+        "tq_rho": float(row[9] or 0.0),
     }
 
 
-def _z_of_mean(observed: float, baseline: float, baseline_sd: float, n: int) -> float:
-    """How many standard errors the window mean sits from the baseline mean."""
+def effective_n(n: int, lag1_autocorr: float) -> float:
+    """Sample size corrected for serial correlation.
+
+        n_eff = n * (1 - rho) / (1 + rho)
+
+    Standard for autocorrelated series, and the correction this module was
+    missing. With rho = 0 it returns n, so an independent signal is unaffected.
+    """
+    rho = max(-0.99, min(0.99, lag1_autocorr))
+    return max(1.0, n * (1.0 - rho) / (1.0 + rho))
+
+
+def _z_of_mean(
+    observed: float, baseline: float, baseline_sd: float, n: int,
+    lag1_autocorr: float = 0.0,
+) -> float:
+    """How many standard errors the window mean sits from the baseline mean.
+
+    THE SAMPLES ARE NOT INDEPENDENT. This divided by sd/sqrt(n), the standard
+    error for independent draws. Air temperature is a documented random walk:
+    successive readings are strongly correlated, so the true uncertainty in a
+    window mean is far larger than sd/sqrt(n) suggests.
+
+    The consequence was a false positive on unchanged data. Comparing the last
+    2,000 cycles against the first 8,000 — with nothing altered — reported
+    SENSOR DRIFT at 58 standard errors, because air temperature genuinely
+    wandered 2.0 K between the two periods and the naive standard error treated
+    that ordinary movement as a fault.
+
+    A drift detector that fires on a healthy non-stationary channel is worse
+    than none: it trains an operator to ignore the one alarm that matters.
+
+    Note the streaming observer never had this bug. It runs CUSUM on
+    INNOVATIONS — residuals from a filter that already tracks the level — which
+    are stationary by construction. Only this window comparison worked on raw
+    means, and only it needed the correction.
+    """
     if n <= 0 or baseline_sd <= 0:
         return 0.0
-    return (observed - baseline) / (baseline_sd / math.sqrt(n))
+    standard_error = baseline_sd / math.sqrt(effective_n(n, lag1_autocorr))
+    return (observed - baseline) / standard_error

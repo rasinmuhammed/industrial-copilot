@@ -120,7 +120,15 @@ class TestInvariants:
         report = diagnose_drift(con, window_where="TRUE", table=table,
                                 baseline_table="observations")
         assert report.verdict is DriftVerdict.SENSOR
-        assert abs(report.z_temp_delta) > 5
+        # 2.8 sigma, not the 40 this once asserted. The old figure divided by
+        # sd/sqrt(n), which assumes independent samples; temp_delta has a lag-1
+        # autocorrelation of 0.997, so its effective sample size is 10 of 2,000
+        # and the naive statistic overstated the evidence about fourteenfold.
+        # What identifies a sensor fault is the CONTRAST between channels, not
+        # the absolute magnitude: the drifting channel moves and the others
+        # do not.
+        assert abs(report.z_temp_delta) > 2
+        assert abs(report.z_temp_delta) > abs(report.z_rotational_speed)
         assert abs(report.z_rotational_speed) < 5
         assert "instrument fault" in report.explanation
 
@@ -251,7 +259,9 @@ class TestReliabilityConsole:
         body = client.post("/reliability/drift",
                            params={"sensor": "air_temperature_k", "delta": -0.4}).json()
         assert body["verdict"] == "sensor"
-        assert abs(body["z"]["temp_delta"]) > 5
+        # See the note in TestInvariants: corrected for autocorrelation.
+        assert abs(body["z"]["temp_delta"]) > 2
+        assert abs(body["z"]["temp_delta"]) > abs(body["z"]["rotational_speed"])
         assert abs(body["z"]["rotational_speed"]) < 5
         assert body["hdf_alerts"]["change_pct"] < -40
         assert "instrument fault" in body["explanation"]
