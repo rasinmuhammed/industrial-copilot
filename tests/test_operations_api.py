@@ -92,7 +92,7 @@ class TestRemainingUsefulLife:
     def test_the_conformal_correction_is_actually_computed(self):
         """The calibration query named a table and two columns that do not
         exist, and a bare `except Exception` turned the failure into a
-        correction of 0.0 — indistinguishable from a correction that was
+        correction of 0.0 - indistinguishable from a correction that was
         computed and came out small.
 
         So the endpoint advertised a 90% CONFORMAL interval, the module was
@@ -139,7 +139,7 @@ class TestWorkOrders:
     def test_a_second_process_can_open_the_ledger(self, tmp_path):
         """DuckDB takes an exclusive file lock, so the API server holding the
         ledger open made every other process fail with "Conflicting lock is
-        held" — including the test suite, and including the second uvicorn
+        held" - including the test suite, and including the second uvicorn
         worker or the overlapping process during a rolling deploy.
 
         This is the deployment failure the test suite could not see while the
@@ -160,7 +160,7 @@ class TestWorkOrders:
     def test_the_seeder_runs(self, tmp_path):
         """/cmms/seed called an undefined `connect()` against a table that does
         not exist. It raised NameError on its first statement and had never
-        run — the one path no test exercised."""
+        run - the one path no test exercised."""
         from copilot.cmms import CMMSStore, generate_from_replay
 
         store = CMMSStore(str(tmp_path / "seed.db"))

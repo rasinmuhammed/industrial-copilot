@@ -4,7 +4,7 @@
 The Kaggle notebook printed exact-match and latency to stdout and then wrote a
 planner_card.json containing neither, so the numbers died with the session. That
 was a real defect: the artifact that survives a training run must carry its own
-evidence. This script closes the gap from the other side — it re-derives the
+evidence. This script closes the gap from the other side - it re-derives the
 identical held-out split (same seed, same generator) and evaluates the exported
 GGUF through Ollama on local hardware.
 
@@ -253,7 +253,7 @@ def ask(model: str, question: str, timeout: float = 120.0):
                      {"role": "user", "content": question}],
         "stream": False,
         # Greedy. A planner that must emit one canonical line has no business
-        # sampling — two runs of the same question must give the same plan.
+        # sampling - two runs of the same question must give the same plan.
         "options": {"temperature": 0, "top_k": 1, "top_p": 1.0,
                     "num_predict": 48, "seed": 0},
     }).encode()

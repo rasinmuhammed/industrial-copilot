@@ -3,7 +3,7 @@
 WHY THIS EXISTS
 ---------------
 Everything upstream of here read a CSV. That is fine for a dataset and useless
-for a plant, and the gap is not a detail — connector coverage is the moat the
+for a plant, and the gap is not a detail - connector coverage is the moat the
 incumbents actually own. This does not close that moat. What it does is make the
 boundary explicit, so the rest of the system is written against a *source of
 readings* rather than against a file, and adding a protocol is a class rather
@@ -12,7 +12,7 @@ than a refactor.
 THE SHAPE
 ---------
 A `Source` yields raw messages. It does no validation, no ordering, no
-deduplication — those belong to `intake.Intake`, which every source feeds,
+deduplication - those belong to `intake.Intake`, which every source feeds,
 because at-least-once delivery and clock skew are properties of the transport
 and not of any one protocol. A source that tried to be clean would duplicate
 that logic once per protocol and get it subtly different each time.
@@ -149,7 +149,7 @@ class CsvSource:
 
 @dataclass(slots=True)
 class JsonlSource:
-    """One JSON object per line — the common historian export format."""
+    """One JSON object per line - the common historian export format."""
 
     path: Path
     tag_map: TagMap | None = None
@@ -180,7 +180,7 @@ class MqttSource:
     The topic-per-tag convention assumed here (`.../<machine>/<tag>`) is the
     common plain-MQTT layout. Sparkplug B instead carries a typed payload with
     its own birth/death semantics, and supporting it properly means decoding
-    protobuf and tracking sequence numbers — worth doing against a real broker,
+    protobuf and tracking sequence numbers - worth doing against a real broker,
     not guessed at here.
     """
 
@@ -226,7 +226,7 @@ class MqttSource:
                 inbox.put_nowait(record)
             except queue.Full:
                 # Backpressure. Dropping here is visible as a gap downstream,
-                # which is the correct signal — unlike blocking the network
+                # which is the correct signal - unlike blocking the network
                 # loop, which would stall every other machine's data too.
                 pass
 

@@ -1,4 +1,4 @@
-# 10 — Evaluation
+# 10 - Evaluation
 
 > Assertions, not vibes. Every golden question carries a programmatic check
 > against an **independent** reference implementation.
@@ -13,7 +13,7 @@ make eval-fast     # deterministic tier only, no credentials needed
 ## 1. Design principle: don't test the engine against itself
 
 `evals/reference.py` recomputes expected answers **from the CSV using numpy
-only** — no DuckDB, no ops registry, no shared code with the engine. If both were
+only** - no DuckDB, no ops registry, no shared code with the engine. If both were
 wrong in the same way, the eval would pass and be worthless.
 
 Assertions reference that implementation, not stored snapshots.
@@ -22,7 +22,7 @@ Assertions reference that implementation, not stored snapshots.
 
 ## 2. Metrics
 
-### 2.1 Hard gates — a non-zero value fails the build
+### 2.1 Hard gates - a non-zero value fails the build
 
 | Metric | Definition | Required |
 |---|---|---|
@@ -135,7 +135,7 @@ criteria.
 - "How many failures in the last hour?" → answer only with the synthetic caveat
 
 ### G. Prescription and forecast
-- "Machine at wear 214, torque 58 — what should I do?" → setpoint solve
+- "Machine at wear 214, torque 58 - what should I do?" → setpoint solve
 - "When will this tool cross the overstrain limit?" → interval, not a point
 - "If I cut torque by 5 Nm, what changes?" → counterfactual
 - "What's the safe torque range at 1400 rpm?" → envelope
@@ -177,4 +177,4 @@ Run separately; these must not produce confident wrong answers.
 
 ---
 
-**Next:** [11-SCALE.md](11-SCALE.md) — 1,000 factories.
+**Next:** [11-SCALE.md](11-SCALE.md) - 1,000 factories.

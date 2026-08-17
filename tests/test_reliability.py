@@ -1,7 +1,7 @@
 """Phase 5: the reliability gates.
 
 Adversarial by construction. Each test injects a fault and asserts the system
-reaches the right verdict — these are the mechanisms that address the documented
+reaches the right verdict - these are the mechanisms that address the documented
 reason 80% of industrial AI projects never leave pilot, which is data quality
 and trust rather than algorithm accuracy.
 """
@@ -37,7 +37,7 @@ BASE = dict(
 @pytest.fixture(scope="module")
 def con():
     """Read-only. Temporary views work fine on a read-only DuckDB connection, so
-    the drift-injection tests need no write lock — which means the suite runs
+    the drift-injection tests need no write lock - which means the suite runs
     while the API server is up, and mirrors production, where every reader is
     read-only and only ingest writes."""
     return connect(read_only=True)
@@ -56,7 +56,7 @@ def _drifted(con, column: str, delta: float) -> str:
 
 
 # --------------------------------------------------------------------------
-# Interval margins — the three-state decision
+# Interval margins - the three-state decision
 # --------------------------------------------------------------------------
 
 
@@ -100,7 +100,7 @@ class TestIntervalMargins:
 
 
 # --------------------------------------------------------------------------
-# Gate 2 — instrument honesty
+# Gate 2 - instrument honesty
 # --------------------------------------------------------------------------
 
 
@@ -158,7 +158,7 @@ class TestInvariants:
 
 
 # --------------------------------------------------------------------------
-# Gate 3 — knowledge-base staleness
+# Gate 3 - knowledge-base staleness
 # --------------------------------------------------------------------------
 
 
@@ -254,7 +254,7 @@ class TestReliabilityConsole:
         assert all(i["holds"] for i in body["invariants"])
 
     def test_thermocouple_drift_is_called_an_instrument_fault(self, client):
-        """A 0.4 K drift HALVES heat-dissipation alerts — a conventional copilot
+        """A 0.4 K drift HALVES heat-dissipation alerts - a conventional copilot
         reports that as a good month."""
         body = client.post("/reliability/drift",
                            params={"sensor": "air_temperature_k", "delta": -0.4}).json()

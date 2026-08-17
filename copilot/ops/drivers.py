@@ -1,4 +1,4 @@
-"""`drivers` — rank which variables separate failures from healthy operation.
+"""`drivers` - rank which variables separate failures from healthy operation.
 
 Deliberately an *associational* op, and its wording is constrained to say so.
 Ranking by separation is not attribution: on this dataset rpm and torque
@@ -157,7 +157,7 @@ def _flag_confounding(
     """Warn when two highly-ranked drivers are collinear.
 
     Without this, a reader sees "rotational speed separates failures" and
-    reasonably concludes speed matters — when r(rpm, torque) = -0.875 means the
+    reasonably concludes speed matters - when r(rpm, torque) = -0.875 means the
     two cannot be told apart by this analysis.
     """
     if len(top) < 2:

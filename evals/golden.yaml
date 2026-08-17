@@ -180,7 +180,7 @@ questions:
   note: >
     False. H fails at 2.09% against L at 3.92%. Before categorical premise
     verification this routed to `describe` and was answered with air-temperature
-    statistics while the claim went unchallenged — a confident answer to a
+    statistics while the claim went unchallenged - a confident answer to a
     question nobody asked.
   assertions:
     - {kind: op_equals, value: rate}
@@ -194,7 +194,7 @@ questions:
   criterion: 3
   category: premise
   question: Why do low quality variants fail more?
-  note: True — L is the worst at 3.92%. The gate must not cry wolf.
+  note: True - L is the worst at 3.92%. The gate must not cry wolf.
   assertions:
     - {kind: op_equals, value: rate}
     - {kind: no_unsourced_numerals}
@@ -292,7 +292,7 @@ questions:
   category: prescribe
   question: What if we reduce torque by 5 Nm?
   note: A net degradation. Overstrain improves but power drops under the stall
-        floor — visible only if the coupling is modelled.
+        floor - visible only if the coupling is modelled.
   assertions:
     - {kind: op_equals, value: counterfactual}
     - {kind: numeric, slot: after.PWF, ref: {fn: counterfactual_mode_counts, args: {torque_delta: -5.0}, key: PWF}, tol: 0}

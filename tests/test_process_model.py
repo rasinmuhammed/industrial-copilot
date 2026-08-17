@@ -4,7 +4,7 @@ Two claims are tested here, and the second is the one that matters commercially.
 
   1. The config-driven evaluator agrees exactly with the hand-written fast path
      on all 10,000 rows. Two independent implementations, so a bug has to occur
-     twice, identically, to escape — the same discipline as evals/reference.py.
+     twice, identically, to escape - the same discipline as evals/reference.py.
 
   2. A DIFFERENT process, with different metrics and different boundaries, runs
      correctly through the same code. No subclass, no branch, no redeploy. This
@@ -66,8 +66,8 @@ class TestSingleSourceOfTruth:
         the one module where divergence would corrupt every answer downstream.
         """
         # Scan EXECUTABLE code only. Docstrings legitimately quote thresholds
-        # when explaining behaviour — boundary_tolerance() discusses the 8.6 K
-        # limit at length — and an earlier version of this test failed on that
+        # when explaining behaviour - boundary_tolerance() discusses the 8.6 K
+        # limit at length - and an earlier version of this test failed on that
         # prose, which would have pressured the next author to write a worse
         # comment rather than a better module.
         import ast

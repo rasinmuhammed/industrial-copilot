@@ -4,7 +4,7 @@ An adversarial technical review found, at high confidence, that the margin
 paradigm assumes a discrete failure boundary and that only 15-20% of real
 industrial failure modes have one. The finding was correct.
 
-The remedy tested here is not the reviewer's — they proposed discarding margins
+The remedy tested here is not the reviewer's - they proposed discarding margins
 entirely for conformal survival prediction, which over-corrects. Where a
 documented boundary exists an exact margin is strictly better than a
 probabilistic interval, because it inverts into a setpoint. The error was never
@@ -59,7 +59,7 @@ class TestTheRegimeWasAlreadyDeclared:
 
     def test_a_mode_with_no_predicate_is_irreducible(self):
         """RNF is parameter-independent by the dataset's own construction. Not
-        hard to predict — impossible. A system that offers a number here is
+        hard to predict - impossible. A system that offers a number here is
         fabricating one."""
         model = load_process_model()
         verdict = regime_for(model.mode("RNF"))

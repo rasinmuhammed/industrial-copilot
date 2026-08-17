@@ -1,7 +1,7 @@
 """The process model, in one place.
 
-Every operator that reasons about hypothetical operating points — counterfactual,
-envelope, forecast — needs the same derivations and the same rule predicates.
+Every operator that reasons about hypothetical operating points - counterfactual,
+envelope, forecast - needs the same derivations and the same rule predicates.
 Duplicating them across ops is how a system ends up disagreeing with itself, so
 they live here and the SQL in ingest.py mirrors this exactly.
 
@@ -49,7 +49,7 @@ RAD_PER_RPM: Final = 2 * math.pi / 60  # a unit conversion, not a process fact
 # It also reduced the 1,000-factory story to a claim. With compiled constants,
 # onboarding factory #2 means editing Python and redeploying. Reading them makes
 # a new process a new FILE, which is what turns the scale argument into
-# something demonstrable — see tests/test_process_model.py, which runs the whole
+# something demonstrable - see tests/test_process_model.py, which runs the whole
 # stack against a second, different process definition with no code change.
 #
 # The names are kept as an AI4I-shaped *view* over the general structure, so
@@ -148,7 +148,7 @@ def boundary_tolerance(*operands: float) -> float:
     Both are 8.6 K. The rule is deciding on representation error, not physics.
 
     The published labels were generated in floating point as well, so our rule
-    audit reports 115/115 exact — we reproduce UCI's artifact rather than
+    audit reports 115/115 exact - we reproduce UCI's artifact rather than
     disagreeing with it. That makes the "exact" claim narrower than it sounds:
     exact against a float-computed ground truth, not against the real number.
     Worth stating, because on a plant with different precision or unit scaling

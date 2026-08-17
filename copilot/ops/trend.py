@@ -1,15 +1,15 @@
-"""`trend` — behaviour along an axis: time, or a physical variable such as wear.
+"""`trend` - behaviour along an axis: time, or a physical variable such as wear.
 
 Two axes are supported and they answer different questions:
 
-  * `time_grain` — "is torque climbing?"  Depends on the SYNTHETIC timeline, so
+  * `time_grain` - "is torque climbing?"  Depends on the SYNTHETIC timeline, so
     every answer using it carries a disclosure.
-  * `bin` on a metric — "how does failure rate vary with tool wear?"  This is
+  * `bin` on a metric - "how does failure rate vary with tool wear?"  This is
     the physically meaningful one on AI4I, because wear is a real degradation
     trajectory (verified: deltas of exactly 2/3/5 min with 119 tool resets).
 
 Slope is reported with a confidence interval. A slope without one is not a
-finding — it is a direction with unknown significance.
+finding - it is a direction with unknown significance.
 
 Slot namespaces are kept disjoint on purpose: per-bucket values live under
 `bucket.*`, derived statistics under `slope.*`, `axis.*` and `changepoint.*`.
@@ -79,7 +79,7 @@ def trend(plan: AnalysisPlan, ctx: ExecutionContext) -> EvidenceBundle:
     xs = [float(i) for i in range(len(buckets))]
     total_n = sum(b["n"] for b in buckets)
 
-    # Failure rate along the axis — always computed; it is the question most
+    # Failure rate along the axis - always computed; it is the question most
     # often behind "how does X vary with Y".
     rates = [(b["failures"] / b["n"] * 100.0) if b["n"] else 0.0 for b in buckets]
     for b, r in zip(buckets, rates):
@@ -169,7 +169,7 @@ def _emit_slope(
         direction = "not well described by a straight line" if spread > typical else "flat"
 
     # The axis step is a dimensionless bucket index, so the slope carries the
-    # same unit as the delta it measures. "per step" is a note, not a unit —
+    # same unit as the delta it measures. "per step" is a note, not a unit -
     # fabricating "ΔW/step" would put an unresolvable symbol into the evidence.
     bundle.put(
         f"slope.{name}",
@@ -194,7 +194,7 @@ def _detect_changepoint(
 ) -> None:
     """Single-changepoint search by maximum mean shift.
 
-    Deliberately simple and reported as a candidate, not a conclusion — a proper
+    Deliberately simple and reported as a candidate, not a conclusion - a proper
     CUSUM with control limits belongs in the streaming layer, not in an
     exploratory op.
     """

@@ -1,4 +1,4 @@
-"""Gate 2 — is the instrument telling the truth?
+"""Gate 2 - is the instrument telling the truth?
 
 The nastiest documented drift property is that *"the sensor may still produce
 values that look normal, but the measurement slowly becomes less trustworthy."*
@@ -18,7 +18,7 @@ Measured on this dataset by injection:
 
 Read the second row. A 0.4 K thermocouple drift makes heat-dissipation alerts
 drop 54%. A conventional copilot reports "failures down 54%, good month" while
-the plant goes blind to the mode it believes it solved — a safety incident
+the plant goes blind to the mode it believes it solved - a safety incident
 dressed as a KPI improvement.
 """
 
@@ -166,7 +166,7 @@ def diagnose_drift(
     fault moves *its own* signal while leaving unrelated signals alone, whereas
     a process change moves the signals the process actually controls.
     """
-    # The baseline may live in a different table — in production, a stored
+    # The baseline may live in a different table - in production, a stored
     # reference period rather than a slice of the live one.
     stats = _window_stats(con, window_where, window_params or [], table)
     base = _window_stats(con, baseline_where, baseline_params or [], baseline_table or table)
@@ -192,7 +192,7 @@ def diagnose_drift(
             "The temperature differential has shifted while speed and torque are "
             "unchanged. The process does not control ambient temperature, so this "
             "is an instrument fault, not a change in operations. Any change in "
-            "heat-dissipation alerts is an artefact — investigate the thermocouple "
+            "heat-dissipation alerts is an artefact - investigate the thermocouple "
             "before acting on the alert counts."
         )
     elif mechanical and thermal_only:
@@ -274,7 +274,7 @@ def _z_of_mean(
     window mean is far larger than sd/sqrt(n) suggests.
 
     The consequence was a false positive on unchanged data. Comparing the last
-    2,000 cycles against the first 8,000 — with nothing altered — reported
+    2,000 cycles against the first 8,000 - with nothing altered - reported
     SENSOR DRIFT at 58 standard errors, because air temperature genuinely
     wandered 2.0 K between the two periods and the naive standard error treated
     that ordinary movement as a fault.
@@ -283,7 +283,7 @@ def _z_of_mean(
     than none: it trains an operator to ignore the one alarm that matters.
 
     Note the streaming observer never had this bug. It runs CUSUM on
-    INNOVATIONS — residuals from a filter that already tracks the level — which
+    INNOVATIONS - residuals from a filter that already tracks the level - which
     are stationary by construction. Only this window comparison worked on raw
     means, and only it needed the correction.
     """

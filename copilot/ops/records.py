@@ -1,4 +1,4 @@
-"""`records` — return example rows as evidence.
+"""`records` - return example rows as evidence.
 
 The drill-down behind every other answer: "show me those cycles". Rows are
 capped, ordered deterministically so a replay returns the same set, and carry

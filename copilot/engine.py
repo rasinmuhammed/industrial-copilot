@@ -87,8 +87,8 @@ class Engine:
     def _flag_violated_invariants(self, plan, bundle) -> None:
         """Carry a known data-integrity violation into the answers it affects.
 
-        The invariants — process temperature above air, the thermal coupling,
-        the rpm/torque correlation — were checked only when somebody asked "can
+        The invariants - process temperature above air, the thermal coupling,
+        the rpm/torque correlation - were checked only when somebody asked "can
         I trust this data". A question whose margins depend on those channels
         was answered without consulting them, so a query over a corrupt archive
         returned confident numbers with no hint that the physics is impossible.
@@ -128,7 +128,7 @@ class Engine:
         # not answered with the nearest thing we do have. The grammar tier will
         # happily match an intent verb ("show me", "how much") and fall back to
         # a default metric, which produces a fully verified, entirely correct
-        # answer about the wrong sensor — the worst outcome available to an
+        # answer about the wrong sensor - the worst outcome available to an
         # Argus platform, because every downstream guarantee still holds.
         unknown = detect_unknown_quantity(question)
         if unknown is not None:
@@ -173,7 +173,7 @@ class Engine:
         narrate_ms = (time.perf_counter() - narrate_started) * 1000.0
 
         # Close the learning loop. A plan only becomes an exemplar if its
-        # answer survived numeric verification — an unverified plan is not
+        # answer survived numeric verification - an unverified plan is not
         # evidence of anything, and storing it would teach the wrong lesson.
         if verified and not degraded:
             self.router.learn(question, routed.plan, routed.tier)

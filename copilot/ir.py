@@ -49,7 +49,7 @@ __all__ = [
 SYNTHETIC_DIMENSIONS = frozenset({"machine_id", "shift"})
 SYNTHETIC_TIME = frozenset({"ts"})
 
-# Grouping cardinality ceiling — beyond this a plan must bin or filter.
+# Grouping cardinality ceiling - beyond this a plan must bin or filter.
 MAX_GROUPS = 50
 
 
@@ -291,7 +291,7 @@ def _validate_vocabulary(plan: AnalysisPlan) -> None:
 
 
 def _validate_dimensional(plan: AnalysisPlan) -> None:
-    """Reject unit-incoherent comparisons — the °C-vs-K class of bug."""
+    """Reject unit-incoherent comparisons - the °C-vs-K class of bug."""
     metrics = metric_index()
     for f in [*plan.filters, *(f for c in plan.cohorts for f in c.filters)]:
         if not f.unit or f.field not in metrics:
@@ -316,7 +316,7 @@ _POINT_PARAMS = frozenset(
 def _validate_domain(plan: AnalysisPlan) -> None:
     """Reject physically impossible values.
 
-    Negative tool wear or zero rotational speed is not a rare query — it is a
+    Negative tool wear or zero rotational speed is not a rare query - it is a
     state that cannot occur. Accepting it silently is how a system produces a
     confident forecast about something impossible, which is worse than refusing.
     """
@@ -351,7 +351,7 @@ def _validate_domain(plan: AnalysisPlan) -> None:
         if key in _POINT_PARAMS:
             check(key, value, "params")
     # A counterfactual delta is a CHANGE, so only the resulting value has a
-    # domain — but an absurd delta still signals a misread question.
+    # domain - but an absurd delta still signals a misread question.
     for field, delta in (plan.params.get("changes") or {}).items():
         if isinstance(delta, (int, float)):
             domain = metrics.get(field, {}).get("domain") or {}
@@ -418,7 +418,7 @@ def _validate_viability(plan: AnalysisPlan) -> None:
             f"op {plan.op.value!r} requires {min_cohorts} cohorts, got {len(plan.cohorts)}",
             hint="Define cohorts, e.g. failed vs healthy.",
         )
-    # Grouping AND filtering the same field is fine in general — "failure rate
+    # Grouping AND filtering the same field is fine in general - "failure rate
     # for L variants" is a scoped breakdown. It is only invalid when a premise
     # claim about that field is being tested, because the test needs the other
     # groups to compare against.
@@ -438,7 +438,7 @@ def _validate_viability(plan: AnalysisPlan) -> None:
     if len(names) != len(set(names)):
         raise PlanError(
             ValidationStage.VIABILITY,
-            "cohort names must be unique — they namespace the evidence slots",
+            "cohort names must be unique - they namespace the evidence slots",
         )
 
 

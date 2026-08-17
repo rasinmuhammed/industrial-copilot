@@ -1,4 +1,4 @@
-# 07 — Context Engineering, Routing, and Latency
+# 07 - Context Engineering, Routing, and Latency
 
 The brief names **latency** and **context engineering** as explicit criteria.
 Both are properties of this path, not of the model chosen to walk it.
@@ -25,7 +25,7 @@ class SessionState(BaseModel):
 **Turn 40 costs the same as turn 2.** That is the property that matters when this
 runs across a plant rather than in a demo.
 
-### 1.1 Prompt assembly — byte-stable prefix
+### 1.1 Prompt assembly - byte-stable prefix
 
 Ordered so everything cacheable sits above everything volatile:
 
@@ -52,7 +52,7 @@ previous:  {op: rate, group_by: [shift], filters: [{product_type = L}]}
 mutation:  filters[0].value: L → H
 ```
 
-No re-planning, no model call — it usually lands on the grammar tier. This is
+No re-planning, no model call - it usually lands on the grammar tier. This is
 both a latency win and a correctness win: the analysis stays identical, so the
 comparison is valid.
 
@@ -62,7 +62,7 @@ A wrong resolution in turn 3 must not silently propagate. Two defenses:
 
 - Session state is **displayed** in the CLI/UI and directly editable.
 - Every answer **restates its resolved scope**: *"For machine M-03, L variant,
-  since 8 Jan (synthetic timeline)…"* — so a bad resolution is visible
+  since 8 Jan (synthetic timeline)…"* - so a bad resolution is visible
   immediately rather than three turns later.
 
 ---
@@ -91,14 +91,14 @@ question
 
 `"which machines are closest to their overstrain limit?"` normalises to the same
 key for every factory. Only the *filter* differs, and the filter comes from
-session state, not the plan. **One shared plan cache serves 1,000 sites** — which
+session state, not the plan. **One shared plan cache serves 1,000 sites** - which
 is what keeps inference cost sublinear in fleet size.
 
 ### 2.2 Speculative execution
 
 While the Tier-2 model streams, the router **speculatively executes** the Tier-1
 grammar guess. If the returned plan matches, the evidence bundle is already
-warm — the model's latency is hidden behind work that was going to happen anyway.
+warm - the model's latency is hidden behind work that was going to happen anyway.
 Cost is one wasted sub-10 ms query on a miss.
 
 ### 2.3 Escalation policy
@@ -141,4 +141,4 @@ Zero-cost paths:
 
 ---
 
-**Next:** [08-DISCOVERY.md](08-DISCOVERY.md) — learning the rules instead of being given them.
+**Next:** [08-DISCOVERY.md](08-DISCOVERY.md) - learning the rules instead of being given them.

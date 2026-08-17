@@ -239,7 +239,7 @@ def counterfactual_mode_counts(torque_delta: float) -> dict[str, int]:
     """Recompute rule firings from perturbed BASE variables.
 
     Written independently of the engine, and in particular it recomputes power
-    and strain from the new torque rather than editing either directly — the
+    and strain from the new torque rather than editing either directly - the
     coupling is part of the specification, not an implementation detail.
     """
     d = data()

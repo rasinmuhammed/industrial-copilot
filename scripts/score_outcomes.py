@@ -8,7 +8,7 @@ false-alarm rate were all gated; whether a warning was followed by the failure
 it warned about was never checked at all.
 
 Ground truth is the failure label on a historical replay. In production the same
-ledger takes work orders instead — see copilot/outcomes.py.
+ledger takes work orders instead - see copilot/outcomes.py.
 """
 
 from __future__ import annotations
@@ -51,7 +51,7 @@ def main() -> int:
     ledger.close(last + HORIZON + 1)
 
     card = ledger.scorecard()
-    print(f"\n  OUTCOME LOOP — {LIMIT:,} cycles, {HORIZON}-cycle horizon")
+    print(f"\n  OUTCOME LOOP - {LIMIT:,} cycles, {HORIZON}-cycle horizon")
     print("  " + "=" * 66)
     for line in card.summary().split(". "):
         if line.strip():
@@ -59,7 +59,7 @@ def main() -> int:
 
     print("\n  by alert kind:")
     for kind, sub in ledger.by_mode().items():
-        lead = f"{sub.median_lead:.0f}" if sub.median_lead is not None else "—"
+        lead = f"{sub.median_lead:.0f}" if sub.median_lead is not None else "-"
         print(f"    {kind:<14} {sub.alerts:>4} alerts   "
               f"precision {sub.precision:>4.0%}   median lead {lead:>3} cycles")
 

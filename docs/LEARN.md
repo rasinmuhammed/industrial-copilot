@@ -3,21 +3,21 @@
 *A learning document. It assumes you know nothing about what was built and ends
 with you able to defend every claim in it.*
 
-The fifteen numbered docs beside this one were written **during** construction —
+The fifteen numbered docs beside this one were written **during** construction -
 they are design records, arguing for decisions as they were made. This one is
 written **backwards**, from the finished system, in the order a person learns
 best: problem, idea, mechanism, evidence, limits.
 
 ---
 
-## Part 0 — The one-paragraph version
+## Part 0 - The one-paragraph version
 
 Read this now, and again at the end. It should mean four times as much the
 second time.
 
 > Industrial failure prediction is normally a classifier: features in,
 > probability out. Argus does something different. Every failure mode in this
-> process is a **documented inequality** — a line the machine must not cross.
+> process is a **documented inequality** - a line the machine must not cross.
 > So instead of estimating *how likely* failure is, it computes the **signed
 > distance to that line**. That number is called the margin. It is exact, it has
 > units, it can be inverted into an instruction ("reduce torque to 51.5 N·m"),
@@ -28,7 +28,7 @@ second time.
 
 ---
 
-## Part 1 — The problem, and why the obvious answer is wrong
+## Part 1 - The problem, and why the obvious answer is wrong
 
 ### 1.1 What the brief asked for
 
@@ -65,7 +65,7 @@ plant, "the model said so" is not a maintenance justification.
 **Three: probabilities from different models do not compose.** A 0.3 from a
 thermal model and a 0.3 from a wear model are not the same quantity. You cannot
 rank them, average them, or take a minimum. Which means you cannot build a fleet
-view — the single most useful screen in the product — out of them.
+view - the single most useful screen in the product - out of them.
 
 ### 1.3 The observation everything else follows from
 
@@ -74,11 +74,11 @@ discovered from data. They are **rules the data generator was built from**:
 
 | Mode | The documented rule |
 |---|---|
-| **HDF** — heat dissipation failure | ΔT < 8.6 K **and** rpm < 1380 |
-| **PWF** — power failure | torque × ω < 3,500 W **or** > 9,000 W |
-| **OSF** — overstrain failure | wear × torque > 11,000 / 12,000 / 13,000 (L/M/H) |
-| **TWF** — tool wear failure | random, in a wear window of 200–240 min |
-| **RNF** — random failure | random, 0.1%, by construction |
+| **HDF** - heat dissipation failure | ΔT < 8.6 K **and** rpm < 1380 |
+| **PWF** - power failure | torque × ω < 3,500 W **or** > 9,000 W |
+| **OSF** - overstrain failure | wear × torque > 11,000 / 12,000 / 13,000 (L/M/H) |
+| **TWF** - tool wear failure | random, in a wear window of 200–240 min |
+| **RNF** - random failure | random, 0.1%, by construction |
 
 We transcribed each rule and scored it against the published labels on all
 10,000 rows:
@@ -95,7 +95,7 @@ modes; they overlap on 21 cycles, so they cover 287 *distinct* failed cycles.)
 This is where most people stop and say "well, that's just the synthetic dataset,
 it doesn't generalise." That objection is worth taking seriously, and Part 6
 answers it properly. The short answer: **real plants have documented limits
-too** — they are in the equipment manual, the ISO standard, the process
+too** - they are in the equipment manual, the ISO standard, the process
 safety review. What is fake about AI4I is not that limits exist; it is only that
 *these particular* limits were used to generate the labels.
 
@@ -105,19 +105,19 @@ Here is the number that made this project's mind up.
 
 **86.4% of the failures in AI4I (293 of 339) are within 3σ of the mean on every
 single one of the five measured channels.** Individually, nothing looks unusual. Temperature is normal. Torque is
-normal. Speed is normal. Wear is normal. An anomaly detector — autoencoder,
-isolation forest, one-class SVM — sees an ordinary point, because it is looking
+normal. Speed is normal. Wear is normal. An anomaly detector - autoencoder,
+isolation forest, one-class SVM - sees an ordinary point, because it is looking
 at the *marginal* distribution of each channel.
 
 But the derived product `wear × torque` is 11,003, and the limit is 11,000.
 
 The failure is not in the data's density. It is in a **relationship between
 variables that crosses a line**. No amount of unsupervised learning finds that,
-because the information is not in the distribution — it is in the physics.
+because the information is not in the distribution - it is in the physics.
 
 ---
 
-## Part 2 — The idea: margin, not probability
+## Part 2 - The idea: margin, not probability
 
 ### 2.1 Definition
 
@@ -145,7 +145,7 @@ The system's headline number for a machine is:
 worst margin = min(HDF margin, PWF margin, OSF margin)
 ```
 
-### 2.2 Why this specific choice matters — three properties
+### 2.2 Why this specific choice matters - three properties
 
 This is the part to have memorised, because it is the actual intellectual
 content of the project.
@@ -161,7 +161,7 @@ probability cannot do.
 **Property 2: it is continuous, so it forecasts.** A probability of failure
 jumps around. A margin is a smooth quantity you can watch approach zero. Fit a
 slope to the last N cycles of margin, extrapolate to the axis, and you get a
-**time to crossing in cycles** — a deadline, not a risk score. That is what
+**time to crossing in cycles** - a deadline, not a risk score. That is what
 drives the alerts: *"Overstrain projected in 11.4 cycles."*
 
 **Property 3: it is associative under `min()`, so it scales.** Because every
@@ -176,7 +176,7 @@ A margin is a difference of measured quantities near 300 K. In IEEE754 double
 precision, that subtraction carries rounding error of order `ε × 300 ≈ 7×10⁻¹⁴`.
 
 That is not hypothetical here. **128 rows in AI4I have a thermal delta of
-exactly 8.6 K** — precisely on the limit. Float subtraction places 43 of them
+exactly 8.6 K** - precisely on the limit. Float subtraction places 43 of them
 below and 85 at or above, purely according to which decimal pair got subtracted:
 
 ```
@@ -187,7 +187,7 @@ below and 85 at or above, purely according to which decimal pair got subtracted:
 Both are 8.6 K. The rule is deciding on representation error, not physics.
 
 So `physics.py` defines a **boundary tolerance** of a few ULPs of the largest
-operand, and margins inside it are marked *degenerate* — the sign is not
+operand, and margins inside it are marked *degenerate* - the sign is not
 determined by the arithmetic, so the system does not assert one.
 
 There is an honest footnote here worth repeating out loud, because it is the
@@ -198,7 +198,7 @@ float-computed ground truth*, not against the real number.
 
 ---
 
-## Part 3 — How a question becomes an answer
+## Part 3 - How a question becomes an answer
 
 This is the request path. Follow one question all the way through.
 
@@ -227,7 +227,7 @@ This is the request path. Follow one question all the way through.
             │
             ▼
   ┌────────────────────┐  Language model writes sentences, and may only
-  │ 5. NARRATION       │  reference slot ids — it never sees raw numbers.
+  │ 5. NARRATION       │  reference slot ids - it never sees raw numbers.
   └────────────────────┘
             │
             ▼
@@ -236,7 +236,7 @@ This is the request path. Follow one question all the way through.
   └────────────────────┘
 ```
 
-### 3.1 The Analysis IR — the most important design decision
+### 3.1 The Analysis IR - the most important design decision
 
 The planner does not emit an answer. It emits a **plan**: a validated JSON
 object naming an operation, filters, metrics, and grouping.
@@ -260,19 +260,19 @@ shaped this way:
   coherence. A plan referencing a column that does not exist is rejected with a
   suggestion, not executed into a confusing error.
 - **The plan is the cache key and the audit record.** Same plan, same answer,
-  forever — and the replay handle in every response lets you reproduce it.
+  forever - and the replay handle in every response lets you reproduce it.
 
-### 3.2 The four planning tiers — this is the latency story
+### 3.2 The four planning tiers - this is the latency story
 
 The brief asked for latency. Here is the answer, and note that it is an
 *architectural* answer rather than a faster-GPU answer:
 
 | Tier | What it is | Cost |
 |---|---|---|
-| **0 — Cache** | Normalised question shape → stored plan shape | ~microseconds |
-| **1 — Grammar** | Regex + semantic layer, deterministic | ~1 ms |
-| **2 — Exemplar** | Nearest-neighbour over verified past plans | ~10 ms |
-| **3 — LLM** | Constrained JSON decoding, enums from the semantic layer | ~1 s |
+| **0 - Cache** | Normalised question shape → stored plan shape | ~microseconds |
+| **1 - Grammar** | Regex + semantic layer, deterministic | ~1 ms |
+| **2 - Exemplar** | Nearest-neighbour over verified past plans | ~10 ms |
+| **3 - LLM** | Constrained JSON decoding, enums from the semantic layer | ~1 s |
 
 On the 74-question eval set the realised distribution is **59 grammar, 3
 exemplar, 12 refused, 0 LLM**. Measured latency: **p50 = 3.1 ms, p95 = 66.7 ms**.
@@ -281,10 +281,10 @@ The insight worth stating in an interview: *most questions in a real industrial
 setting are not novel.* They are the same twenty questions asked in slightly
 different words. Tier 0 and Tier 1 exist to make the common case free, and the
 LLM exists as a fallback for genuine novelty. Cost is then driven by the
-diversity of **question shapes**, not by the number of factories — which is
+diversity of **question shapes**, not by the number of factories - which is
 precisely the 1,000-factory scaling argument.
 
-### 3.3 Grounding — how hallucination is actually prevented
+### 3.3 Grounding - how hallucination is actually prevented
 
 Most systems "reduce hallucination" by prompting. This one makes it structurally
 difficult, in three layers:
@@ -303,14 +303,14 @@ The narrator's prompt contains the slot **ids**, not the values. It writes
 **Layer 2: the verifier is adversarial.** After rendering, every numeral in the
 final text is extracted and matched against the slot values. An unsourced figure
 means the answer is **refused**, not flagged. There is a test file dedicated to
-trying to defeat this — including spelling numbers out as words, which was a
+trying to defeat this - including spelling numbers out as words, which was a
 real bypass that had to be closed.
 
 **Layer 3: refusal is a first-class outcome.** The system declines when the
 subject is not measured. This sounds obvious and is the hardest part to get
 right, which is the subject of the next section.
 
-### 3.4 Silent substitution — the failure mode this project is really about
+### 3.4 Silent substitution - the failure mode this project is really about
 
 If you remember one war story from this codebase, make it this one.
 
@@ -322,7 +322,7 @@ the question.**
 
 Worse: **"how much does a replacement tool cost"** → air temperature statistics.
 The token "tool" matched `tool_wear`, no subject resolved, and a fallback
-described every metric it had — leading with ambient air.
+described every metric it had - leading with ambient air.
 
 This class of bug is invisible to every correctness gate, because the answer *is*
 correct. It is only visible if you ask whether the answer is about the thing that
@@ -334,7 +334,7 @@ The same bug recurred, in a worse place, while building the operations console:
 > **"How often does L-03 fail?"** → *3.39% (339 of 10,000)*
 
 That is the entire fleet. The machine-id pattern required a noun in front of it
-(`machine L-03`), so a bare `L-03` never matched, the filter was never added —
+(`machine L-03`), so a bare `L-03` never matched, the filter was never added -
 and **a filter that is never added cannot be seen to be missing**. The scoped
 and unscoped answers are both well-formed sentences with correct numbers in
 them. It now reads `2.86% (34 of 1,188)`, and there is a test file arguing the
@@ -342,7 +342,7 @@ case at length.
 
 ---
 
-## Part 4 — How a sensor reading becomes an alert
+## Part 4 - How a sensor reading becomes an alert
 
 That was the question path. This is the streaming path, and it is where most of
 the engineering rigour lives.
@@ -371,12 +371,12 @@ the engineering rigour lives.
   └─────────────┘
 ```
 
-### 4.1 The observer — interrogate before computing
+### 4.1 The observer - interrogate before computing
 
 The single most important line in `stream.py` is a comment:
 
-> *This used to be six bare `float()` calls. Everything below it — signed
-> margins, interval arithmetic, three-state verdicts — is rigorous arithmetic,
+> *This used to be six bare `float()` calls. Everything below it - signed
+> margins, interval arithmetic, three-state verdicts - is rigorous arithmetic,
 > and all of it was being performed on unexamined numbers. The more careful the
 > downstream, the more confidently the system asserted a conclusion drawn from a
 > dead sensor.*
@@ -386,11 +386,11 @@ That is the trap. Rigour applied to a frozen sensor produces *confident garbage*
 So every channel gets a scalar Kalman filter (local-level model) and three fault
 tests:
 
-- **Stuck** — a χ² test on innovation energy. A sensor reading exactly 40.0 for
+- **Stuck** - a χ² test on innovation energy. A sensor reading exactly 40.0 for
   50 cycles is not a stable machine; it is a dead wire.
-- **Drift** — CUSUM, with the alarm threshold set by inverting Siegmund's ARL
+- **Drift** - CUSUM, with the alarm threshold set by inverting Siegmund's ARL
   approximation so the false-alarm rate is *chosen*, not discovered.
-- **Dropout** — availability floor at 0.98 for intermittent channels.
+- **Dropout** - availability floor at 0.98 for intermittent channels.
 
 The categories map onto **NAMUR NE 107**, the standard device-status taxonomy,
 so the output is something a real control system already knows how to consume.
@@ -415,11 +415,11 @@ Nothing in the identification pipeline is told that. It recovers **σ = 10.039**
 
 A related category error, worth knowing because it is a genuinely subtle bug:
 tool wear is a **counter**, not a level. It ramps up and resets to zero on a tool
-change. Tested as a level, that sawtooth reads as enormous process noise —
+change. Tested as a level, that sawtooth reads as enormous process noise -
 inflating `q` to a standard deviation of 21. Channels now carry a `ChannelKind`
 and counters are differenced before testing.
 
-### 4.3 Three-state verdicts — abstention as a design principle
+### 4.3 Three-state verdicts - abstention as a design principle
 
 Once uncertainty is propagated, a margin is not a number. It is an **interval**.
 Which gives three outcomes rather than two:
@@ -434,7 +434,7 @@ Abstention is not a failure. It is the system saying *"given how much I trust
 this instrument right now, I cannot determine the sign."* Uncertainty propagates
 as covariance: a stale channel has a wide posterior, which widens the margin
 interval, which makes it straddle zero, which yields abstain. **No special-casing
-anywhere** — it falls out of the arithmetic.
+anywhere** - it falls out of the arithmetic.
 
 You can see this in the console. During the first ~50 cycles of a replay the
 observers are still calibrating and the activity rail fills with *"margin
@@ -448,20 +448,20 @@ On a full 10,000-cycle replay: **306 alerts raised, 4,805 suppressed.**
 That ratio is the product. An industrial alerting system that fires 5,000 times
 gets muted within a week, at which point its detection rate is irrelevant.
 Suppression comes from persistence requirements, hysteresis on recovery (an
-intermittent channel would otherwise re-arm and page on every cycle — 517 alerts
+intermittent channel would otherwise re-arm and page on every cycle - 517 alerts
 where there was one fault), and a robust median track so a single outlier sample
 cannot fire.
 
 ---
 
-## Part 5 — Where the machine learning actually is
+## Part 5 - Where the machine learning actually is
 
 Be precise about this, because "is there any ML in it?" is the first question a
 sceptical interviewer asks. The honest answer is a table.
 
 | Component | Method | Learned from data? |
 |---|---|---|
-| Failure boundaries | Documented rules | No — transcribed, then audited |
+| Failure boundaries | Documented rules | No - transcribed, then audited |
 | Rule **discovery** (new plant) | Separate-and-conquer tree induction | **Yes** |
 | Noise variances | Method of moments | **Yes** |
 | Drift detection | CUSUM + Siegmund ARL inversion | **Yes** (thresholds) |
@@ -475,7 +475,7 @@ sceptical interviewer asks. The honest answer is a table.
 So: substantial statistical learning, in the places where learning is the right
 tool. **Zero** learning in the place where a wrong answer is dangerous.
 
-### 5.1 Rule discovery — the scaling answer
+### 5.1 Rule discovery - the scaling answer
 
 The obvious objection to "we transcribed documented rules" is: *what about a
 plant that has no documented rules?*
@@ -484,7 +484,7 @@ plant that has no documented rules?*
 
 1. Profiles each channel and classifies it **counter vs level**
 2. Identifies noise by method of moments
-3. **Excludes target leakage** — AI4I ships the per-mode flags beside the label,
+3. **Excludes target leakage** - AI4I ships the per-mode flags beside the label,
    and a learner handed those "discovers" that failure occurs when the failure
    flag is set
 4. Induces rules by **separate-and-conquer**: fit, remove the explained
@@ -499,16 +499,16 @@ to within 0.1 of 11,000, power to within 0.5, thermal delta to within 1.0 K.
 
 Crucially, it **grades its own output**. Rules with zero false alarms are marked
 `verified`; imperfect ones are marked `candidate` and say *"an engineer must
-review this"*. And it leaves TWF and RNF **uncovered** — they are random by
+review this"*. And it leaves TWF and RNF **uncovered** - they are random by
 construction, no threshold rule can find them, and a tool claiming 100% coverage
 there would be lying. The gap is the honest answer.
 
-### 5.2 RUL — a real predictive model
+### 5.2 RUL - a real predictive model
 
 Remaining useful life is genuine probabilistic modelling. Overstrain margin
 degrades as wear accrues, and wear accrues as a Wiener process with drift
 (verified: Pearson r = 0.986 between wear and cycle index). Time to first
-passage of a level by such a process is **inverse-Gaussian** — a standard PHM
+passage of a level by such a process is **inverse-Gaussian** - a standard PHM
 formulation, giving a full predictive distribution from measured parameters
 without training.
 
@@ -517,7 +517,7 @@ which is distribution-free and finite-sample exact.
 
 This is also a good cautionary tale. The conformal calibration queried a table
 that does not exist, behind a bare `except Exception`, so the correction was
-silently **0.0** — indistinguishable from a correction that was computed and came
+silently **0.0** - indistinguishable from a correction that was computed and came
 out small. The API advertised a "90% conformal interval" and shipped the raw
 uncalibrated quantile. Fixed, the correction is **17.4 cycles**, and H-01's
 interval widened from **46–51** to **29–68**.
@@ -527,26 +527,26 @@ leaves a false claim standing in place of a working one.*
 
 ---
 
-## Part 6 — Answering the hard objections
+## Part 6 - Answering the hard objections
 
 Rehearse these. They are what a good interviewer will ask.
 
 **"This only works because AI4I is synthetic with known rules."**
 
 Partly fair, and the honest framing is: the *rules* are synthetic, the
-*existence* of rules is not. Real plants have documented limits — equipment
+*existence* of rules is not. Real plants have documented limits - equipment
 manuals, ISO standards, process safety reviews, HAZOP studies. What Argus needs
 is not "a synthetic dataset"; it needs "a process where somebody wrote down what
 must not happen", which is nearly every regulated industrial process. And for
 plants where nobody did, `onboard.py` induces candidate rules and **marks them
 as candidates**. The system also runs end-to-end against a second, entirely
-different process definition with no code change — that test exists specifically
+different process definition with no code change - that test exists specifically
 to answer this objection.
 
 **"Why not just use a neural network?"**
 
-We built one — a 5→3→5 residual autoencoder written directly in numpy, under
-100 parameters, running in microseconds — and benchmarked it against a PCA
+We built one - a 5→3→5 residual autoencoder written directly in numpy, under
+100 parameters, running in microseconds - and benchmarked it against a PCA
 baseline (`scripts/bench_neural.py`). It did not beat the physics. Not because
 neural networks are bad, but because **86.4% of failures are within 3σ on every
 channel**: the information is not in the density, so a density model has nothing
@@ -554,17 +554,17 @@ to find.
 
 We also checked whether *sequence* models applied, and they do not. AI4I has
 1,490 tool-life segments with a **median length of six cycles and not one
-reaching twenty** — the longest monotone wear run in the whole dataset is 16
+reaching twenty** - the longest monotone wear run in the whole dataset is 16
 cycles. There are no degradation trajectories to learn from, so an LSTM or
 temporal transformer fitted here would be fitting noise and any RUL curve it
 produced would be an artefact.
 
 Both negative results were kept rather than quietly deleted, because knowing
-what does not work — and why — is part of the argument.
+what does not work - and why - is part of the argument.
 
 **"How does it compare to a trained classifier?"**
 
-Against published AI4I baselines — Random Forest ≈ 0.882 F1, XGBoost ≈ 0.901 —
+Against published AI4I baselines - Random Forest ≈ 0.882 F1, XGBoost ≈ 0.901 -
 the margin engine achieves **precision 1.0000, recall 0.8466, F1 0.9169**, with
 **zero false alarms** and **no training**. The recall gap is entirely TWF and
 RNF, which are random by construction and which no method can predict. That is
@@ -585,12 +585,12 @@ slot.
 
 ---
 
-## Part 7 — Scaling to 1,000 factories
+## Part 7 - Scaling to 1,000 factories
 
 The brief asked for a systems argument. Here it is in five points.
 
 1. **Cost scales with question diversity, not factory count.** Cache keys
-   normalise away entities — `"why did cycle 9016 fail"` and `"why did cycle
+   normalise away entities - `"why did cycle 9016 fail"` and `"why did cycle
    4045 fail"` are one key. One shared cache serves every site. (This is also
    what caused a real bug: because the key erases entities, the *value* must not
    contain them. It stored the operating point, so every envelope question
@@ -611,12 +611,12 @@ The brief asked for a systems argument. Here it is in five points.
 5. **Storage is split by lifecycle.** The analytical warehouse (DuckDB) is
    rebuilt from source and read-only at serve time. The work-order ledger
    (SQLite, WAL) is appended to and must survive rebuilds. Conflating them was a
-   real bug — DuckDB takes an exclusive lock, so a second worker or an
+   real bug - DuckDB takes an exclusive lock, so a second worker or an
    overlapping deploy dies at startup.
 
 ---
 
-## Part 8 — The evidence, and what it does not say
+## Part 8 - The evidence, and what it does not say
 
 Every number here is regenerated by `make verify`, which fails the build if any
 figure drifts.
@@ -626,7 +626,7 @@ figure drifts.
 | Deterministic rule accuracy | 308 firings, 308 labelled, **0 FP, 0 FN** |
 | Detection vs baselines | P **1.0000** / R **0.8466** / F1 **0.9169** |
 | Question coverage | **98.4%** (73 of 74) |
-| Soundness — every numeral sourced | **100%** |
+| Soundness - every numeral sourced | **100%** |
 | Silent failures | **0** |
 | Refusal precision | **91.7%** |
 | Latency p50 / p95 | **3.1 ms / 66.7 ms** |
@@ -638,7 +638,7 @@ asked:
 
 - Accuracy is against float-computed labels, so "exact" is narrower than it sounds.
 - TWF and RNF are unpredictable and are not predicted. The recall gap is them.
-- `machine_id` and `shift` are a **synthetic overlay** — AI4I is a pool of
+- `machine_id` and `shift` are a **synthetic overlay** - AI4I is a pool of
   cycles, not per-machine time series. Answers depending on them carry a warning
   saying so.
 - The coverage harness is 74 questions written by the same people who built the
@@ -646,12 +646,12 @@ asked:
 
 ---
 
-## Part 9 — How to explain it out loud
+## Part 9 - How to explain it out loud
 
 **In 30 seconds.** *"Most predictive maintenance gives you a probability. We
 compute the signed distance to the failure boundary instead. That's a number
-with units, so you can invert it into an instruction — 'reduce torque to 51.5
-N·m' — and project it into a deadline — 'crossing in 11 cycles'. The language
+with units, so you can invert it into an instruction - 'reduce torque to 51.5
+N·m' - and project it into a deadline - 'crossing in 11 cycles'. The language
 model never produces a number; it picks which calculation to run and reads the
 result back."*
 
@@ -661,20 +661,20 @@ instrument cannot be trusted; and the fact that margins normalise, which is what
 makes a fleet view possible at all.
 
 **If challenged.** Go straight to the honest limits in Part 8 before being
-pushed there. The strongest thing about this system is not any single number —
+pushed there. The strongest thing about this system is not any single number -
 it is that it knows what it does not know, and there is machinery enforcing
 that: the refusal path, abstention, candidate-vs-verified rule grading, and the
 warnings on synthetic columns.
 
 **The story to tell if you only tell one.** Silent substitution. *"The worst bug
-we found wasn't a wrong number — it was a perfectly correct answer about a
+we found wasn't a wrong number - it was a perfectly correct answer about a
 different sensor than the one the engineer asked about. Every guarantee held.
 That's the failure mode nobody tests for, because the answer is right. It's why
 we built a risk-coverage harness instead of just measuring accuracy."*
 
 ---
 
-## Appendix — Reading the code in the right order
+## Appendix - Reading the code in the right order
 
 If you want to actually understand the implementation, read in this sequence.
 Roughly two hours.
@@ -690,9 +690,9 @@ Roughly two hours.
 | 7 | `copilot/rul.py` | Inverse-Gaussian first passage + conformal. |
 | 8 | `copilot/static/console.html` | The operations console. |
 | 9 | `evals/coverage.py` | The risk-coverage harness. |
-| 10 | `scripts/onboard.py` | Rule discovery — the scaling claim, executable. |
+| 10 | `scripts/onboard.py` | Rule discovery - the scaling claim, executable. |
 
-Then read the test files named after bugs — `test_silent_substitution.py`,
+Then read the test files named after bugs - `test_silent_substitution.py`,
 `test_machine_scope.py`, `test_prescription_integrity.py`. Each one opens with a
 prose account of a real defect, what it produced, and why nothing caught it.
 They are the most honest documentation in the repository.

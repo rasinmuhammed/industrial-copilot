@@ -1,7 +1,7 @@
 # Single-node deployment. `docker compose up` and the copilot is on :8000.
 #
 # No broker, no database, no model server. The engine answers from the grammar
-# tier with every API key unset, so this is the whole runtime — which is the
+# tier with every API key unset, so this is the whole runtime - which is the
 # point: an air-gapped site can run it, and no question leaves the box.
 
 services:

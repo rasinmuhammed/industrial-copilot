@@ -1,4 +1,4 @@
-# 02 — Why Language Models Fail on Time Series, and What We Do Instead
+# 02 - Why Language Models Fail on Time Series, and What We Do Instead
 
 > **The model never sees the time series.**
 >
@@ -32,7 +32,7 @@ samples, is asking it to emulate a comparator it does not have.
 | One 2,000-machine site, 1 day | 864,000,000 | ~2 billion |
 | **AI4I in full (10,000 × 8 numeric)** | **80,000** | **~180,000** |
 
-Even the *toy* dataset for this assignment does not comfortably fit a prompt —
+Even the *toy* dataset for this assignment does not comfortably fit a prompt -
 and one real machine-day exhausts a million-token window. Any design whose
 answer to "analyse this sensor data" is "put it in the context window" does not
 survive contact with a plant.
@@ -61,7 +61,7 @@ model has no type system to catch it.
 
 Best-in-world text-to-SQL reaches **~72–76 %** execution accuracy on BIRD against
 real databases, versus **92.96 %** for humans. Roughly one query in four is
-wrong. For an engineer acting on a failure diagnosis, that is unusable — and
+wrong. For an engineer acting on a failure diagnosis, that is unusable - and
 text-to-SQL is the *easier* task, because the database does the arithmetic.
 
 ---
@@ -73,7 +73,7 @@ text-to-SQL is the *easier* task, because the database does the arithmetic.
 | Dump rows into context | Serialise CSV into the prompt | Breaks at ~1 machine-hour; model still does arithmetic badly |
 | RAG over time series | Embed windows, retrieve nearest | Embeddings of numeric windows are not semantically meaningful; retrieval ≠ computation |
 | Text-to-SQL | Model writes SQL, DB computes | Fixes arithmetic, not correctness: ~25 % of queries wrong; unverifiable |
-| Time-series foundation models | Pretrained forecaster (Chronos, TimesFM, Moirai) | Genuinely useful for forecasting, but they *forecast* — they do not answer "why", cannot prescribe, and are another opaque model to calibrate per site |
+| Time-series foundation models | Pretrained forecaster (Chronos, TimesFM, Moirai) | Genuinely useful for forecasting, but they *forecast* - they do not answer "why", cannot prescribe, and are another opaque model to calibrate per site |
 | Fine-tune on plant data | Bake behaviour into weights | Facts in weights cannot be updated, audited, or unit-checked. Worst option. |
 
 Every one of these keeps the model **inside the numeric path**. That is the error.
@@ -104,11 +104,11 @@ Every one of these keeps the model **inside the numeric path**. That is the erro
                     ┌──────────────────────────────────────────┐
                     │  LANGUAGE MODEL                          │
                     │  job: phrase the finding                 │
-                    │  writes {{slot}} refs — NEVER digits     │
+                    │  writes {{slot}} refs - NEVER digits     │
                     └──────────────────────────────────────────┘
 ```
 
-The model is used **twice, for language only** — once to understand intent, once
+The model is used **twice, for language only** - once to understand intent, once
 to phrase a result. Between those two points sits arithmetic.
 
 **Consequence:** our time-series competence is bounded by numpy and DuckDB, not by
@@ -131,8 +131,8 @@ A margin does exactly that:
 86,400 raw samples/day  ──►  min(margin) over the day  ──►  one scalar
 ```
 
-That single scalar answers *"how close did we come to failing?"* — which is the
-decision-relevant question — **exactly**, because `min` is associative and the
+That single scalar answers *"how close did we come to failing?"* - which is the
+decision-relevant question - **exactly**, because `min` is associative and the
 worst approach to a boundary is precisely what matters. Nothing decision-relevant
 is lost.
 
@@ -179,7 +179,7 @@ is a **first-passage problem with a closed-form inverse-Gaussian solution**:
 | 120 | 60 | 3800 | 24.4 | 23.0 – 25.7 |
 
 **No training. No inference. No model artifact.** A full predictive distribution
-from arithmetic — which is also the standard PHM formulation (Wiener degradation
+from arithmetic - which is also the standard PHM formulation (Wiener degradation
 → IG remaining useful life). Conformal calibration on top supplies
 distribution-free coverage guarantees on those intervals.
 
@@ -196,9 +196,9 @@ auditable.
 | Vectorised | **419 M samples/sec/core** |
 | Full stream scorer (robust track + alerting) | **~14 µs** → ~72 k/sec/core |
 | Requirement, 2,000-machine site @ 1 Hz | 2,000 events/sec |
-| **Headroom on one core — raw arithmetic** | **2,310×** |
-| **Headroom on one core — full scorer** | **~36×** |
-| Numeric error | **0** — arithmetic, not estimation |
+| **Headroom on one core - raw arithmetic** | **2,310×** |
+| **Headroom on one core - full scorer** | **~36×** |
+| Numeric error | **0** - arithmetic, not estimation |
 | Context tokens for a 10-million-row question | **~400** (the evidence bundle) |
 
 The speed is not the result of optimisation. **There is no model to run at
@@ -214,8 +214,8 @@ That inversion is the deepest idea in the project:
 > We place intelligence in **rules discovered offline**, so inference cost is
 > constant, edge deployment is trivial, and there is no artifact to drift.
 
-It also answers the third documented cause of industrial-AI pilot failure —
-*"inference latency across diverse manufacturing environments"* — by making
+It also answers the third documented cause of industrial-AI pilot failure -
+*"inference latency across diverse manufacturing environments"* - by making
 inference latency structurally irrelevant.
 
 ---
@@ -224,8 +224,8 @@ inference latency structurally irrelevant.
 
 - **Not every mode has a closed form.** Bearing spectral signatures, cavitation,
   and lubrication breakdown will not reduce to `f(x) > θ`. Those require learned
-  health indicators. The architecture survives — you apply the margin abstraction
-  to a *learned* indicator instead of a derived one, which is standard PHM — but
+  health indicators. The architecture survives - you apply the margin abstraction
+  to a *learned* indicator instead of a derived one, which is standard PHM - but
   the exactness does not.
 - **The rule language currently lacks temporal operators.** AI4I modes are
   per-sample predicates. Real modes need windowed aggregates, rate-of-change, and
@@ -242,5 +242,5 @@ inference latency structurally irrelevant.
 
 ---
 
-**Next:** [03-ARCHITECTURE.md](03-ARCHITECTURE.md) — components, data flow, and the
+**Next:** [03-ARCHITECTURE.md](03-ARCHITECTURE.md) - components, data flow, and the
 request lifecycle.

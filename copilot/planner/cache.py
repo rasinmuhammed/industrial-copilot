@@ -7,7 +7,7 @@ than the plan. One shared cache therefore serves a whole fleet, which is what
 keeps LLM cost driven by the diversity of *question shapes* rather than by the
 number of sites.
 
-Normalisation deliberately erases specifics — entity ids, numbers, punctuation —
+Normalisation deliberately erases specifics - entity ids, numbers, punctuation -
 so "why did cycle 9016 fail" and "why did cycle 4045 fail" share one entry.
 
 Because the KEY erases entities, the stored VALUE must not contain them. The
@@ -75,7 +75,7 @@ class PlanCache:
     """Bounded LRU over normalised question shapes.
 
     Stores plans, never answers. A plan is data-independent, so it cannot go
-    stale when the warehouse is rebuilt — that is the answer cache's problem, and
+    stale when the warehouse is rebuilt - that is the answer cache's problem, and
     it is keyed on the data fingerprint instead.
     """
 

@@ -2,7 +2,7 @@
 
 One interface, several providers, all optional. With no provider configured the
 system still answers every question the grammar tier covers and is fully
-evaluable — graceful degradation here means degrading to *less fluent*, never to
+evaluable - graceful degradation here means degrading to *less fluent*, never to
 *wrong*.
 
 Prompt assembly is ordered so everything cacheable sits above everything
@@ -107,15 +107,15 @@ def planner_system_prompt() -> str:
     """Byte-stable prefix. Everything here caches."""
     layer = semantic_layer()
     metrics = "\n".join(
-        f"  {name} [{spec.get('unit', '')}] — {spec['label']}"
+        f"  {name} [{spec.get('unit', '')}] - {spec['label']}"
         for name, spec in layer["metrics"].items()
     )
     dimensions = "\n".join(
-        f"  {name} — {spec['label']}"
+        f"  {name} - {spec['label']}"
         + (f" (values: {', '.join(map(str, spec['values']))})" if spec.get("values") else "")
         for name, spec in layer["dimensions"].items()
     )
-    intents = "\n".join(f"  {name} — {desc}" for name, desc in layer["intents"].items())
+    intents = "\n".join(f"  {name} - {desc}" for name, desc in layer["intents"].items())
 
     return f"""You translate an engineer's question into an Analysis Plan for an \
 Argus platform. You do NOT answer the question and you do NOT compute anything.
@@ -240,7 +240,7 @@ class AnthropicProvider:
 
 @dataclass(slots=True)
 class OpenAICompatibleProvider:
-    """Cerebras, Together, Groq, vLLM, Ollama — all speak this dialect.
+    """Cerebras, Together, Groq, vLLM, Ollama - all speak this dialect.
 
     Cerebras is the notable free option: 30 RPM, 60k TPM, 1M tokens/day, no card,
     and native JSON-schema structured output, which is exactly what a planner
@@ -314,7 +314,7 @@ def available_provider() -> Provider | None:
         # providers, so it needs no client of its own. Set COPILOT_SLM_MODEL to
         # whichever model you want; the default is a small one, because this
         # tier only runs for questions the grammar and exemplar tiers could not
-        # plan — 0 of 74 on the current eval set.
+        # plan - 0 of 74 on the current eval set.
         return OpenAICompatibleProvider(
             base_url=os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1"),
             api_key=key,

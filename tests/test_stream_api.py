@@ -207,7 +207,7 @@ class TestFleet:
 
     Margins are normalised by their own threshold, so a thermal risk and a
     torque risk land on the same scale and can be ordered against each other.
-    Probabilities from separate models cannot be ranked together — a 0.3 from a
+    Probabilities from separate models cannot be ranked together - a 0.3 from a
     heat model and a 0.3 from a wear model are not the same quantity.
     """
 
@@ -246,7 +246,7 @@ class TestFleet:
         assert worst["binding"] == "PWF"
 
     def test_the_first_violation_is_a_stall_not_an_overload(self, client):
-        """High speed, low torque — the mechanism the flagship analysis found.
+        """High speed, low torque - the mechanism the flagship analysis found.
         Power falls under the 3500 W floor rather than over the ceiling."""
         import math
 

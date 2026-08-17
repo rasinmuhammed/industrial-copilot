@@ -15,7 +15,7 @@ evidence of anything and is discarded.
     python scripts/export_exemplars.py --stdout   # print instead
 
 Upload the result to Kaggle as a dataset named `margin-engine-exemplars`; the
-notebook picks it up automatically. It is optional — without it the notebook
+notebook picks it up automatically. It is optional - without it the notebook
 still generates ~1,200 synthetic pairs.
 """
 
@@ -37,7 +37,7 @@ from copilot.session import SessionState  # noqa: E402
 GOLDEN = Path(__file__).resolve().parent.parent / "evals" / "golden.yaml"
 
 # Extra phrasings beyond the golden set, so the corpus carries more than one
-# surface form per intent. Still executed for real — nothing here is assumed.
+# surface form per intent. Still executed for real - nothing here is assumed.
 EXTRA = [
     "What are typical operating conditions?",
     "What is the average torque?",
@@ -143,7 +143,7 @@ def main() -> int:
 
     print(f"asked      {tally['asked']}")
     print(f"verified   {tally['verified']}")
-    print(f"refused    {tally['refused']}  (correctly — out-of-scope questions)")
+    print(f"refused    {tally['refused']}  (correctly - out-of-scope questions)")
     print(f"stored     {tally['stored']} unique plan shapes")
     print(f"collapsed  {tally['collapsed']} phrasings normalised onto an existing shape")
     print(f"\nby op      {dict(sorted(by_op.items()))}")
@@ -151,7 +151,7 @@ def main() -> int:
     print(
         "\nUpload this as a Kaggle dataset named 'margin-engine-exemplars'.\n"
         "The notebook finds it at /kaggle/input/margin-engine-exemplars/exemplars.jsonl.\n"
-        "It is optional — the notebook generates ~1,200 synthetic pairs without it."
+        "It is optional - the notebook generates ~1,200 synthetic pairs without it."
     )
     return 0
 

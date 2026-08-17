@@ -1,4 +1,4 @@
-# 00 — Thesis
+# 00 - Thesis
 
 > **The copilot computes distance to the failure boundary. It never predicts the
 > probability of failure, and it never authors a number.**
@@ -20,8 +20,8 @@ Four acceptance criteria:
 | 3 | Investigate failures | `root_cause`, `counterfactual`, `data_quality` ops |
 | 4 | Follow-up questions | Typed session state → [06](07-CONTEXT.md) |
 
-Three things the brief explicitly rewards — **latency, context engineering,
-hallucination reduction** — and three it explicitly does not: using the biggest
+Three things the brief explicitly rewards - **latency, context engineering,
+hallucination reduction** - and three it explicitly does not: using the biggest
 LLM, building a pretty frontend, or stacking AI frameworks.
 
 ## 2. The observation that determines the whole design
@@ -35,14 +35,14 @@ the prose and scored it against the published labels on all 10,000 rows:
 | HDF | ΔT < 8.6 K **and** rpm < 1380 | 115 | 115 | **0** | **0** |
 | PWF | torque·ω < 3500 W **or** > 9000 W | 95 | 95 | **0** | **0** |
 | OSF | wear·torque > 11k/12k/13k (L/M/H) | 98 | 98 | **0** | **0** |
-| TWF | wear ∈ [200,240] → random draw | 790 | 46 | — | 3 |
-| RNF | 0.1 % background | — | 19 | — | — |
+| TWF | wear ∈ [200,240] → random draw | 790 | 46 | - | 3 |
+| RNF | 0.1 % background | - | 19 | - | - |
 
 **287 of 339 failures are exactly explainable by arithmetic.**
 
 This is not a statistical learning problem dressed as one. The ground truth is a
 formula. Any system that answers *"why did this fail?"* with a gradient-boosted
-probability converts a **known quantity into an estimate** — and then cannot act
+probability converts a **known quantity into an estimate** - and then cannot act
 on it. That is the default submission for this assignment and it is the thing to
 beat.
 
@@ -50,7 +50,7 @@ Full analysis and every verified figure: **[01-DATASET.md](01-DATASET.md)**.
 
 ## 3. Why "margin" and not "probability"
 
-A margin is a signed scalar in native engineering units — `−1,433 min·Nm past
+A margin is a signed scalar in native engineering units - `−1,433 min·Nm past
 the overstrain limit`, `+412 W below the overload ceiling`. Three properties
 follow, and they are the entire architecture:
 
@@ -70,13 +70,13 @@ zero yields a crossing time. Measured on this dataset:
 - **2,019 within 10 %**
 - There are only **339 failures** in the entire dataset
 
-Distance is computed per *rule*, not per condition — HDF is conjunctive, so a
+Distance is computed per *rule*, not per condition - HDF is conjunctive, so a
 cycle far below 1380 rpm is nowhere near failing if its thermal gradient is
 healthy. The corrected definition is self-validating: **no** healthy cycle has a
 negative rule-level margin, and **exactly the 287** deterministically-explained
 failures do.
 
-The failure label sees none of those near-misses. The margin sees all of them —
+The failure label sees none of those near-misses. The margin sees all of them -
 579 cycles that came within 5 % of failing, against 339 that actually did, with
 no model involved and no false members in the count.
 
@@ -164,7 +164,7 @@ discrimination, and the four-gate epistemic perimeter.
 ### Where this breaks
 
 - Our exactness is partly an artifact of the dataset documenting its own rules.
-  Mitigated — not eliminated — by the discovery pipeline in
+  Mitigated - not eliminated - by the discovery pipeline in
   **[08-DISCOVERY.md](08-DISCOVERY.md)**, which re-derives those rules from data
   alone to within 0.01–3.4 %.
 - Real failure modes with spectral signatures have no closed form. Those stay
@@ -176,4 +176,4 @@ Full list: **[12-ASSUMPTIONS.md](12-ASSUMPTIONS.md)**.
 
 ---
 
-**Next:** [01-DATASET.md](01-DATASET.md) — every verified figure and its derivation.
+**Next:** [01-DATASET.md](01-DATASET.md) - every verified figure and its derivation.

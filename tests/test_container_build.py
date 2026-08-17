@@ -15,7 +15,7 @@ without complaint, so the package imported correctly in every test, in the dev
 server and in the editor. Only the image build cared.
 
 And there was no `.dockerignore` at all, so `COPY . .` sent the entire working
-tree to the builder — `data/` at 2.7 GB and `results/` at 4.3 GB — for an
+tree to the builder - `data/` at 2.7 GB and `results/` at 4.3 GB - for an
 application whose source is under a megabyte.
 """
 
@@ -98,7 +98,7 @@ class TestTheBuildContextIsBounded:
 
     def test_the_source_data_IS_shipped(self):
         """The CSV is the input the warehouse is built from, so it must survive
-        the ignore rules — excluding all of `data/` would produce an image that
+        the ignore rules - excluding all of `data/` would produce an image that
         starts and then cannot answer anything."""
         ignored = DOCKERIGNORE.read_text().splitlines()
         assert "data/" not in [line.strip() for line in ignored]

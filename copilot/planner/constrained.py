@@ -4,7 +4,7 @@ WHAT CHANGED, AND WHY IT MATTERS
 --------------------------------
 The closed vocabulary has always been the anti-hallucination mechanism: a plan
 naming a column that does not exist is refused by the validator. That is
-detection. It works, and it is one step too late — the model has already spent
+detection. It works, and it is one step too late - the model has already spent
 its latency budget producing something unusable, and the repair path is another
 round trip.
 
@@ -20,14 +20,14 @@ becomes a property of the construction.
 THE EVIDENCE THIS IS THE RIGHT FIX
 ----------------------------------
 The first distilled planner scored 14.2% exact match against the grammar tier's
-98.4%. The failure was not comprehension — it was FORMAT. Its errors were
+98.4%. The failure was not comprehension - it was FORMAT. Its errors were
 overwhelmingly right-content-wrong-slot:
 
     want  counterfactual|-|-|-|-|rotational_speed_rpm-8
     got   counterfactual|-|-|-|rotational_speed_rpm-8|-
 
 The compact notation is positional, so the model had to count pipe separators,
-which is close to the worst thing to ask of a transformer — the same weakness
+which is close to the worst thing to ask of a transformer - the same weakness
 behind every miscounted letter in a word. It understood the question and put the
 answer one field to the left.
 
@@ -43,8 +43,8 @@ unconstrained. Enumerate that field and the invention is impossible.
 WHERE THIS SITS
 ---------------
 Still the last tier. 93% of questions never reach a model, and 3 ms of grammar
-beats any model on latency. This exists for the long tail — the phrasings nobody
-anticipated — and for the honest reason that a real plant asks stranger
+beats any model on latency. This exists for the long tail - the phrasings nobody
+anticipated - and for the honest reason that a real plant asks stranger
 questions than one dataset can contain.
 """
 
@@ -65,7 +65,7 @@ def plan_schema() -> dict[str, Any]:
     """A JSON schema for an Analysis Plan, generated from the semantic layer.
 
     Generated, not written. A hand-maintained schema is a second declaration of
-    the vocabulary that drifts from the first — the duplication this project
+    the vocabulary that drifts from the first - the duplication this project
     removed from physics.py, reappearing in a new place. Adding a metric to the
     YAML extends what the model may emit, with no code change and no way for the
     two to disagree.
@@ -86,7 +86,7 @@ def plan_schema() -> dict[str, Any]:
             # Constraining the output space removes the model's ability to
             # decline: if every reachable token spells a valid plan, "I cannot
             # answer that" is unreachable, and the model emits the NEAREST valid
-            # plan instead. Measured on the first probe — asked for bearing
+            # plan instead. Measured on the first probe - asked for bearing
             # temperature, a sensor this process does not have, it confidently
             # produced a well-formed plan describing ambient air.
             #
@@ -149,7 +149,7 @@ def system_prompt() -> str:
 
     The schema makes an invalid name unreachable; the prompt makes the RIGHT
     name likelier. Constraining without telling the model what the fields mean
-    produces valid plans that answer the wrong question — structurally sound and
+    produces valid plans that answer the wrong question - structurally sound and
     semantically wrong, which is worse than a refusal.
     """
     metrics = metric_index()
@@ -161,12 +161,12 @@ def system_prompt() -> str:
     ]
     for name in sorted(metrics):
         spec = metrics[name]
-        lines.append(f"  {name} — {spec.get('label', name)} ({spec.get('unit', '')})")
+        lines.append(f"  {name} - {spec.get('label', name)} ({spec.get('unit', '')})")
     lines += ["", "dimensions:"]
     for name, spec in sorted(dimension_index().items()):
         if name == "failure_mode":
             continue
-        lines.append(f"  {name} — {spec.get('label', name)}")
+        lines.append(f"  {name} - {spec.get('label', name)}")
     lines += [
         "",
         "If the question asks about a quantity not listed above, or cannot be",
@@ -238,7 +238,7 @@ class ConstrainedPlanner:
 
         Observed: asked for bearing temperature, the model set
         `refuse_reason: "no such measurement"` and left `op: describe`. It knew
-        the question was unanswerable and answered anyway — the two fields
+        the question was unanswerable and answered anyway - the two fields
         disagreeing, with the confident one winning.
 
         A stated reason to decline outranks a plan it contradicts. Failing safe

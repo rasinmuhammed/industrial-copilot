@@ -2,7 +2,7 @@
 
 Every case here corresponds to a bug found while building the module, or to a
 published sensor-fault class. Several of these tests exist because the first
-implementation got the answer confidently wrong — those are marked, because a
+implementation got the answer confidently wrong - those are marked, because a
 test whose provenance is a real mistake is worth more than one written from
 imagination.
 """
@@ -83,7 +83,7 @@ class TestDerivedThresholds:
 
         The first implementation had the sign of the in-control drift wrong,
         which made the inversion run into its bisection ceiling and return
-        h = 50 — a chart that would never alarm.
+        h = 50 - a chart that would never alarm.
         """
         h = cusum_threshold_for_arl(465.0, k=0.5)
         assert 4.8 < h < 5.2
@@ -104,12 +104,12 @@ class TestNoiseIdentification:
         The first version hard-coded a torque sigma of 0.30 and a temperature
         sigma six times too large, with a comment claiming both were measured.
         That single misdescription flagged 94% of healthy cycles as frozen
-        sensors — a constant chosen but described as derived is exactly the
+        sensors - a constant chosen but described as derived is exactly the
         failure this project exists to prevent, and it still got in.
         """
         obs, _ = _run(cycles, limit=WARMUP + 1)
         torque = obs.observers["M1"].channels["torque_nm"]
-        # 9.44 against a documented 10.0 — within 6% from 200 samples, with no
+        # 9.44 against a documented 10.0 - within 6% from 200 samples, with no
         # knowledge of the generating process.
         assert math.sqrt(torque.r) == pytest.approx(10.0, rel=0.10)
 
@@ -198,7 +198,7 @@ class TestFaultsRequiringRedundancy:
 
         A local level estimator absorbs a bias step as a genuine process change,
         so torque bias is undetectable in principle from torque alone. An
-        earlier version of the injection harness appeared to catch it — but that
+        earlier version of the injection harness appeared to catch it - but that
         was a coincident baseline false alarm on a different channel, which is
         precisely how this class of mistake survives into production.
         """

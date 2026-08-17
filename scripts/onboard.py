@@ -59,8 +59,8 @@ from typing import Any
 # found NOTHING on a dataset whose rules are known to be recoverable. The error
 # was conceptual: a real machine has SEVERAL failure modes, the label is their
 # union, and several of those modes are conjunctions. A single cut on one metric
-# therefore has its recall structurally capped — overstrain alone tops out near
-# F1 0.44 here — and gets thrown away no matter how perfect it is at the thing
+# therefore has its recall structurally capped - overstrain alone tops out near
+# F1 0.44 here - and gets thrown away no matter how perfect it is at the thing
 # it actually explains.
 #
 # What a failure mode really is: a *sufficient* condition. When it fires, the
@@ -173,7 +173,7 @@ def _numeric(values: list[str]) -> list[float] | None:
 def profile(name: str, values: list[float]) -> Channel:
     """Identify a channel's character from the signal alone.
 
-    Noise is split by method of moments on the first differences — the same
+    Noise is split by method of moments on the first differences - the same
     identification the observer uses at runtime:
 
         Var(dz) = q + 2r ,  Cov(dz_t, dz_{t-1}) = -r
@@ -484,7 +484,7 @@ def _render(report: Report, csv_path: Path) -> str:
     for ch in report.channels:
         lines.append(ch.as_yaml_block().rstrip("\n"))
     if report.leaked:
-        lines += ["", "# Excluded as target leakage — these are the label decomposed,",
+        lines += ["", "# Excluded as target leakage - these are the label decomposed,",
                   "# not causes of it:", f"# {', '.join(report.leaked)}"]
     lines += ["", "modes:"]
     if not report.rules:
@@ -516,7 +516,7 @@ def _render(report: Report, csv_path: Path) -> str:
 
 # Discovered feature names are built from column headers; documented ones come
 # from the process description. Mapping between them is a human step, and it is
-# only needed for the AUDIT — validating the method against a process whose
+# only needed for the AUDIT - validating the method against a process whose
 # rules we already know. A genuinely new plant has nothing to audit against,
 # which is exactly why the confidence grading has to carry the honesty instead.
 _AUDIT_ALIAS = {
@@ -590,8 +590,8 @@ def main() -> int:
               f"{', '.join(report.leaked)}")
         print("    These are the label decomposed, not causes of it.")
 
-    for tier, head in (("verified", "VERIFIED — fire only on rows that failed"),
-                       ("candidate", "CANDIDATE — need an engineer's confirmation")):
+    for tier, head in (("verified", "VERIFIED - fire only on rows that failed"),
+                       ("candidate", "CANDIDATE - need an engineer's confirmation")):
         subset = [r for r in report.rules if r.confidence == tier]
         print(f"\n  {head} ({len(subset)}):")
         for r in subset:
@@ -605,7 +605,7 @@ def main() -> int:
 
     if args.audit:
         matches = audit(report)
-        print("\n  AUDIT — discovered vs documented (nothing upstream saw the docs):")
+        print("\n  AUDIT - discovered vs documented (nothing upstream saw the docs):")
         print(f"    {'metric':<24}{'discovered':>13}{'documented':>13}{'error':>9}")
         for metric, got, want, err in matches:
             print(f"    {metric:<24}{got:>13.6g}{want:>13.6g}{err:>8.2f}%")

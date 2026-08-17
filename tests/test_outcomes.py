@@ -1,6 +1,6 @@
 """Was the alert right? The one quality nothing here ever measured.
 
-Coverage, soundness, false-alarm rate — all measured. Whether a warning was
+Coverage, soundness, false-alarm rate - all measured. Whether a warning was
 followed by the failure it warned about: never. A predictive system without an
 outcome loop cannot improve from being wrong and, worse, cannot notice it has
 started being wrong.
@@ -176,7 +176,7 @@ class TestNotEveryModeIsForecastable:
 
         Only OSF and TWF accumulate, and only they can be predicted in advance.
         A median lead of zero across all modes is therefore not a defect to fix
-        but a property to declare — the same discipline as the exact /
+        but a property to declare - the same discipline as the exact /
         statistical / irreducible split.
         """
         from copilot.process_model import load_process_model

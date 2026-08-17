@@ -33,7 +33,7 @@ class TestIsotonicRegression:
         """The bug this test exists for: an earlier implementation replicated
         each PAVA block by its WEIGHT rather than by the number of positions it
         spanned. With exposure weights in the hundreds that produced a list
-        thousands long, truncated back to the first block — so every fitted
+        thousands long, truncated back to the first block - so every fitted
         value came out as that block's mean.
 
         A flat line. Which passed the monotonicity check, because a constant is
@@ -83,13 +83,13 @@ class TestTheCurveOnRealData:
 
     def test_it_never_says_a_tool_gets_safer_with_use(self, wear_curve):
         """A wearout hazard is non-decreasing. This is a fact about the physics,
-        so the model is chosen to be incapable of contradicting it — rather than
+        so the model is chosen to be incapable of contradicting it - rather than
         fitted freely and checked afterwards."""
         fitted = [p.fitted for p in wear_curve.points]
         assert all(a <= b + 1e-12 for a, b in zip(fitted, fitted[1:]))
 
     def test_a_thin_band_is_reported_as_thin(self, wear_curve):
-        """The top bands hold a handful of cycles. The estimate is still given —
+        """The top bands hold a handful of cycles. The estimate is still given -
         with an interval that makes the thinness obvious rather than a point
         that hides it."""
         sparse = [p for p in wear_curve.points if not p.reportable]

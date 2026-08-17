@@ -4,7 +4,7 @@ Two independent defects, on the one capability an operator would actually act
 on, both of which produced verified answers to questions nobody asked:
 
 1. THE PLAN CACHE INHERITED THE OPERATING POINT.
-   `normalise()` erases numbers on purpose — "at 8 minutes of wear" and "at 200
+   `normalise()` erases numbers on purpose - "at 8 minutes of wear" and "at 200
    minutes of wear" are one cache key, which is what lets one shared cache serve
    a fleet. The value was supposed to hold only a plan SHAPE, with entities
    rebound from the current question. Filters were rebound. Params were not. So
@@ -13,8 +13,8 @@ on, both of which produced verified answers to questions nobody asked:
 
 2. THE ENVELOPE OP DISCARDED A LONE PARAMETER.
    It honoured explicit values only when at least three of five were given.
-   "What torque should I run at 200 minutes of wear" names exactly one — the
-   entire subject of the question — so it was dropped and the envelope was
+   "What torque should I run at 200 minutes of wear" names exactly one - the
+   entire subject of the question - so it was dropped and the envelope was
    computed at the cohort's mean wear of 108 minutes.
 
 Together they mean an engineer asking about a badly worn tool was told the safe
@@ -24,7 +24,7 @@ limited at 55.85 N·m: the advice was to run a worn tool above its limit.
 
 554 tests passed throughout. Nothing was checking that the answer described the
 operating point in the question, because every answer was internally consistent
-and correctly computed — it was consistent about the wrong point.
+and correctly computed - it was consistent about the wrong point.
 """
 
 from __future__ import annotations
@@ -64,7 +64,7 @@ class TestTheAnswerDescribesTheQuestionsSetpoint:
         assert _reported_wear(answer.narration) == pytest.approx(wear, abs=0.5)
 
     def test_a_lone_parameter_is_enough(self, engine):
-        """One named quantity used to be silently discarded — the op required
+        """One named quantity used to be silently discarded - the op required
         three of five before it honoured any."""
         answer = engine.ask("What torque should I run at 240 minutes of wear?", SessionState())
         assert _reported_wear(answer.narration) == pytest.approx(240, abs=0.5)
@@ -78,7 +78,7 @@ class TestTheAnswerDescribesTheQuestionsSetpoint:
 
 class TestTheCacheDoesNotInheritOperatingPoints:
     def test_a_second_question_is_not_answered_with_the_first(self, engine):
-        """The cache hit is desirable — the plan SHAPE is genuinely reusable.
+        """The cache hit is desirable - the plan SHAPE is genuinely reusable.
         What must not survive the hit is the operating point."""
         first = engine.ask("What torque should I run at 8 minutes of wear?", SessionState())
         second = engine.ask("What torque should I run at 240 minutes of wear?", SessionState())

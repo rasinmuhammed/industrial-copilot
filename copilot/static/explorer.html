@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Operating Envelope · Argus</title>
-<meta name="description" content="Operating Envelope Explorer — drag the crosshair to see the safe window narrow as conditions change.">
+<meta name="description" content="Operating Envelope Explorer - drag the crosshair to see the safe window narrow as conditions change.">
 <link rel="stylesheet" href="/static/app.css">
 <style>
 main{display:grid;grid-template-columns:236px minmax(0,1fr) 292px;min-height:0;overflow:hidden}
@@ -20,8 +20,8 @@ svg text{pointer-events:none}
 /* override metric-row in explorer to use smaller padding */
 #margins .metric-row { padding: 7px 0; }
 
-/* Every screen in this product answers a question. Reliability already did —
-   "Is the instrument telling the truth?" — and the copilot now opens the same
+/* Every screen in this product answers a question. Reliability already did -
+   "Is the instrument telling the truth?" - and the copilot now opens the same
    way. Fleet and Envelope had no heading at all, so a reader arrived at a wall
    of controls with no statement of what the screen is FOR. */
 .screen-ask {
@@ -143,10 +143,10 @@ svg text{pointer-events:none}
     <div class="block">
       <div class="block-title">Torque window</div>
       <dl>
-        <div class="kv"><dt>Floor</dt><dd class="num" id="w-lo">—</dd></div>
-        <div class="kv"><dt>Ceiling</dt><dd class="num" id="w-hi">—</dd></div>
-        <div class="kv"><dt>Width</dt><dd class="num" id="w-w">—</dd></div>
-        <div class="kv"><dt>Limited by</dt><dd id="w-b">—</dd></div>
+        <div class="kv"><dt>Floor</dt><dd class="num" id="w-lo">-</dd></div>
+        <div class="kv"><dt>Ceiling</dt><dd class="num" id="w-hi">-</dd></div>
+        <div class="kv"><dt>Width</dt><dd class="num" id="w-w">-</dd></div>
+        <div class="kv"><dt>Limited by</dt><dd id="w-b">-</dd></div>
       </dl>
     </div>
     <div class="block" id="advice"></div>
@@ -252,7 +252,7 @@ function draw(){
   }
 
   /* Only the ceiling moves. The stall floor is pinned by the drive, while the
-     overstrain ceiling is threshold/wear and descends toward it — so a closing
+     overstrain ceiling is threshold/wear and descends toward it - so a closing
      window reads best as a falling ceiling, not as nested regions. */
   if(S.project){
     const lo=hdfBinds(S.dt)?Math.max(RPM_LO,HDF_S):RPM_LO;
@@ -345,7 +345,7 @@ function render(){
   const fl=floorAt(S.rpm), ce=ceilAt(S.rpm,S.wear,S.variant);
   const osf=osfCeil(S.wear,S.variant), ov=overloadAt(S.rpm), width=Math.max(0,ce-fl);
   document.getElementById("w-lo").textContent=fmt(fl)+" N·m";
-  document.getElementById("w-hi").textContent=(ce>fl?fmt(ce):"—")+" N·m";
+  document.getElementById("w-hi").textContent=(ce>fl?fmt(ce):"-")+" N·m";
   document.getElementById("w-w").textContent=fmt(width)+" N·m";
   document.getElementById("w-b").textContent=osf<ov?"Tool wear":"Drive power";
 
@@ -393,7 +393,7 @@ document.getElementById("variant").addEventListener("click",e=>{
 
 let dragging=false;
 /* Snap to the same step the sliders use. Without this the drag leaves S holding
-   a continuous value while the slider snaps and the readout rounds — three
+   a continuous value while the slider snaps and the readout rounds - three
    slightly different numbers for one quantity. On a tool whose entire claim is
    that its numbers can be trusted, that is not a rounding detail. */
 const snap=(v,step)=>Math.round(v/step)*step;

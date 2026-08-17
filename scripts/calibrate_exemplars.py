@@ -40,12 +40,12 @@ def main() -> int:
     same = [sim(a, b) for a, b in PARAPHRASES]
     diff = [sim(a, b) for a, b in UNRELATED]
 
-    print("paraphrase pairs — must sit ABOVE the reuse threshold")
+    print("paraphrase pairs - must sit ABOVE the reuse threshold")
     for (a, b), v in zip(PARAPHRASES, same):
         flag = "ok " if v >= REUSE_THRESHOLD else "MISS"
         print(f"  [{flag}] {v:.3f}  {a[:36]:<36} | {b[:36]}")
 
-    print("\nunrelated pairs — must sit BELOW it")
+    print("\nunrelated pairs - must sit BELOW it")
     for (a, b), v in zip(UNRELATED, diff):
         flag = "ok " if v < REUSE_THRESHOLD else "LEAK"
         print(f"  [{flag}] {v:.3f}  {a[:36]:<36} | {b[:36]}")

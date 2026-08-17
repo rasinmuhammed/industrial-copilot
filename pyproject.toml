@@ -1,7 +1,7 @@
 [project]
 name = "industrial-copilot"
 version = "0.1.0"
-description = "Argus — an Argus platform that computes distance to the failure boundary"
+description = "Argus - an Argus platform that computes distance to the failure boundary"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 
@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Offline rule discovery only — never on the inference path.
+# Offline rule discovery only - never on the inference path.
 discovery = ["scikit-learn>=1.4"]
 # Protocol adapters. Optional because a CSV replay needs neither, and a plant
 # that speaks only one of them should not have to install the other.

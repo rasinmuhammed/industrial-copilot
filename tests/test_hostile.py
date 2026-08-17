@@ -1,6 +1,6 @@
 """Every way this could be a bad solution, probed deliberately.
 
-Not "does it work" — the other suites cover that. This asks the questions a
+Not "does it work" - the other suites cover that. This asks the questions a
 hostile reviewer asks: can I make it execute my SQL, can I make it lie, can I
 exhaust it, does it agree with itself, does it survive being used by more than
 one person at once.
@@ -143,7 +143,7 @@ class TestAgreementWithItself:
     """A system that answers differently on a retry cannot be audited."""
 
     def test_the_substance_is_deterministic(self, engine):
-        """Only the provenance footer varies — wall-clock timing, and the tier
+        """Only the provenance footer varies - wall-clock timing, and the tier
         once the cache warms. The narration, slot values and plan hash must be
         byte-identical."""
         answers = [
@@ -188,7 +188,7 @@ class TestAgreementWithItself:
         HashingEmbedder used hash(), which is seeded per interpreter. Two
         silent consequences: exemplar retrieval differed between runs (measured
         coverage moved 96.8% <-> 98.4% depending on PYTHONHASHSEED), and a
-        PERSISTED store would have been quietly corrupt — vectors written by one
+        PERSISTED store would have been quietly corrupt - vectors written by one
         process never matching those computed by the next, so the system would
         stop learning after a restart with no error at all.
         """
@@ -233,7 +233,7 @@ class TestTheHttpSurface:
     def test_two_callers_without_a_session_id_do_not_share_one(self, client):
         """session_id defaulted to the literal "default", so every caller who
         omitted it shared a conversation. Engineer A scoped to L variants;
-        Engineer B then asked for the OVERALL rate and received A's scope — a
+        Engineer B then asked for the OVERALL rate and received A's scope - a
         confident, correctly computed answer to a question nobody asked.
 
         Follow-up context is acceptance criterion 4, and it was the mechanism
@@ -329,7 +329,7 @@ class TestBoundaryArithmetic:
 class TestGuardsThatMustActuallyFire:
     """An unexercised guard is not a guard.
 
-    The invariant warning was added, 443 tests passed, and it was broken — a
+    The invariant warning was added, 443 tests passed, and it was broken - a
     missing import in a branch that never runs on a clean archive. The whole
     suite was green because the code path was unreachable with real data.
 

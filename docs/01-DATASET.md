@@ -1,4 +1,4 @@
-# 01 — Dataset Analysis
+# 01 - Dataset Analysis
 
 Every figure in this document was computed from `data/ai4i2020.csv` (10,000 rows).
 Reproduce all of it with:
@@ -15,8 +15,8 @@ Source: [UCI AI4I 2020 Predictive Maintenance Dataset](https://archive.ics.uci.e
 
 | Column | Clean name | Unit | Notes from the dataset page |
 |---|---|---|---|
-| `UDI` | `udi` | — | Row index 1..10000 |
-| `Product ID` | `product_id` | — | Letter prefix = quality variant |
+| `UDI` | `udi` | - | Row index 1..10000 |
+| `Product ID` | `product_id` | - | Letter prefix = quality variant |
 | `Type` | `product_type` | L/M/H | Low 50 %, Medium 30 %, High 20 % |
 | `Air temperature [K]` | `air_temperature_k` | K | Random walk, σ = 2 K around 300 K |
 | `Process temperature [K]` | `process_temperature_k` | K | Air + 10 K, σ = 1 K |
@@ -29,7 +29,7 @@ Source: [UCI AI4I 2020 Predictive Maintenance Dataset](https://archive.ics.uci.e
 The published header carries a UTF-8 BOM and bracketed unit suffixes. Ingest
 normalises both; units are retained in the semantic layer rather than discarded.
 
-## 2. Class balance — verified
+## 2. Class balance - verified
 
 ```
 rows                10,000
@@ -38,7 +38,7 @@ machine_failure        339   (3.39 %)
 TWF 46   HDF 115   PWF 95   OSF 98   RNF 19
 ```
 
-## 3. Rule verification — the central result
+## 3. Rule verification - the central result
 
 Rules transcribed from the dataset page's *Additional Variable Information*,
 then scored against the published labels. Derived quantities:
@@ -58,7 +58,7 @@ overstrain_min_nm = tool_wear_min × torque_nm
 
 `HDF ∨ PWF ∨ OSF` vs `machine_failure`: **TP 287, FP 0, FN 52.**
 
-Three deterministic modes are recovered **exactly** — zero false positives and
+Three deterministic modes are recovered **exactly** - zero false positives and
 zero false negatives across 10,000 rows. TWF is genuinely stochastic: 43 of the
 790 rows inside the documented window are labelled failures, an in-window rate of
 **5.4 %**. Three TWF rows fall outside the window and are reported as such.
@@ -87,7 +87,7 @@ Nine rows carry `machine_failure = 1` with none of TWF/HDF/PWF/OSF set.
 | 9016 | L | 10.9 | 1431 | 49.7 | 210 | 7448 | 563 | 0 |
 
 **Tested for hidden structure and found none.** Mean rule-level worst margin is
-**0.153** for orphans versus **0.180** for healthy rows — the same neighbourhood,
+**0.153** for orphans versus **0.180** for healthy rows - the same neighbourhood,
 with orphans if anything slightly *safer* than a failure population should look.
 None carries RNF.
 
@@ -116,7 +116,7 @@ PWF+OSF 11 | HDF+OSF 6 | HDF+PWF 3 | TWF+OSF 2 | TWF+PWF+OSF 1
 none (orphans) 9
 ```
 
-A single-label multiclass classifier is **structurally incapable** here — it must
+A single-label multiclass classifier is **structurally incapable** here - it must
 pick one mode and is wrong on the rest by construction. The rule engine reports
 every firing mode with its individual margin.
 
@@ -153,11 +153,11 @@ and then explain the true mechanism.
 
 **It is also a confounding trap.** At r = −0.875, *any* analysis of "failures vs
 rpm" is confounded by torque. The `compare` and `drivers` ops therefore detect
-and report collinearity automatically — see [04-ANALYSIS-IR.md](04-ANALYSIS-IR.md).
+and report collinearity automatically - see [04-ANALYSIS-IR.md](04-ANALYSIS-IR.md).
 
 ## 7. The near-miss surface
 
-Distance is computed **per rule**, not per condition — this distinction is a real
+Distance is computed **per rule**, not per condition - this distinction is a real
 modelling trap. HDF is conjunctive (both conditions required), so its binding
 constraint is the *larger* normalised margin; PWF fires on either side, so its
 binding constraint is the *smaller*. Treating all five conditions as independent
@@ -178,7 +178,7 @@ failed  rows with a negative rule-level margin:  287    (= the deterministic cou
 
 Nearly **six hundred healthy cycles came within 5 % of failing**. The binary label
 sees none of them; the margin sees every one. That is the quantified justification
-for the entire design — and unlike the naive per-condition version, this count
+for the entire design - and unlike the naive per-condition version, this count
 contains no false members.
 
 ## 8. Tool wear is a real degradation trajectory
@@ -200,7 +200,7 @@ real replacements. There is a genuine degradation path, so time-to-crossing
 forecasts can be validated against observed events rather than only on a
 synthetic stream. See [09-STREAMING.md](09-STREAMING.md).
 
-## 9. Physics invariants — quantities that must hold
+## 9. Physics invariants - quantities that must hold
 
 Used by Gate 2 to distinguish a broken instrument from a changing process
 ([06-RELIABILITY.md](06-RELIABILITY.md)).
@@ -227,5 +227,5 @@ Full detail: **[12-ASSUMPTIONS.md](12-ASSUMPTIONS.md)**.
 
 ---
 
-**Next:** [02-TIME-SERIES.md](02-TIME-SERIES.md) — why language models fail on this
+**Next:** [02-TIME-SERIES.md](02-TIME-SERIES.md) - why language models fail on this
 data, and the structural answer.

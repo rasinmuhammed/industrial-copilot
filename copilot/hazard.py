@@ -22,14 +22,14 @@ This is a wearout mode, so the hazard is monotone non-decreasing in wear: a tool
 does not become less likely to fail by being used more. That is a fact about the
 physics, and the right model is one that CANNOT violate it.
 
-Isotonic regression fits the best monotone step function to the observed rates —
+Isotonic regression fits the best monotone step function to the observed rates -
 best in least squares, by the pool-adjacent-violators algorithm, exactly and in
 linear time. No learning rate, no epochs, no seed, no local minimum. Fit the
 same data twice and get the same curve, which matters for something an engineer
 is asked to act on.
 
 A neural hazard model could fit this too, and would sometimes emit a curve that
-dips — a tool getting safer as it wears — which is not a possibility to be
+dips - a tool getting safer as it wears - which is not a possibility to be
 smoothed away but a statement that is false. Constraining the hypothesis space
 to the physically possible is strictly better than fitting freely and hoping.
 
@@ -38,7 +38,7 @@ WHAT IT DOES NOT CLAIM
 The hazard is estimated from 46 observed failures. The top bands hold a handful
 of cycles each, so their rates are wide, and every point carries a Wilson
 interval saying so. Where a band is too thin to support a claim the estimate is
-still reported — with an interval that makes the thinness obvious rather than a
+still reported - with an interval that makes the thinness obvious rather than a
 point that hides it.
 """
 
@@ -65,7 +65,7 @@ def isotonic(values: Sequence[float], weights: Sequence[float]) -> list[float]:
     # input; an earlier version replicated each block by its WEIGHT instead,
     # which for exposure weights in the hundreds produced a list thousands long
     # and then truncated it to the first block. Every fitted value came back as
-    # that block's mean — a flat line, which passed the monotonicity check
+    # that block's mean - a flat line, which passed the monotonicity check
     # because a constant is monotone. The output looked plausible and was
     # entirely wrong.
     blocks: list[tuple[float, float, int]] = []     # (mean, weight, span)
@@ -181,7 +181,7 @@ def fit_hazard(
     lo = math.floor((lower if lower is not None else min(v for v, _ in pairs)) / band) * band
     hi = math.ceil((upper if upper is not None else max(v for v, _ in pairs)) / band) * band
     # A single reading, or a set that all lands on one band edge, gives lo == hi
-    # and an empty loop below — no curve at all for data that plainly has one
+    # and an empty loop below - no curve at all for data that plainly has one
     # band's worth. Guarantee at least one band.
     if hi <= lo:
         hi = lo + band

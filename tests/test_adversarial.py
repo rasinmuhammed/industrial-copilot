@@ -1,7 +1,7 @@
 """Adversarial suite: actively try to make the system state something false.
 
 Every case here was a real hole found by probing, not a hypothetical. The
-standard is not "usually right" — it is that a false statement should be
+standard is not "usually right" - it is that a false statement should be
 structurally unreachable, and where it is not, the system should decline.
 """
 
@@ -26,7 +26,7 @@ class TestCategoricalFalsePremise:
     """H fails at 2.09%, L at 3.92%. "H fails more" is false.
 
     Before this gate the question routed to `describe` and was answered with
-    air-temperature statistics while the premise went unchallenged — a confident
+    air-temperature statistics while the premise went unchallenged - a confident
     answer to a question nobody asked.
     """
 
@@ -71,7 +71,7 @@ class TestPhysicalDomain:
     """An impossible input must be refused, not answered.
 
     A forecast built on negative tool wear is a confident prediction about a
-    state that cannot occur — worse than no answer at all.
+    state that cannot occur - worse than no answer at all.
     """
 
     @pytest.mark.parametrize("payload", [
@@ -241,7 +241,7 @@ class TestTierConsistency:
 
     def test_a_scoped_breakdown_may_group_and_filter_the_same_field(self):
         """"Failure rate for L variants" wants one number for L. That is a valid
-        scoped breakdown, not a defeated comparison — the rule must not overreach."""
+        scoped breakdown, not a defeated comparison - the rule must not overreach."""
         plan = parse_plan({"op": "rate", "group_by": ["product_type"],
                            "filters": [{"field": "product_type", "op": "=", "value": "L"}]})
         assert plan.group_by == ["product_type"]
@@ -260,7 +260,7 @@ class TestTierConsistency:
         rebound = rebind(shape, question, None)
         assert rebound is not None
         assert "product_type" in rebound.group_by
-        # The claimed field is not filtered — the comparison needs the other groups.
+        # The claimed field is not filtered - the comparison needs the other groups.
         assert not any(f.field == "product_type" for f in rebound.filters)
         assert rebound.params["premise"]["value"] == "H"
 

@@ -1,6 +1,6 @@
 """Phase 3: session state, routing, narration and the PCN verifier.
 
-These test the guarantees the brief names directly — latency (tier routing),
+These test the guarantees the brief names directly - latency (tier routing),
 context engineering (flat token budget), and hallucination reduction (fail-closed
 numeric verification).
 """
@@ -33,7 +33,7 @@ def _bundle(**slots: tuple[float | str, str]) -> EvidenceBundle:
 
 
 # --------------------------------------------------------------------------
-# The verifier — Gate 4
+# The verifier - Gate 4
 # --------------------------------------------------------------------------
 
 
@@ -105,7 +105,7 @@ class TestVerifier:
 
 
 # --------------------------------------------------------------------------
-# Session state — context engineering
+# Session state - context engineering
 # --------------------------------------------------------------------------
 
 
@@ -167,7 +167,7 @@ class TestRouting:
 
     def test_cache_returns_an_equivalent_plan(self):
         """The cache stores a SHAPE and rebinds entities, so the returned plan is
-        equivalent rather than identical — that is what stops one cache entry
+        equivalent rather than identical - that is what stops one cache entry
         answering every "why did cycle N fail" with the same row."""
         cache = PlanCache()
         plan = parse_plan({"op": "rate", "group_by": ["product_type"]})
@@ -179,7 +179,7 @@ class TestRouting:
     def test_cache_evicts_beyond_capacity(self):
         cache = PlanCache(capacity=2)
         plan = parse_plan({"op": "rate"})
-        # Distinct SHAPES — trailing integers all normalise to the same key.
+        # Distinct SHAPES - trailing integers all normalise to the same key.
         for question in ("failure rate by variant", "what drives failures",
                          "why did the cycle fail", "show me the worst cycles",
                          "can i trust this data"):
@@ -266,7 +266,7 @@ class TestEndToEnd:
             answer = engine.ask(question, state)
             # Scan only the region PCN covers: the narrated prose. The scope
             # line and the provenance footer are engine-generated metadata, and
-            # warnings are operator-generated — none pass through a model.
+            # warnings are operator-generated - none pass through a model.
             body = answer.narration
             permitted = {s.render() for s in answer.bundle.slots.values() if s.value is not None}
             residual = body

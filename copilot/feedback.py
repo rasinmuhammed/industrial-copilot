@@ -22,7 +22,7 @@ Three outcome types and what they signal:
                    when it shouldn't have, OR the technician mis-diagnosed).
 
 Updates are logged to ``cmms_kb_log`` for audit. They do NOT mutate the
-knowledge base YAML on disk — they accumulate a signed weight that the
+knowledge base YAML on disk - they accumulate a signed weight that the
 query layer uses to adjust confidence bounds on reported numbers. The
 documented threshold is never changed without a human review step.
 """
@@ -34,7 +34,7 @@ from typing import Any
 
 from copilot.cmms import AlertOutcome, CMMSStore, WorkOrder
 
-# Learning rate — each confirmation shifts confidence by this much.
+# Learning rate - each confirmation shifts confidence by this much.
 ALPHA = 0.002
 
 # If the rolling false-alarm rate for a mode exceeds this, emit a warning.
@@ -131,7 +131,7 @@ class FeedbackLearner:
 
         elif wo.outcome == AlertOutcome.FALSE_ALARM:
             mw.false_alarms += 1
-            delta   = -ALPHA * 0.5   # penalise but gently — one FA is not a rule change
+            delta   = -ALPHA * 0.5   # penalise but gently - one FA is not a rule change
             reason  = "false_alarm: no failure found; possible threshold too tight"
 
         elif wo.outcome == AlertOutcome.WRONG_MODE:

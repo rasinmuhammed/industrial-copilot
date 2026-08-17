@@ -2,7 +2,7 @@
 """Throughput benchmark for margin evaluation.
 
 Backs the performance claims in docs/09-STREAMING.md and the README. The point
-is not that the code is fast — it is that there is no model to run at inference
+is not that the code is fast - it is that there is no model to run at inference
 time, so speed is structural.
 
     python scripts/bench.py
@@ -105,7 +105,7 @@ def main() -> int:
 
     print("\n" + "=" * 74)
     print("Speed is not the result of optimisation. There is no model to run at")
-    print("inference time — intelligence lives in the knowledge base, built")
+    print("inference time - intelligence lives in the knowledge base, built")
     print("offline. Online is arithmetic.")
     return 0
 

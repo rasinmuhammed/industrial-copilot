@@ -3,7 +3,7 @@
 WHY THIS SUITE EXISTS
 ---------------------
 Twenty-eight defects were found in this codebase by deliberate probing. Sorted
-by root cause, the largest single category — nine of them, 32% — was the same
+by root cause, the largest single category - nine of them, 32% - was the same
 thing every time: **a guarantee asserted somewhere and enforced nowhere.**
 
     "the executor caps it"          the executor did not
@@ -16,8 +16,8 @@ Every one lived in a comment, a docstring, a README line or a default argument.
 None lived anywhere a build could check.
 
 The project already has four mechanisms that turn a claim into something
-executable — the fail-closed verifier, `make verify`, `verify_readme`, and the
-AST literal guard — and each has caught real errors, several of them mine. The
+executable - the fail-closed verifier, `make verify`, `verify_readme`, and the
+AST literal guard - and each has caught real errors, several of them mine. The
 defects clustered exactly where no such mechanism existed.
 
 So this is not another layer. The layering survived every attack: the closed
@@ -29,7 +29,7 @@ WHY METAMORPHIC RATHER THAN MORE EXAMPLES
 -----------------------------------------
 Example-based tests need a known correct answer. For a generated operating
 point nobody knows the right failure rate, which is the classic test-oracle
-problem — and it is why the missing coverage sat undetected: every test fed the
+problem - and it is why the missing coverage sat undetected: every test fed the
 system inputs its author had already thought about.
 
 Metamorphic testing sidesteps the oracle. You may not know f(x), but you know
@@ -106,7 +106,7 @@ class TestPhysicsRelations:
                 assert scaled.power_w == pytest.approx(point.power_w * k, rel=1e-12)
 
     def test_evaluation_is_pure(self):
-        """Same point, same margins — no accumulated state anywhere."""
+        """Same point, same margins - no accumulated state anywhere."""
         for point in _points(50):
             first = evaluate(point)
             second = evaluate(point)
@@ -257,7 +257,7 @@ class TestQueryRelations:
 
         The streaming observer checks these per tick and catches an inverted
         thermocouple at 20 sigma. The historical path checks them too, but only
-        when somebody asks "can I trust this data" — so a query whose margins
+        when somebody asks "can I trust this data" - so a query whose margins
         depend on those channels is answered without consulting them. That gap
         is narrow and known; this test at least holds the relations themselves.
         """

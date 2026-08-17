@@ -1,7 +1,7 @@
 """Constrained decoding: make an invalid plan unreachable, not merely rejected.
 
 The first distilled planner scored 14.2% exact match. The failure was FORMAT,
-not comprehension — a positional notation made the model count pipe separators
+not comprehension - a positional notation made the model count pipe separators
 and its errors were overwhelmingly right-content-wrong-slot.
 
 The rebuild changes two things: the target is labelled JSON so nothing is
@@ -42,7 +42,7 @@ class TestTheSchemaIsGeneratedNotWritten:
 
     def test_adding_a_metric_to_the_yaml_would_extend_the_schema(self):
         """The point of generating it: no code change, and no way for the two
-        declarations to disagree — the duplication removed from physics.py,
+        declarations to disagree - the duplication removed from physics.py,
         prevented from reappearing here."""
         schema_metrics = plan_schema()["properties"]["metrics"]["items"]["enum"]
         assert "torque_nm" in schema_metrics
@@ -88,7 +88,7 @@ class TestRefusalMustBeInTheVocabulary:
 
         Measured on the first probe: asked for bearing temperature, a sensor
         this process does not have, the constrained model confidently described
-        ambient air — the silent-substitution failure reintroduced by the very
+        ambient air - the silent-substitution failure reintroduced by the very
         mechanism meant to make output safer.
         """
         assert "refuse" in plan_schema()["properties"]["op"]["enum"]
@@ -122,7 +122,7 @@ class TestTheSchemaDoesNotReplaceTheValidator:
     def test_a_schema_valid_plan_can_still_be_rejected(self):
         """The schema constrains vocabulary and shape. The validator
         additionally enforces dimensional consistency, physical domains,
-        cardinality and viability — a plan can be perfectly well-formed and
+        cardinality and viability - a plan can be perfectly well-formed and
         still ask to group ten thousand cycles one at a time.
         """
         well_formed = {"op": "rate", "group_by": ["udi"]}

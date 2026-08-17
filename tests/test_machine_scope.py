@@ -1,7 +1,7 @@
 """Asking about one machine must not answer about the whole plant.
 
-This is the silent-substitution failure again — the class of bug this system
-treats as its worst — in the place it does the most damage:
+This is the silent-substitution failure again - the class of bug this system
+treats as its worst - in the place it does the most damage:
 
     "How often does L-03 fail?"  ->  3.39 % (339 of 10,000)
 
@@ -67,7 +67,7 @@ class TestABareMachineIdScopes:
 class TestAMachineIsNotAVariant:
     """`L-03` contains a word-boundary `L`, which the bare-variant pattern
     matches. Left in place, "failure rate for L-03 variants" scoped to machine
-    L-03 AND every L-variant machine — an intersection nobody asked for, which
+    L-03 AND every L-variant machine - an intersection nobody asked for, which
     silently changes the denominator again."""
 
     def test_the_letter_is_consumed_by_the_machine_id(self):
@@ -90,7 +90,7 @@ class TestAMachineIsNotAVariant:
 
 class TestIdsInsideLongerTokensAreNotAssets:
     """Product ids look like `L47181`, and a part number may embed a hyphen.
-    Reading one as an asset id would scope a fleet question to one machine —
+    Reading one as an asset id would scope a fleet question to one machine -
     the same failure with the sign flipped."""
 
     @pytest.mark.parametrize("question", [

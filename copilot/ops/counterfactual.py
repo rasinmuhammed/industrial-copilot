@@ -1,4 +1,4 @@
-"""`counterfactual` — "if torque dropped 5 Nm, what changes?"
+"""`counterfactual` - "if torque dropped 5 Nm, what changes?"
 
 Recomputes rule firings over a cohort under a hypothetical parameter change.
 Because the constraints are analytic this is exact, not simulated.
@@ -6,7 +6,7 @@ Because the constraints are analytic this is exact, not simulated.
 The correctness point most implementations get wrong: **base variables are
 coupled through the derived ones.** Reducing torque lowers power *and*
 overstrain, so it moves a cycle relative to the PWF boundary and the OSF
-boundary simultaneously — and can rescue one while breaking the other. We
+boundary simultaneously - and can rescue one while breaking the other. We
 therefore recompute the full physics from perturbed base variables rather than
 editing a stored column.
 """
@@ -48,7 +48,7 @@ def counterfactual(plan: AnalysisPlan, ctx: ExecutionContext) -> EvidenceBundle:
         bundle.put("cf.verdict", None, quality=Quality.ABSTAIN)
         bundle.warn(
             "abstained",
-            f"Cannot vary {', '.join(label_for(d) for d in derived)} directly — "
+            f"Cannot vary {', '.join(label_for(d) for d in derived)} directly - "
             f"{'it is a' if len(derived) == 1 else 'they are'} derived "
             f"{'quantity' if len(derived) == 1 else 'quantities'}. Vary a base "
             f"variable instead ({', '.join(sorted(BASE_VARIABLES))}); the derived "
@@ -144,7 +144,7 @@ def counterfactual(plan: AnalysisPlan, ctx: ExecutionContext) -> EvidenceBundle:
         bundle.warn(
             "data_quality",
             f"This change is a trade-off, not a pure win: {rescued} cycle(s) stop "
-            f"failing but {broken} start. Base variables are coupled — moving torque "
+            f"failing but {broken} start. Base variables are coupled - moving torque "
             "shifts power and overstrain together, so relieving one boundary can "
             "cross another.",
             severity=Severity.WARNING,

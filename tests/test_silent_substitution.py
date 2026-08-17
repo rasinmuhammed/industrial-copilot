@@ -13,7 +13,7 @@ a bearing and a purchase order and the answers were about ambient air.
 
 The cause was structural, not incidental: the grammar matched an intent verb
 ("show me", "how much") without resolving the subject, then fell back to
-`_DEFAULT_DESCRIBE_METRICS` — every metric we do have.
+`_DEFAULT_DESCRIBE_METRICS` - every metric we do have.
 
 The existing refusal test passed only by luck. It used "vibration signature",
 which shares no token with any synonym, so nothing matched and the planner
@@ -130,7 +130,7 @@ class TestCoverageDidNotRegress:
 
     def test_plural_failures_matches_singular_fail(self, engine):
         """The RATE pattern ended in `fail)\\b`, so "how many fail" matched and
-        "how many failures" did not — every natural plural phrasing of the
+        "how many failures" did not - every natural plural phrasing of the
         commonest question in the product was unreachable."""
         answer = engine.ask("How many failures are in this data?", SessionState())
         assert not answer.refused

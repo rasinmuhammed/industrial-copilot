@@ -91,7 +91,7 @@ class TestRuleDiscovery:
 
         The first implementation scored single conditions against the whole
         label and found nothing at all, on a dataset whose rules are fully
-        recoverable — recall is structurally capped when the label is a union of
+        recoverable - recall is structurally capped when the label is a union of
         modes and the rule explains only one of them.
         """
         rep, _ = report

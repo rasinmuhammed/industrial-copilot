@@ -9,7 +9,7 @@ So alerting is not binary. It is:
 
     ALERT    the entire margin interval is negative
     SAFE     the entire margin interval is positive
-    ABSTAIN  the interval straddles zero — say so, and flag the instrument
+    ABSTAIN  the interval straddles zero - say so, and flag the instrument
 
 Cost: 2x the flops. Gain: a bad reading can never produce a false alert. It
 produces silence and a maintenance ticket.
@@ -47,7 +47,7 @@ class Uncertainty:
       1. declared instrument accuracy from tag metadata
       2. observed short-window dispersion (Hampel/MAD)
       3. imputation bounds when a value is missing
-      4. a wide default when provenance is unknown — which correctly yields
+      4. a wide default when provenance is unknown - which correctly yields
          ABSTAIN rather than false confidence
     """
 
@@ -129,7 +129,7 @@ def _conjunctive(a: Interval, b: Interval) -> Verdict:
     """HDF: fires only if BOTH conditions are violated.
 
     Certainly firing requires both intervals wholly negative. Certainly safe
-    requires at least one wholly positive — because that one condition alone
+    requires at least one wholly positive - because that one condition alone
     prevents the rule regardless of the other.
     """
     va, vb = a.verdict(), b.verdict()
@@ -167,7 +167,7 @@ def evaluate_interval(
     """Propagate input uncertainty through to margin bounds.
 
     Each margin is monotone in its inputs, so the extremes of the output
-    interval come from the extremes of the inputs — no sampling required, which
+    interval come from the extremes of the inputs - no sampling required, which
     is why this stays a fixed 2x cost rather than a Monte Carlo.
     """
     u = uncertainty

@@ -1,4 +1,4 @@
-# 03 — Architecture
+# 03 - Architecture
 
 ---
 
@@ -16,9 +16,9 @@ Mapped onto the four-layer industrial reference model (plant → ingest → reas
 ┌────────────────────────────────▼─────────────────────────────────────────┐
 │ L2  INGEST & NORMALISE                                    copilot/ingest │
 │     · schema normalisation (BOM, unit suffixes)                          │
-│     · dimensional typing — units are first-class, mismatch is rejected   │
+│     · dimensional typing - units are first-class, mismatch is rejected   │
 │     · derived physics:  ΔT · power · overstrain                          │
-│     · MARGIN COMPUTATION — 5 signed scalars, stateless, 0.22 µs          │
+│     · MARGIN COMPUTATION - 5 signed scalars, stateless, 0.22 µs          │
 │     · invariant evaluation (I1–I4)                                       │
 │     · synthetic overlays: ts, machine_id, shift        [flagged SYNTHETIC]│
 └────────────────────────────────┬─────────────────────────────────────────┘
@@ -68,7 +68,7 @@ Where latency and hallucination are controlled. Neither depends on model quality
   └─────────┬─────────┘   └──────────────────────────┘
             ▼
   ┌─────────────────────────────────────────────────────┐
-  │ THREE-TIER ROUTER — escalate only on miss           │
+  │ THREE-TIER ROUTER - escalate only on miss           │
   │  ┌───────────┐ →  ┌───────────────┐ → ┌───────────┐ │
   │  │Plan cache │    │Grammar planner│   │LLM planner│ │
   │  │  ~0 ms    │    │    ~1 ms      │   │  ~400 ms  │ │
@@ -93,12 +93,12 @@ Where latency and hallucination are controlled. Neither depends on model quality
   └─────────┬───────────────────────────────┘
             ▼
   ┌─────────────────────────────────────────┐
-  │ Narrator — prose with {{slot}} refs     │
+  │ Narrator - prose with {{slot}} refs     │
   │ NEVER writes a digit                    │
   └─────────┬───────────────────────────────┘
             ▼
   ┌─────────────────────────────────────────┐
-  │ PCN verifier — fail-closed              │
+  │ PCN verifier - fail-closed              │
   │ bare numeral → REJECT → regenerate      │
   └─────────┬───────────────────────────────┘
             ▼
@@ -112,12 +112,12 @@ Where latency and hallucination are controlled. Neither depends on model quality
 | 0 | plan cache hit | < 1 ms | repeat questions |
 | 1 | grammar planner | < 5 ms | common plant vocabulary |
 | 2 | LLM planner (cached prefix) | < 600 ms | novel questions |
-| — | execution | < 10 ms | all |
-| — | narration (template) | < 1 ms | offline mode |
-| — | narration (LLM) | < 500 ms | online mode |
+| - | execution | < 10 ms | all |
+| - | narration (template) | < 1 ms | offline mode |
+| - | narration (LLM) | < 500 ms | online mode |
 
 Measured tier distribution on the golden set is reported by
-`make eval` — see [10-EVALS.md](10-EVALS.md).
+`make eval` - see [10-EVALS.md](10-EVALS.md).
 
 ---
 
@@ -215,7 +215,7 @@ One interface, three implementations, selected by config:
 | Provider | Cost | Use |
 |---|---|---|
 | **None (deterministic)** | $0 | Default. Grammar planner + template narrator. Fully evaluable with zero credentials. |
-| **Cerebras** | $0 (free tier: 30 RPM, 60k TPM, 1M tok/day) | Native JSON-schema structured output — ideal for the planner |
+| **Cerebras** | $0 (free tier: 30 RPM, 60k TPM, 1M tok/day) | Native JSON-schema structured output - ideal for the planner |
 | **Anthropic** | ~$0.0034/question (Haiku 4.5, cached prefix) | Best phrasing; used to measure real latency percentiles |
 | **Ollama** | $0, local | Air-gapped operation |
 
@@ -253,7 +253,7 @@ power_low_margin_w         DOUBLE  [W]
 power_high_margin_w        DOUBLE  [W]
 overstrain_margin_min_nm   DOUBLE  [min·N·m]
 wear_to_window_min         DOUBLE  [min]
-worst_normalised_margin    DOUBLE  [—]
+worst_normalised_margin    DOUBLE  [-]
 
 -- rule firings, RECOMPUTED from the KB, never copied from labels
 hdf_rule pwf_rule osf_rule twf_window  BOOLEAN
@@ -265,7 +265,7 @@ shift                      VARCHAR
 ```
 
 Rule columns are recomputed rather than copied so that **divergence between rules
-and labels is measurable** — that is what the KB calibration monitor consumes.
+and labels is measurable** - that is what the KB calibration monitor consumes.
 
 ### 6.2 Evidence bundle
 
@@ -292,4 +292,4 @@ Every number the engineer ever sees is a `Slot`. There is no other path.
 
 ---
 
-**Next:** [04-ANALYSIS-IR.md](04-ANALYSIS-IR.md) — the plan schema and every operator.
+**Next:** [04-ANALYSIS-IR.md](04-ANALYSIS-IR.md) - the plan schema and every operator.

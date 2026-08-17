@@ -1,4 +1,4 @@
-# 05 — Numeric Grounding (Gate 4)
+# 05 - Numeric Grounding (Gate 4)
 
 > **No number in any answer is authored by a language model.**
 >
@@ -9,7 +9,7 @@
 ## 1. The problem
 
 Numeric hallucination is the failure mode that destroys trust in an industrial
-copilot, and small deviations are the dangerous ones — reporting 6.0 % where the
+copilot, and small deviations are the dangerous ones - reporting 6.0 % where the
 truth is 5.7 % is worse than an obvious error, because it survives review.
 
 Retrieval and citations improve transparency but **cannot guarantee accuracy**.
@@ -17,7 +17,7 @@ The number still passes through the model's output distribution.
 
 There is a second, subtler class that naive verification misses:
 **mis-attribution.** The model quotes a *correct* number from the *wrong* cohort.
-"Failed machines averaged 40.0 N·m" — a real figure, but it is the *healthy*
+"Failed machines averaged 40.0 N·m" - a real figure, but it is the *healthy*
 cohort's mean. A verifier that only asks *"does this numeral appear in the
 evidence?"* passes it.
 
@@ -56,7 +56,7 @@ osf.margin.min                 = −1433  [min·N·m]
 ```
 
 The cohort is part of the identifier. **Mis-attribution becomes unrepresentable**
-— you cannot write `healthy`'s value while referring to `failed`, because the
+- you cannot write `healthy`'s value while referring to `failed`, because the
 reference *is* the cohort.
 
 ### 3.2 The narrator is forbidden digits
@@ -71,7 +71,7 @@ Draft output:
 
 ```
 Failed cycles ran at {{failed.torque_nm.mean}} against {{healthy.torque_nm.mean}}
-for healthy cycles — a difference of {{delta.torque_nm}} with a standardised
+for healthy cycles - a difference of {{delta.torque_nm}} with a standardised
 effect of {{effect.torque_nm.cohens_d}}.
 ```
 
@@ -88,7 +88,7 @@ effect of {{effect.torque_nm.cohens_d}}.
 ```
 
 Rejection triggers **one** regeneration with the error fed back. A second failure
-degrades to **template narration** — less fluent, still correct. The system
+degrades to **template narration** - less fluent, still correct. The system
 degrades to *less readable*, never to *wrong*.
 
 ### 3.4 Allowed exceptions, explicitly whitelisted
@@ -117,7 +117,7 @@ KB constants are slots too. They are never literals in the prompt.
 
 The first three are **hard gates**. A non-zero value fails the build.
 
-Note that exactness is 1.000 *by construction*, not by measurement — the eval
+Note that exactness is 1.000 *by construction*, not by measurement - the eval
 exists to prove the construction holds, and to catch regressions in the plumbing.
 
 ---
@@ -135,7 +135,7 @@ tier           cache | grammar | llm
 ```
 
 Given a handle, `copilot replay <hash>` re-executes and returns either the
-identical result or a structured diff showing exactly what changed — the data,
+identical result or a structured diff showing exactly what changed - the data,
 the KB, or the plan.
 
 This is what regulated industries actually require during incident review, and it
@@ -160,4 +160,4 @@ Four gates, because one is never enough.
 
 ---
 
-**Next:** [06-RELIABILITY.md](06-RELIABILITY.md) — drift, bad sensors, and stale rules.
+**Next:** [06-RELIABILITY.md](06-RELIABILITY.md) - drift, bad sensors, and stale rules.

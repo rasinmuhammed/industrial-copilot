@@ -3,7 +3,7 @@
 A refusal is a feature everywhere else in this system: when the subject of a
 question is not measured, saying so is the only honest answer. But a refusal in
 response to the product's OWN suggested question is different in kind. Nobody
-asked it — the console did — and the operator learns, before asking anything of
+asked it - the console did - and the operator learns, before asking anything of
 their own, that the copilot does not understand its own screen.
 
 The first draft of the chip list was written from intuition. Two of four were

@@ -10,8 +10,8 @@ Found by the risk-coverage harness, which is the only reason it was found:
 Neither question is answerable. There is no bearing thermocouple in this
 dataset and no cost data at all. But both contain a recognised *intent* verb
 ("show me", "how much"), and when the grammar matched the verb without
-resolving the subject it fell back to `_DEFAULT_DESCRIBE_METRICS` — every
-metric we do have — and the narrator picked the first one.
+resolving the subject it fell back to `_DEFAULT_DESCRIBE_METRICS` - every
+metric we do have - and the narrator picked the first one.
 
 That is the single worst failure mode an Argus platform has. Not "I don't
 know", not a wrong number, but a **confident, correct, verified answer about a
@@ -30,7 +30,7 @@ A closed vocabulary tells us what we HAVE. This is the other half: detecting
 that a question asks for something we do NOT have, and naming it rather than
 substituting the nearest thing we do.
 
-Two checks, both conservative — they only fire on positive evidence that a
+Two checks, both conservative - they only fire on positive evidence that a
 foreign quantity was named, never on merely unfamiliar wording:
 
   1. NAMED QUANTITY. A curated list of quantities common in industrial plants

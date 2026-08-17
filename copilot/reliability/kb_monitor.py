@@ -1,4 +1,4 @@
-"""Gate 3 — is the rule still valid?
+"""Gate 3 - is the rule still valid?
 
 The dangerous drift is not the sensor. It is the *rule* silently becoming
 wrong: a tool supplier changes and the real overstrain limit is now 10,200
@@ -6,7 +6,7 @@ rather than 11,000. Every margin is then verifiably computed, auditable, and
 wrong.
 
 The monitor needs no model and no retraining. Two counters over quantities we
-already have — margins we compute, and failures the CMMS eventually reports:
+already have - margins we compute, and failures the CMMS eventually reports:
 
     surprise failures   a failure occurred at margin > 0   -> threshold too LOOSE
     false alarms        margin < 0 with no failure         -> threshold too TIGHT
@@ -21,7 +21,7 @@ Measured sensitivity, perturbing the OSF threshold:
         +5.0%         45           0
 
 Three properties: zero **only** at the true threshold, monotone in the size of
-the error, and **directional** — which counter fires tells you which way to
+the error, and **directional** - which counter fires tells you which way to
 move. It also works with delayed labels, which matters because real work orders
 arrive days after the event.
 
@@ -90,7 +90,7 @@ class RuleCalibration:
             ),
             Direction.CONFLICTED: (
                 "The rule both misses failures and fires without them. That is not a "
-                "mis-set threshold — the functional FORM is likely wrong, or a variable "
+                "mis-set threshold - the functional FORM is likely wrong, or a variable "
                 "the rule does not include has changed. Escalate to an engineer."
             ),
         }[self.direction]
@@ -138,7 +138,7 @@ def audit_calibration(
 
     Uses the published per-mode labels where available. In a real deployment the
     label is a CMMS work order arriving days later, and the query is the same
-    with a lagged window — the monitor degrades to slower detection, never to
+    with a lagged window - the monitor degrades to slower detection, never to
     incorrect detection.
     """
     params = params or []
