@@ -275,6 +275,26 @@ main {
   main { grid-template-columns: 1fr; }
   .detail-rail { border-left: 0; border-top: 1px solid var(--line); max-height: 35vh; }
 }
+
+/* Every screen in this product answers a question. Reliability already did —
+   "Is the instrument telling the truth?" — and the copilot now opens the same
+   way. Fleet and Envelope had no heading at all, so a reader arrived at a wall
+   of controls with no statement of what the screen is FOR. */
+.screen-ask {
+  /* These pages lay their main region out as a grid of rails. Without an
+     explicit span the heading is placed in the first column and wraps over
+     three lines in a 200px rail. */
+  grid-column: 1 / -1;
+  padding: 20px 28px 4px;
+  max-width: 62ch;
+}
+.screen-ask h1 {
+  font-size: 21px; line-height: 1.22; letter-spacing: -.015em;
+  font-weight: 600; margin: 0 0 5px; color: var(--text); text-wrap: balance;
+}
+.screen-ask p {
+  font-size: 12.5px; line-height: 1.55; color: var(--text-3); margin: 0;
+}
 </style>
 </head>
 <body>
@@ -303,6 +323,10 @@ main {
 </header>
 
 <main>
+  <div class="screen-ask">
+    <h1>Which machine needs attention first?</h1>
+    <p>Ranked by distance to the nearest failure boundary, not by a risk score. A machine with no measurable margin is shown as unknown rather than safe.</p>
+  </div>
   <div class="fleet-floor">
     <div class="fleet-header">
       <div class="fleet-stat">
