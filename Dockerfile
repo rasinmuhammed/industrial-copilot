@@ -27,6 +27,20 @@ RUN python -m venv /opt/venv && /opt/venv/bin/pip install --upgrade pip \
 COPY . .
 RUN /opt/venv/bin/pip install --no-deps .
 
+# Build the warehouse at IMAGE BUILD time, not at boot.
+#
+# The image ships the CSV and not the DuckDB file — the warehouse is derived, so
+# shipping it would mean shipping the output instead of the recipe. But nothing
+# then built it, so the container started, the first request called
+# Engine.build(), and there was no warehouse to open. The platform healthcheck
+# hit /health, got no answer, and retired the replica: "1/1 replicas never
+# became healthy".
+#
+# Doing it here rather than in an entrypoint means boot is a process start
+# rather than an ingest, so the healthcheck passes in the window platforms
+# actually allow. It costs about three seconds of build and 4.5 MB of layer.
+RUN /opt/venv/bin/python -m copilot.ingest
+
 
 FROM python:3.12-slim
 
@@ -41,9 +55,11 @@ COPY --from=build --chown=copilot:copilot /app /app
 ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    COPILOT_DB=/tmp/copilot.duckdb
+    COPILOT_DB=/app/data/warehouse.duckdb \
+    PORT=8000
 
 USER copilot
+# Documentation only. The port actually bound is $PORT, below.
 EXPOSE 8000
 
 # Liveness is not "the port is open". The engine is only useful once the process
@@ -57,4 +73,13 @@ assert m.deterministic_modes, 'no process definition loaded'; \
 evaluate(OperatingPoint(300.0, 310.0, 1500.0, 40.0, 100.0, 'L')); \
 print('ok')" || exit 1
 
-CMD ["uvicorn", "copilot.api:app", "--host", "0.0.0.0", "--port", "8000"]
+# Shell form on purpose: $PORT has to expand.
+#
+# Every managed platform assigns the port and routes to it. With `--port 8000`
+# hardcoded, the app listened on 8000, the platform probed the port it had
+# assigned, and every healthcheck attempt returned service unavailable while the
+# process sat there running perfectly.
+#
+# --timeout-graceful-shutdown because an open SSE stream otherwise holds the old
+# container through the whole replay and stalls the next deploy.
+CMD uvicorn copilot.api:app --host 0.0.0.0 --port ${PORT:-8000} --timeout-graceful-shutdown 5
