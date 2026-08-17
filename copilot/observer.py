@@ -77,6 +77,7 @@ from typing import Any
 
 from scipy.stats import chi2, norm
 
+from copilot.regime import RegimeTracker
 from copilot.reliability.intervals import Uncertainty
 
 __all__ = [
@@ -319,6 +320,9 @@ class TrustReport:
     fault_kind: FaultKind
     uncertainty: Uncertainty
     explanation: str
+    #: Which operating mode this reading belongs to, when tracked.
+    regime: str | None = None
+    regime_status: str | None = None
 
     @property
     def trusted(self) -> bool:
@@ -651,6 +655,24 @@ class _Channel:
             return None
         return sum(self.delivery) / len(self.delivery)
 
+    def reset_for_new_regime(self) -> None:
+        """Re-learn this channel for a mode whose spread we have not measured.
+
+        Keeping the old noise model across a changeover is worse than having
+        none: it judges the new recipe against the previous one's variability
+        and reports the difference as a fault.
+        """
+        self.initialised = False
+        self.calibrated = False
+        self.learning.clear()
+        self.calibrating.clear()
+        self.recent.clear()
+        self.delivery.clear()
+        self.energy_sum = 0.0
+        self.cusum_hi = self.cusum_lo = 0.0
+        self.gated_run = 0
+        self.age = 0
+
     def _provisional(self, z: float, reason: str) -> ChannelHealth:
         return ChannelHealth(
             name=self.name, status=NE107.FUNCTION_CHECK, value=z,
@@ -676,12 +698,25 @@ THERMAL_SIGMA_K = 1.001       # measured sd; matches the documented 1 K
 
 @dataclass(slots=True)
 class MachineObserver:
-    """One machine's instrument layer."""
+    """One machine's instrument layer.
+
+    REGIME AWARENESS. A machine that changes recipe changes every channel at
+    once. Without knowing that, the observer sees a simultaneous step on all of
+    them and reports a fleet of sensor faults for a planned event — the fastest
+    way to lose a control room.
+
+    The tracker (copilot/regime.py) supplies the mode. On a changeover the
+    channels are told to re-establish, because their identified noise belongs to
+    the mode it was measured in and carrying it across is worse than having none.
+    """
 
     machine_id: str
     channels: dict[str, _Channel] = field(default_factory=dict)
     last_wear: float | None = None
     tool_changes: int = 0
+    regimes: RegimeTracker | None = None
+    current_regime: str | None = None
+    regime_changes: int = 0
 
     def __post_init__(self) -> None:
         if not self.channels:
@@ -690,12 +725,28 @@ class MachineObserver:
             }
 
     def observe(self, reading: dict[str, Any]) -> TrustReport:
+        regime = self._track_regime(reading)
         health = {
             name: ch.observe(_as_float(reading.get(name)))
             for name, ch in self.channels.items()
         }
         parity = self._parity(health, reading)
         kind, why = self._classify(health, parity)
+
+        # A changeover is a planned event. Saying so is the whole point of
+        # tracking regimes: the alternative is a screen of sensor alarms.
+        if regime is not None and regime.changed_from is not None:
+            kind = FaultKind.NONE
+            why = (
+                f"Operating mode changed from {regime.changed_from} to "
+                f"{regime.label}. Every channel moves at once because the "
+                f"setpoints moved — this is a changeover, not a fault. "
+                f"Baselines are re-establishing for the new mode."
+            )
+        elif regime is not None and not regime.usable:
+            kind = FaultKind.NONE
+            why = regime.reason
+
         return TrustReport(
             machine_id=self.machine_id,
             channels=health,
@@ -703,7 +754,23 @@ class MachineObserver:
             fault_kind=kind,
             uncertainty=self._uncertainty(health),
             explanation=why,
+            regime=regime.label if regime else None,
+            regime_status=regime.status.value if regime else None,
         )
+
+    def _track_regime(self, reading: dict[str, Any]):
+        """Assign the reading to a mode, and reset the channels on a change."""
+        if self.regimes is None:
+            return None
+        verdict = self.regimes.observe(reading)
+        if verdict.label != self.current_regime and verdict.changed_from is not None:
+            self.regime_changes += 1
+            # Noise identified in one mode does not describe another. Carrying
+            # it across would judge the new recipe against the old one's spread.
+            for channel in self.channels.values():
+                channel.reset_for_new_regime()
+        self.current_regime = verdict.label
+        return verdict
 
     def _parity(
         self, health: dict[str, ChannelHealth], reading: dict[str, Any]
@@ -896,12 +963,20 @@ class FleetObserver:
     """One observer per machine, created on first sight."""
 
     observers: dict[str, MachineObserver] = field(default_factory=dict)
+    #: Per-axis variance defining a mode's radius. Supply it to enable regime
+    #: tracking; without it the observer behaves as it did before, on the
+    #: assumption that the machine runs a single recipe.
+    regime_scale: list[float] | None = None
 
     def observe(self, reading: dict[str, Any]) -> TrustReport:
         machine = str(reading.get("machine_id", "unknown"))
         obs = self.observers.get(machine)
         if obs is None:
-            obs = self.observers[machine] = MachineObserver(machine_id=machine)
+            obs = self.observers[machine] = MachineObserver(
+                machine_id=machine,
+                regimes=(RegimeTracker(scale=list(self.regime_scale))
+                         if self.regime_scale else None),
+            )
         return obs.observe(reading)
 
 
