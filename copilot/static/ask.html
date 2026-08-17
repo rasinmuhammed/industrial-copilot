@@ -14,6 +14,10 @@ body { grid-template-rows: 48px 1fr; overflow: hidden; }
   display: grid;
   grid-template-columns: 220px minmax(0,1fr) 240px;
   transition: grid-template-columns .32s cubic-bezier(.4,0,.2,1);
+  /* The shell is exactly the viewport. Scrolling belongs to the thread, not
+     the document: an app whose chrome scrolls away is a page pretending. */
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* Once an answer is on screen the rails have done their job. The pipeline
@@ -23,8 +27,6 @@ body { grid-template-rows: 48px 1fr; overflow: hidden; }
    width, and `Detail` brings them back for anyone who wants them. */
 .layout.reading {
   grid-template-columns: 0 minmax(0,1fr) 0;
-  min-height: 0;
-  overflow: hidden;
 }
 
 /* ── left rail: context + suggestions ───────────────────────────────── */
@@ -559,6 +561,55 @@ table.ev-table tr.abstain td.slot-val { color: var(--warn); }
 .layout.reading .thread-wrap { max-width: 52rem; margin: 0 auto; }
 
 /* Explainer belongs where a newcomer needs it: the empty state. */
+/* ── Landing ─────────────────────────────────────────────────────────────
+   One screen that answers the only question worth asking, then gets out of
+   the way. The old hero led with a product name and four telemetry counters;
+   a name is not a claim and latency is not a reason to trust anything. */
+.hero-eyebrow {
+  font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--text-3); font-weight: 600; margin: 0 0 18px;
+}
+.hero-claim {
+  font-size: clamp(26px, 3.6vw, 40px); line-height: 1.12; letter-spacing: -.022em;
+  font-weight: 600; margin: 0 0 18px; color: var(--text); text-wrap: balance;
+}
+.hero-sub {
+  font-size: 15px; line-height: 1.6; color: var(--text-2);
+  max-width: 46ch; margin: 0 0 28px;
+}
+
+.regime-strip {
+  display: grid; gap: 1px; background: var(--line);
+  border: 1px solid var(--line); border-radius: 6px; overflow: hidden;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); margin-bottom: 26px;
+}
+.regime {
+  background: var(--raised); padding: 14px 16px 15px;
+  display: grid; gap: 5px; align-content: start;
+}
+.regime-k {
+  font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase;
+  font-weight: 650; color: var(--live);
+}
+.regime-stat { color: var(--info); }
+.regime-irr  { color: var(--text-3); }
+.regime-v {
+  font-family: var(--mono); font-size: 26px; line-height: 1;
+  font-variant-numeric: tabular-nums; font-weight: 500; color: var(--text);
+  letter-spacing: -.02em;
+}
+.regime-d { font-size: 12px; line-height: 1.5; color: var(--text-3); }
+
+.hero-proof {
+  font-size: 13px; line-height: 1.6; color: var(--text-2);
+  max-width: 56ch; margin: 0;
+}
+.hero-proof .proof-n {
+  font-family: var(--mono); font-variant-numeric: tabular-nums;
+  color: var(--text); font-weight: 550;
+}
+.hero-proof em { color: var(--text); font-style: normal; font-weight: 600; }
+
 .empty-pipeline {
   display: grid; gap: 7px; margin-top: 22px; padding-top: 18px;
   border-top: 1px solid var(--line);
@@ -672,6 +723,55 @@ table.ev-table tr.abstain td.slot-val { color: var(--warn); }
 .layout.reading .thread-wrap { max-width: 52rem; margin: 0 auto; }
 
 /* Explainer belongs where a newcomer needs it: the empty state. */
+/* ── Landing ─────────────────────────────────────────────────────────────
+   One screen that answers the only question worth asking, then gets out of
+   the way. The old hero led with a product name and four telemetry counters;
+   a name is not a claim and latency is not a reason to trust anything. */
+.hero-eyebrow {
+  font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--text-3); font-weight: 600; margin: 0 0 18px;
+}
+.hero-claim {
+  font-size: clamp(26px, 3.6vw, 40px); line-height: 1.12; letter-spacing: -.022em;
+  font-weight: 600; margin: 0 0 18px; color: var(--text); text-wrap: balance;
+}
+.hero-sub {
+  font-size: 15px; line-height: 1.6; color: var(--text-2);
+  max-width: 46ch; margin: 0 0 28px;
+}
+
+.regime-strip {
+  display: grid; gap: 1px; background: var(--line);
+  border: 1px solid var(--line); border-radius: 6px; overflow: hidden;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); margin-bottom: 26px;
+}
+.regime {
+  background: var(--raised); padding: 14px 16px 15px;
+  display: grid; gap: 5px; align-content: start;
+}
+.regime-k {
+  font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase;
+  font-weight: 650; color: var(--live);
+}
+.regime-stat { color: var(--info); }
+.regime-irr  { color: var(--text-3); }
+.regime-v {
+  font-family: var(--mono); font-size: 26px; line-height: 1;
+  font-variant-numeric: tabular-nums; font-weight: 500; color: var(--text);
+  letter-spacing: -.02em;
+}
+.regime-d { font-size: 12px; line-height: 1.5; color: var(--text-3); }
+
+.hero-proof {
+  font-size: 13px; line-height: 1.6; color: var(--text-2);
+  max-width: 56ch; margin: 0;
+}
+.hero-proof .proof-n {
+  font-family: var(--mono); font-variant-numeric: tabular-nums;
+  color: var(--text); font-weight: 550;
+}
+.hero-proof em { color: var(--text); font-style: normal; font-weight: 600; }
+
 .empty-pipeline {
   display: grid; gap: 7px; margin-top: 22px; padding-top: 18px;
   border-top: 1px solid var(--line);
@@ -745,44 +845,44 @@ table.ev-table tr.abstain td.slot-val { color: var(--warn); }
     <div class="thread" id="thread">
       <!-- empty state -->
       <div class="empty-state" id="empty">
-        <div class="empty-hero">
-          <div class="empty-hero-mark">
-            <svg viewBox="0 0 20 20"><path d="M10 2L3 7v6l7 5 7-5V7L10 2zm0 2.5l5 3.5-5 3.5L5 8l5-3.5zm-6 5l6 4.3 6-4.3V13l-6 4.3L4 13v-3.5z"/></svg>
-          </div>
-          <div>
-            <div class="empty-title">Industrial Copilot</div>
-          </div>
-        </div>
-        <p class="empty-sub">
-          Ask questions about machine behaviour, failure patterns, operating conditions, and process trends. Every number in every answer is computed arithmetic — not model output.
+
+        <p class="hero-eyebrow">Margin Engine</p>
+        <h1 class="hero-claim">How far is this machine from failing,<br>
+          and can you trust that number?</h1>
+        <p class="hero-sub">
+          Every figure below is computed from the process physics and traced to
+          its source. A language model reads your question and never touches a
+          number.
         </p>
-        <div class="empty-props">
-          <div class="prop-item">
-            <div class="prop-item-label">Latency p50</div>
-            <div class="prop-item-value">7 ms</div>
+
+        <div class="regime-strip" role="list">
+          <div class="regime" role="listitem">
+            <span class="regime-k">Exact</span>
+            <span class="regime-v">287</span>
+            <span class="regime-d">failures with a documented boundary. Distance
+              to it is arithmetic, and it inverts into a setpoint.</span>
           </div>
-          <div class="prop-item">
-            <div class="prop-item-label">Below model tier</div>
-            <div class="prop-item-value">92 %</div>
+          <div class="regime" role="listitem">
+            <span class="regime-k regime-stat">Statistical</span>
+            <span class="regime-v">46</span>
+            <span class="regime-d">no crisp edge. An interval with a coverage
+              guarantee that holds whatever the degradation shape is.</span>
           </div>
-          <div class="prop-item">
-            <div class="prop-item-label">Unsourced numerals</div>
-            <div class="prop-item-value">0.000</div>
-          </div>
-          <div class="prop-item">
-            <div class="prop-item-label">Golden eval pass</div>
-            <div class="prop-item-value">27 / 27</div>
+          <div class="regime" role="listitem">
+            <span class="regime-k regime-irr">Unknowable</span>
+            <span class="regime-v">1</span>
+            <span class="regime-d">no relationship to any measured parameter.
+              Not hard to predict — impossible, and it says so.</span>
           </div>
         </div>
-        <div class="empty-pipeline">
-          <div class="ep"><b>1 · Route</b>cache, then grammar, then a model only if needed</div>
-          <div class="ep"><b>2 · Validate</b>the plan must name real columns</div>
-          <div class="ep"><b>3 · Execute</b>typed operators over DuckDB</div>
-          <div class="ep"><b>4 · Narrate</b>slot references, never digits</div>
-          <div class="ep"><b>5 · Verify</b>a bare numeral is rejected</div>
-        </div>
-      </div>
-    </div>
+
+        <p class="hero-proof">
+          <span class="proof-n">F1 0.917</span> against Random Forest 0.882 and
+          XGBoost 0.901 — at <em>precision 1.000</em>, with no training. Every
+          figure traced, or refused.
+        </p>
+
+      </div>    </div>
 
     <button class="detail-toggle" id="detail-toggle" type="button"
             aria-pressed="false">Show detail</button>
